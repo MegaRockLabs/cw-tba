@@ -1,0 +1,50 @@
+[workspace]
+members = [
+    "contracts/*",
+    "packages/*",
+]
+
+resolver = "2"
+
+[workspace.package]
+version    = "0.1.0"
+edition    = "2021"
+repository = ""
+
+
+[workspace.dependencies]
+cosmwasm-std         = { version = "1.4.1", default-features = false }
+cosmwasm-schema      = "1.5.4"
+cw-storage-plus      = "1.2.0"
+
+k256                 = { version = "0.13.3", default-features = false, features = ["ecdsa"] }
+sha2                 = { version = "0.10.2", default-features = false }
+
+schemars                = "0.8.15"
+semver                  = "1.0.20"
+thiserror               = "1.0.50"
+
+cw-ownable              = "0.5.1"
+cw-utils                = "1.0.3"
+cw1                     = "1.1.2"
+cw2                     = "1.1.2"
+
+cw81                    = { git = "https://github.com/megarocklabs/cw-extra", package = "cw81" }
+cw82                    = { git = "https://github.com/megarocklabs/cw-extra", package = "cw82" }
+cw83                    = { git = "https://github.com/megarocklabs/cw-extra", package = "cw83" }
+cw22                    = { git = "https://github.com/aura-nw/cw-plus",       package = "cw22" }
+cw721                   = "0.18.0"
+cw721-base              = "0.18.0"
+cw82-base               = { path = "contracts/cw82-base" }
+cw83-base               = { path = "contracts/cw83-base" }
+cw-tba                  = { path = "packages/cw-tba"     }
+
+
+
+[profile.release]
+rpath            = false
+lto              = true
+overflow-checks  = true
+opt-level        = 3
+debug            = false
+debug-assertions = false
