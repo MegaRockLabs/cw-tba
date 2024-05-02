@@ -1,4 +1,4 @@
-use cosmwasm_std::{from_json, Addr, Binary, CosmosMsg, Deps, Env, Order, StdResult};
+use cosmwasm_std::{StdResult, Deps, Binary, CosmosMsg, Order, Env, from_json};
 use cw82::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
 use k256::sha2::{Digest, Sha256};
 use cw_ownable::is_owner;
@@ -19,6 +19,7 @@ pub fn can_execute(
     sender: String,
     msg: &CosmosMsg
 ) -> StdResult<CanExecuteResponse> {
+
     let cant = CanExecuteResponse { can_execute: false };
 
     if !status_ok(deps.storage) { return Ok(cant) };
@@ -44,7 +45,7 @@ pub fn valid_signature(
 
     let address = match payload {
         Some(payload) => from_json(payload)?,
-        None => owner.owner.unwrap_or(Addr::unchecked("")).to_string()
+        None => owner.owner.unwrap().to_string()
     };
 
     Ok(ValidSignatureResponse {
@@ -76,7 +77,7 @@ pub fn valid_signatures(
 
     let address = match payload {
         Some(payload) => from_json(payload)?,
-        None => owner.owner.unwrap_or(Addr::unchecked("")).to_string()
+        None => owner.owner.unwrap().to_string()
     };
 
     let are_valid : Vec<bool> = signatures

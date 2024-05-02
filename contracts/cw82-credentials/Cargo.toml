@@ -1,10 +1,10 @@
 [package]
-name = "cw82-base"
+name = "cw82-credentials"
 version     = { workspace = true }
 edition     = { workspace = true }
 repository  = { workspace = true }
 authors = [ "Kromsten <s@noreply.megarock.labs>" ]
-description = "Token Bound Account Base"
+description = "Token Bound Account Credentials"
 
 exclude = [
   "contract.wasm",
@@ -39,5 +39,4 @@ cw721-base      = { workspace = true }
 
 cw-tba          = { workspace = true }
 
-ripemd          = { version = "0.1.3", default-features = false }
-bech32          = { version = "0.9.1" }
+saa             = { workspace = true }

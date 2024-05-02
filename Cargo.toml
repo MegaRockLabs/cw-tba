@@ -29,6 +29,7 @@ cw-utils                = "1.0.3"
 cw1                     = "1.1.2"
 cw2                     = "1.1.2"
 
+saa                     = { git = "https://github.com/MegaRockLabs/smart-account-auth", package = "smart-account-auth", features = ["cosmwasm"]}
 cw81                    = { git = "https://github.com/megarocklabs/cw-extra", package = "cw81" }
 cw82                    = { git = "https://github.com/megarocklabs/cw-extra", package = "cw82" }
 cw83                    = { git = "https://github.com/megarocklabs/cw-extra", package = "cw83" }
@@ -38,6 +39,7 @@ cw721-base              = "0.18.0"
 cw82-base               = { path = "contracts/cw82-base" }
 cw83-base               = { path = "contracts/cw83-base" }
 cw-tba                  = { path = "packages/cw-tba"     }
+
 
 
 
