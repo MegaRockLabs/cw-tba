@@ -4,13 +4,11 @@ use cosmwasm_std::{
 use cw_ownable::{assert_owner, initialize_owner, is_owner};
 use cw_tba::{query_tokens, verify_nft_ownership};
 use crate::{
-    error::ContractError, 
-    utils::{is_ok_cosmos_msg, assert_status, assert_registry}, 
-    state::{KNOWN_TOKENS, PUBKEY, STATUS, MINT_CACHE, TOKEN_INFO, REGISTRY_ADDRESS, SERIAL}, 
-    msg::Status, 
+    error::ContractError, msg::Status, state::{CREDENTIALS, KNOWN_TOKENS, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, VERIFYING_CRED_ID}, utils::{assert_registry, assert_status, is_ok_cosmos_msg} 
 };
 
 pub const MINT_REPLY_ID: u64 = 1;
+
 
 pub fn try_executing(
     deps: Deps,
@@ -101,7 +99,6 @@ pub fn try_updating_ownership(
     assert_registry(deps.storage, &sender)?;
     initialize_owner(deps.storage, deps.api, Some(&new_owner))?;
     if new_pubkey.is_some() {
-        PUBKEY.save(deps.storage, &new_pubkey.unwrap())?;
         STATUS.save(deps.storage, &Status { frozen: false })?;
     }
     Ok(Response::default()
@@ -118,7 +115,7 @@ pub fn try_changing_pubkey(
 ) -> Result<Response, ContractError> {
     assert_owner(deps.storage, &sender)?;
     assert_status(deps.storage)?;
-    PUBKEY.save(deps.storage, &pubkey)?;
+    //VERIFYING_CREDENTIAL.save(store, data)
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "change_pubkey"),
@@ -281,7 +278,8 @@ pub fn try_purging(
     MINT_CACHE.remove(deps.storage);
     TOKEN_INFO.remove(deps.storage);
     SERIAL.remove(deps.storage);
-    PUBKEY.remove(deps.storage);
+    CREDENTIALS.clear(deps.storage);
+    VERIFYING_CRED_ID.remove(deps.storage);
     STATUS.remove(deps.storage);
     Ok(Response::default()
         .add_attribute("action", "purge")

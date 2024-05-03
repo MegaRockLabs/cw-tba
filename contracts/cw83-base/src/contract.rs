@@ -103,8 +103,9 @@ pub fn execute(deps: DepsMut, env : Env, info : MessageInfo, msg : ExecuteMsg)
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, _ : Env, msg : Reply) 
 -> Result<Response, ContractError> {
-
+    
     if msg.id == CREATE_ACCOUNT_REPLY_ID {
+
         let res = cw_utils::parse_reply_instantiate_data(msg)?;
 
         let addr = res.contract_address;

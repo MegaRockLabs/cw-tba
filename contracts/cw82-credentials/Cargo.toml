@@ -15,7 +15,6 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
@@ -38,5 +37,4 @@ cw721           = { workspace = true }
 cw721-base      = { workspace = true }
 
 cw-tba          = { workspace = true }
-
 saa             = { workspace = true }

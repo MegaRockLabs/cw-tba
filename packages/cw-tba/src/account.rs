@@ -25,12 +25,12 @@ pub struct MigrateAccountMsg<T = Empty> {
 
 
 #[cw_serde]
-pub enum ExecuteAccountMsg<T = Binary> {
+pub enum ExecuteAccountMsg<T = Empty, A = Binary> {
     /// Proxy method for executing cosmos messages
     /// Wasm and Stargate messages aren't supported
     /// Only the current holder can execute this method
     Execute { 
-        msgs: Vec<CosmosMsg> 
+        msgs: Vec<CosmosMsg<T>> 
     },
     /// Mint NFTs directly from token account
     MintToken { 
@@ -82,13 +82,13 @@ pub enum ExecuteAccountMsg<T = Binary> {
         /// Current NFT holder
         new_owner: String, 
         /// New account data
-        new_account_data: Option<T> 
+        new_account_data: Option<A> 
     },
 
     /// Owner only method to update account data
     UpdateAccountData { 
         /// New account data
-        new_account_data: T 
+        new_account_data: A 
     },
 
     /// Registering a token as known on receiving

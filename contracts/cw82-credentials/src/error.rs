@@ -1,6 +1,7 @@
 use cosmwasm_std::StdError;
 use cw_ownable::OwnershipError;
 use cw_utils::ParseReplyError;
+use saa::AuthError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -13,6 +14,12 @@ pub enum ContractError {
 
     #[error("{0}")]
     Parse(#[from] ParseReplyError),
+
+    #[error("{0}")]
+    Auth(#[from] AuthError),
+
+    #[error("Invalid Payload: {0}")]
+    Payload(String),
 
     #[error("Unauthorized")]
     Unauthorized {},

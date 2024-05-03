@@ -5,4 +5,3 @@ pub mod registry;
 pub mod query;
 pub mod error;
 mod state;
-mod utils;

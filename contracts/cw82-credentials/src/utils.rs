@@ -1,9 +1,12 @@
-use cosmwasm_std::{Addr, StdResult, StdError, WasmMsg, Storage, QuerierWrapper, CosmosMsg};
+use cosmwasm_std::{from_json, to_json_binary, Addr, Binary, CosmosMsg, Deps, QuerierWrapper, StdError, StdResult, Storage, WasmMsg};
+use saa::{ensure, CosmosArbitrary, Credential, CredentialId, Ed25519, EvmCredential, Secp256k1};
+use std::collections::HashSet;
 
 
-use crate::{error::ContractError, state::{STATUS, REGISTRY_ADDRESS}};
+use crate::{error::ContractError, msg::{ValidSignaturePayload, ValidSignaturesPayload}, state::{CredentialInfo, CREDENTIALS, REGISTRY_ADDRESS, STATUS, VERIFYING_CRED_ID}};
 
-pub const HRP: &str = "stars";
+
+const ONLY_ONE_ERR : &str = "Only one of the 'address' or 'hrp' can be provided";
 
 
 pub fn assert_status(
@@ -80,10 +83,223 @@ pub fn is_registry(
 
 
 
-pub fn generate_amino_transaction_string(signer: &str, data: &str) -> String {
-    format!(
-        "{{\"account_number\":\"0\",\"chain_id\":\"\",\"fee\":{{\"amount\":[],\"gas\":\"0\"}},\"memo\":\"\",\"msgs\":[{{\"type\":\"sign/MsgSignData\",\"value\":{{\"data\":\"{}\",\"signer\":\"{}\"}}}}],\"sequence\":\"0\"}}", 
-        data, signer
+fn validate_payload(
+    storage: &dyn Storage,
+    payload: &ValidSignaturePayload,
+) -> StdResult<()> {
+    
+    if payload.hrp.is_some() {
+        ensure!(payload.address.is_none(), StdError::generic_err(ONLY_ONE_ERR));
+    }
+    
+    if payload.address.is_some() {
+        ensure!(payload.hrp.is_none(), StdError::generic_err(ONLY_ONE_ERR));
+    }
+
+    if payload.credential_id.is_some() {
+
+        let info_res = CREDENTIALS.load(
+            storage, 
+            payload.credential_id.clone().unwrap()
+        );
+
+        ensure!(
+            info_res.is_ok(),
+            StdError::generic_err("Credential not found")
+        );
+
+
+        if payload.hrp.is_some() {
+            ensure!(
+                info_res.unwrap().name == "cosmos-arbitrary",
+                StdError::generic_err("hrp can only be used with cosmos-arbitrary")
+            );
+        }
+    }
+
+    Ok(())
+}
+
+
+pub fn validate_multi_payload(
+    storage:  &dyn Storage,
+    payload: &ValidSignaturesPayload
+) -> StdResult<()> {
+
+    match payload {
+        ValidSignaturesPayload::Generic(p) => {
+            validate_payload(storage, p)?;
+        },
+        ValidSignaturesPayload::Multiple(p) => {
+            let count = p.len();
+            ensure!(count < 255, StdError::generic_err("Too many payloads"));
+            let mut indeces : HashSet<u8> = HashSet::with_capacity(count);
+            p
+                .iter()
+                .map(|p| {
+                    if p.is_none() {
+                        return Ok(());
+                    }
+                    let p = p.clone().unwrap();
+                    ensure!(p.index < 255 && p.index < count as u8, StdError::generic_err("Invalid index"));
+                    let inserted = indeces.insert(p.index);
+                    ensure!(!inserted, StdError::generic_err("Duplicate index"));
+                    validate_payload(storage, &p.payload)
+                })
+                .collect::<StdResult<Vec<()>>>()?;
+
+            // at least one must be specified
+            ensure!(indeces.len() > 0, StdError::generic_err("No valid payloads"));
+        }
+    }
+    Ok(())
+}
+
+
+
+fn get_verifying_credential_tuple(
+    storage  : &dyn Storage,
+    payload  : &Option<ValidSignaturePayload>,
+    validate : bool
+) -> StdResult<(CredentialId, CredentialInfo)> {
+    let id = match payload {
+        Some(payload) => {
+            if validate {
+                validate_payload(storage, &payload)?;
+            }
+            payload.credential_id.clone().unwrap_or(
+                VERIFYING_CRED_ID.load(storage)?
+            )
+        },
+        None => {
+            VERIFYING_CRED_ID.load(storage)?
+        }
+    };
+    let info = CREDENTIALS.load(storage, id.clone())?;
+    Ok((id, info))
+}
+
+
+
+fn get_credential_from_args(
+    id          : CredentialId,
+    info        : CredentialInfo,
+    data        : Binary,
+    signature   : Binary,
+    payload     : &Option<ValidSignaturePayload>
+) -> StdResult<Credential> {
+    
+    let credential = match info.name.as_str() {
+        "evm" => {
+            let signer = match payload {
+                Some(payload) => {
+                    ensure!(
+                        payload.hrp.is_none(),
+                        StdError::generic_err("Cannot use 'hrp' with EVM credentials")
+                    );
+                    match payload.address.as_ref() {
+                        Some(address) => {
+                            to_json_binary(address)?.0
+                        },
+                        None => id
+                    }
+                },
+                None => id
+            };
+            Credential::Evm(EvmCredential {
+                message: data.into(),
+                signature: signature.into(),
+                signer,
+            })
+        }
+        "cosmos-arbitrary" => {
+            Credential::CosmosArbitrary(CosmosArbitrary {
+                pubkey: id,
+                message: data.into(),
+                signature: signature.into(),
+                hrp: payload.clone().map(|p| p.hrp).unwrap_or(info.hrp)
+            })
+        }
+        "ed25519" => {
+            Credential::Ed25519(Ed25519 {
+                pubkey: id,
+                message: data.into(),
+                signature: signature.into()
+            })
+        },
+        "secp256k1" => {
+            Credential::Secp256k1(Secp256k1 {
+                pubkey: id,
+                message: data.into(),
+                signature: signature.into()
+            })
+        },
+        _ => {
+            return Err(StdError::generic_err("Unsupported credential type"));
+        }
+    };
+
+    Ok(credential)
+}
+
+
+
+pub fn get_verifying_credential(
+    deps        : Deps,
+    data        : Binary,
+    signature   : Binary,
+    payload     : &Option<Binary>,
+) -> StdResult<Credential> {
+
+    let payload = match payload {
+        Some(payload) => Some(from_json(payload)?),
+        None => None
+    };
+
+    let (id, info) = get_verifying_credential_tuple(deps.storage, &payload, true)?;
+
+    get_credential_from_args(
+        id, 
+        info, 
+        data, 
+        signature, 
+        &payload
     )
 }
 
+
+pub fn get_verifying_indexed_credential(
+    deps        : Deps,
+    data        : Binary,
+    signature   : Binary,
+    index       : usize,
+    payload     : &Option<ValidSignaturesPayload>,
+) -> StdResult<Credential> {
+
+    let payload = match payload {
+        Some(payload) => {
+            let payload = match payload {
+                ValidSignaturesPayload::Generic(p) => {
+                    Some(p.clone())
+                },
+                ValidSignaturesPayload::Multiple(p) => {
+                    p.get(index).map(|op| 
+                        op.clone().map(|ip| ip.payload)
+                    ).flatten()
+                }
+            };
+            payload
+        }
+        None => None
+    };
+
+    let (id, info) = get_verifying_credential_tuple(deps.storage, &payload, true)?;
+
+    get_credential_from_args(
+        id, 
+        info,
+        data, 
+        signature, 
+        &payload
+    )
+}

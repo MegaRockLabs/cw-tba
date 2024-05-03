@@ -1,13 +1,16 @@
-use cosmwasm_std::{StdResult, Deps, Binary, CosmosMsg, Order, Env, from_json};
+use cosmwasm_std::{from_json, Binary, CosmosMsg, Deps, Env, Order, StdError, StdResult};
 use cw82::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
-use k256::sha2::{Digest, Sha256};
 use cw_ownable::is_owner;
 use cw_tba::TokenInfo;
+use saa::{ensure, Verifiable};
+
 
 use crate::{
-    state::{PUBKEY, KNOWN_TOKENS, TOKEN_INFO, STATUS, REGISTRY_ADDRESS}, 
-    utils::{generate_amino_transaction_string, is_ok_cosmos_msg, status_ok, assert_status}, 
-    msg::{AssetsResponse, FullInfoResponse}
+    msg::{AssetsResponse, FullInfoResponse, ValidSignaturesPayload}, 
+    state::{KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO}, 
+    utils::{
+        get_verifying_credential, get_verifying_indexed_credential, is_ok_cosmos_msg, status_ok, validate_multi_payload
+    }
 };
 
 
@@ -15,9 +18,9 @@ const DEFAULT_BATCH_SIZE : u32 = 100;
 
 
 pub fn can_execute(
-    deps: Deps,
-    sender: String,
-    msg: &CosmosMsg
+    deps    : Deps,
+    sender  : String,
+    msg     : &CosmosMsg
 ) -> StdResult<CanExecuteResponse> {
 
     let cant = CanExecuteResponse { can_execute: false };
@@ -35,66 +38,72 @@ pub fn can_execute(
 
 
 pub fn valid_signature(
-    deps: Deps,
-    data: Binary,
-    signature: Binary,
-    payload: &Option<Binary>
+    deps        : Deps,
+    data        : Binary,
+    signature   : Binary,
+    payload     : Option<Binary>
 ) -> StdResult<ValidSignatureResponse> {
-    let pk: Binary = PUBKEY.load(deps.storage)?;
-    let owner = cw_ownable::get_ownership(deps.storage)?;
 
-    let address = match payload {
-        Some(payload) => from_json(payload)?,
-        None => owner.owner.unwrap().to_string()
+    let is_valid = if status_ok(deps.storage) {
+        let credential = get_verifying_credential(deps, data, signature, &payload)?;
+        credential.verify().is_ok()
+    } else {
+        false
     };
 
     Ok(ValidSignatureResponse {
-        is_valid: match assert_status(deps.storage)? {
-            true => verify_arbitrary(
-                deps,
-                &address,
-                data,
-                signature,
-                &pk
-            )?,
-            false => false
-        }
+        is_valid
     })
 }
 
 
 pub fn valid_signatures(
-    deps: Deps,
-    data: Vec<Binary>,
-    signatures: Vec<Binary>,
-    payload: &Option<Binary>
+    deps        : Deps,
+    data        : Vec<Binary>,
+    signatures  : Vec<Binary>,
+    payload     : Option<Binary>
 ) -> StdResult<ValidSignaturesResponse> {
-
-    let status_ok = assert_status(deps.storage)?;
-
-    let pk: Binary = PUBKEY.load(deps.storage)?;
-    let owner = cw_ownable::get_ownership(deps.storage)?;
-
-    let address = match payload {
-        Some(payload) => from_json(payload)?,
-        None => owner.owner.unwrap().to_string()
+    
+    if !status_ok(deps.storage) { 
+        return Ok(ValidSignaturesResponse { 
+            are_valid: vec![false, data.len() > 1] 
+        }) 
     };
 
+    ensure!(
+        data.len() == signatures.len(), 
+        StdError::generic_err("Data and signatures must be of equal length")
+    );
+
+
+    let payload = if payload.is_some() {
+        let payload = from_json::<ValidSignaturesPayload>(payload.unwrap())?;
+        validate_multi_payload(deps.storage, &payload)?;
+        Some(payload)
+    } else { 
+        None
+    };
+
+    
     let are_valid : Vec<bool> = signatures
         .into_iter()
         .enumerate()
-        .map(|(i, signature)| {
-            if !status_ok { return false };
-            let data = data.get(i).unwrap().clone();
-            verify_arbitrary(
-                deps,
-                &address,
-                data,
-                signature,
-                &pk
-            ).unwrap_or(false)
+        .map(|(index, signature)| {
+            let data = data[index].clone();
+            let credential_res = get_verifying_indexed_credential(
+                deps, 
+                data, 
+                signature, 
+                index,
+                &payload
+            );
+            if credential_res.is_err() {
+                return false;
+            }
+            credential_res.unwrap().verify().is_ok()
         })
         .collect(); 
+
     
     Ok(ValidSignaturesResponse {
         are_valid
@@ -102,28 +111,7 @@ pub fn valid_signatures(
 }
 
 
-pub fn verify_arbitrary(
-    deps: Deps,
-    account_addr: &str,
-    data: Binary,
-    signature: Binary,
-    pubkey: &[u8],
-) -> StdResult<bool> {
 
-    let digest = Sha256::new_with_prefix(
-        generate_amino_transaction_string(
-        account_addr,
-        from_json::<String>(&data)?.as_str(),
-    )).finalize();
-
-    deps.api.secp256k1_verify(
-        &digest, 
-        &signature, 
-        pubkey
-    )?;
-
-    Ok(true)
-}
 
 
 pub fn assets(
@@ -167,7 +155,6 @@ pub fn known_tokens(
         Ok(TokenInfo { collection: kp.0, id: kp.1 })
     })
     .collect();
-
     tokens
 }
 
@@ -188,7 +175,6 @@ pub fn full_info(
         tokens,
         ownership,
         registry:   REGISTRY_ADDRESS.load(deps.storage)?,
-        pubkey:     PUBKEY.load(deps.storage)?,
         token_info: TOKEN_INFO.load(deps.storage)?,
         status:     STATUS.load(deps.storage)?
     })

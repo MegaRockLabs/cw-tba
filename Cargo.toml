@@ -13,11 +13,11 @@ repository = ""
 
 
 [workspace.dependencies]
-cosmwasm-std         = { version = "1.4.1", default-features = false }
+cosmwasm-std         = { version = "1.5.4",  features = ["staking", "stargate" ] }
 cosmwasm-schema      = "1.5.4"
-cw-storage-plus      = "1.2.0"
+cw-storage-plus      = "0.16.0"
 
-k256                 = { version = "0.13.3", default-features = false, features = ["ecdsa"] }
+k256                 = { version = "0.13.1", default-features = false, features = ["ecdsa"] }
 sha2                 = { version = "0.10.2", default-features = false }
 
 schemars                = "0.8.15"

@@ -66,7 +66,6 @@ pub fn instantiate(deps: DepsMut, _ : Env, info : MessageInfo, msg : Instantiate
     REGISTRY_ADDRESS.save(deps.storage, &info.sender.to_string())?;
     STATUS.save(deps.storage, &Status { frozen: false })?;
     PUBKEY.save(deps.storage, &msg.account_data)?;
-
     SERIAL.save(deps.storage, &0u128)?;
     Ok(Response::default())
 }
@@ -76,7 +75,7 @@ pub fn instantiate(deps: DepsMut, _ : Env, info : MessageInfo, msg : Instantiate
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(deps: DepsMut, env : Env, info : MessageInfo, msg : ExecuteMsg) 
 -> Result<Response, ContractError> {
-    if !REGISTRY_ADDRESS.exists(deps.storage) {
+    if REGISTRY_ADDRESS.load(deps.storage).is_err() {
         return Err(ContractError::Deleted {})
     }
     SERIAL.update(deps.storage, |s| Ok::<u128, StdError>((s + 1) % u128::MAX))?;
@@ -132,7 +131,7 @@ pub fn execute(deps: DepsMut, env : Env, info : MessageInfo, msg : ExecuteMsg)
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env : Env, msg: QueryMsg) -> StdResult<Binary> {
-    if !REGISTRY_ADDRESS.exists(deps.storage) {
+    if REGISTRY_ADDRESS.load(deps.storage).is_err() {
         return Err(StdError::GenericErr { 
             msg: ContractError::Deleted {}.to_string() 
         })

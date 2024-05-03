@@ -11,3 +11,7 @@ pub use common::*;
 pub use cosmwasm_std;
 pub use cosmwasm_schema;
 pub use cw721;
+
+
+use cw83::CreateAccountMsg as CreateAccountMsgBase;
+pub type CreateAccountMsg = CreateAccountMsgBase<TokenAccount>;

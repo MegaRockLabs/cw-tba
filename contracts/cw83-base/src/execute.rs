@@ -1,17 +1,6 @@
 use cosmwasm_schema::serde::Serialize;
 use cosmwasm_std::{
-    Env, 
-    Binary, 
-    Response,
-    CosmosMsg,
-    DepsMut, 
-    Coin, 
-    SubMsg, 
-    ReplyOn, 
-    WasmMsg, 
-    Addr,
-    MessageInfo, 
-    to_json_binary, 
+    to_json_binary, Addr, Binary, Coin, CosmosMsg, DepsMut, Empty, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg 
 };
 
 use cw83::CREATE_ACCOUNT_REPLY_ID;
@@ -121,7 +110,7 @@ pub fn update_account_owner(
         deps.storage, 
         (token_info.collection.as_str(), token_info.id.as_str())
     )?;
-    let msg = ExecuteAccountMsg::UpdateOwnership { 
+    let msg = ExecuteAccountMsg::<Empty>::UpdateOwnership { 
         new_owner: owner.to_string(), 
         new_account_data
     };

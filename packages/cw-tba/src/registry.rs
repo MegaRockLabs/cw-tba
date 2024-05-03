@@ -14,7 +14,7 @@ pub struct RegistryParams<T = Empty> {
 
 /// An extenstion for [cw83::CreateAccountMsg]
 #[cw_serde]
-pub struct CreateAccountPayload<T = Binary> 
+pub struct TokenAccount<T = Binary> 
 where T: Serialize
 {
     /// Non-Fungible Token Info that the created account will be linked to 

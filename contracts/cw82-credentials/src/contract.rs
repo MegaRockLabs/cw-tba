@@ -1,33 +1,18 @@
 use cosmwasm_std::{
     Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Response, Reply, StdError, to_json_binary,
 };
-use cw_ownable::{get_ownership, initialize_owner};
+use cw_ownable::get_ownership;
 
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 
 use crate::{
-    state::{REGISTRY_ADDRESS, TOKEN_INFO, PUBKEY, STATUS, MINT_CACHE, SERIAL}, 
-    msg::{QueryMsg, InstantiateMsg, ExecuteMsg, Status, MigrateMsg}, 
-    error::ContractError, 
-    query::{can_execute, valid_signature, valid_signatures, known_tokens, assets, full_info}, 
-    execute::{
-        try_executing, 
-        try_updating_ownership, 
-        try_updating_known_tokens, 
-        try_forgeting_tokens, 
-        try_updating_known_on_receive, 
-        try_transfering_token, 
-        try_sending_token, 
-        try_freezing, 
-        try_unfreezing, 
-        try_changing_pubkey, 
-        try_minting_token, 
-        try_purging,
-        MINT_REPLY_ID
-    }, 
+    error::ContractError, execute::{
+        try_changing_pubkey, try_executing, try_forgeting_tokens, try_freezing, try_minting_token, try_purging, try_sending_token, try_transfering_token, try_unfreezing, try_updating_known_on_receive, try_updating_known_tokens, try_updating_ownership, MINT_REPLY_ID
+    }, msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Status}, query::{assets, can_execute, full_info, known_tokens, valid_signature, valid_signatures}, state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO} 
 };
+
 
 #[cfg(target_arch = "wasm32")]
 use crate::utils::query_if_registry;
@@ -37,7 +22,7 @@ pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn instantiate(deps: DepsMut, _ : Env, info : MessageInfo, msg : InstantiateMsg) 
+pub fn instantiate(deps: DepsMut, env : Env, info : MessageInfo, msg : InstantiateMsg) 
 -> Result<Response, ContractError> {
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     cw22::set_contract_supported_interface(
@@ -61,13 +46,13 @@ pub fn instantiate(deps: DepsMut, _ : Env, info : MessageInfo, msg : Instantiate
     if !query_if_registry(&deps.querier, info.sender.clone())? {
         return Err(ContractError::Unauthorized {})
     };
-    initialize_owner(deps.storage, deps.api, Some(msg.owner.as_str()))?;
     TOKEN_INFO.save(deps.storage, &msg.token_info)?;
     REGISTRY_ADDRESS.save(deps.storage, &info.sender.to_string())?;
     STATUS.save(deps.storage, &Status { frozen: false })?;
-    PUBKEY.save(deps.storage, &msg.account_data)?;
-
     SERIAL.save(deps.storage, &0u128)?;
+    
+    save_credentials(deps, env, info, msg.account_data, msg.owner)?;
+
     Ok(Response::default())
 }
 
@@ -76,7 +61,7 @@ pub fn instantiate(deps: DepsMut, _ : Env, info : MessageInfo, msg : Instantiate
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(deps: DepsMut, env : Env, info : MessageInfo, msg : ExecuteMsg) 
 -> Result<Response, ContractError> {
-    if !REGISTRY_ADDRESS.exists(deps.storage) {
+    if REGISTRY_ADDRESS.load(deps.storage).is_err() {
         return Err(ContractError::Deleted {})
     }
     SERIAL.update(deps.storage, |s| Ok::<u128, StdError>((s + 1) % u128::MAX))?;
@@ -132,7 +117,7 @@ pub fn execute(deps: DepsMut, env : Env, info : MessageInfo, msg : ExecuteMsg)
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env : Env, msg: QueryMsg) -> StdResult<Binary> {
-    if !REGISTRY_ADDRESS.exists(deps.storage) {
+    if REGISTRY_ADDRESS.load(deps.storage).is_err() {
         return Err(StdError::GenericErr { 
             msg: ContractError::Deleted {}.to_string() 
         })
@@ -141,7 +126,6 @@ pub fn query(deps: Deps, env : Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Token {} => to_json_binary(&TOKEN_INFO.load(deps.storage)?),
         QueryMsg::Status {} => to_json_binary(&STATUS.load(deps.storage)?),
         QueryMsg::Serial {} => to_json_binary(&SERIAL.load(deps.storage)?),
-        QueryMsg::Pubkey {} => to_json_binary(&PUBKEY.load(deps.storage)?),
         QueryMsg::Registry {} => to_json_binary(&REGISTRY_ADDRESS.load(deps.storage)?),
         QueryMsg::Ownership {} => to_json_binary(&get_ownership(deps.storage)?),
         QueryMsg::CanExecute { 
@@ -152,12 +136,12 @@ pub fn query(deps: Deps, env : Env, msg: QueryMsg) -> StdResult<Binary> {
             signature, 
             data, 
             payload ,
-        } => to_json_binary(&valid_signature(deps, data, signature, &payload)?),
+        } => to_json_binary(&valid_signature(deps, data, signature, payload)?),
         QueryMsg::ValidSignatures { 
             signatures, 
             data, 
             payload 
-        } => to_json_binary(&valid_signatures(deps, data, signatures, &payload)?),
+        } => to_json_binary(&valid_signatures(deps, data, signatures, payload)?),
         QueryMsg::KnownTokens {
             skip,
             limit

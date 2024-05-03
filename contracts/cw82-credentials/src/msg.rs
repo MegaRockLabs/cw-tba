@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, Empty, Coin, Addr};
+use cosmwasm_std::{Empty, Coin, Addr};
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
 pub use cw82::{
     smart_account_query, 
@@ -8,11 +8,45 @@ pub use cw82::{
 };
 use cw_ownable::cw_ownable_query;
 use cw_tba::{TokenInfo, InstantiateAccountMsg, ExecuteAccountMsg, MigrateAccountMsg};
+use saa::{CredentialData, CredentialId};
 
 
-pub type InstantiateMsg = InstantiateAccountMsg;
+pub type InstantiateMsg = InstantiateAccountMsg<CredentialData>;
 pub type MigrateMsg = MigrateAccountMsg;
 pub type ExecuteMsg = ExecuteAccountMsg;
+
+
+#[cw_serde]
+pub struct ValidSignaturePayload {
+    pub hrp:              Option<String>,
+    pub address:          Option<String>,
+    pub credential_id:    Option<CredentialId>,
+}
+
+
+#[cw_serde]
+pub struct IndexedSignaturePayload {
+    pub payload: ValidSignaturePayload,
+    pub index: u8
+}
+
+#[cw_serde]
+pub enum ValidSignaturesPayload {
+    Generic(ValidSignaturePayload),
+    Multiple(Vec<Option<IndexedSignaturePayload>>)
+}
+
+
+impl ValidSignaturesPayload {
+    pub fn generic_credential_needed(&self) -> bool {
+        match self {
+            ValidSignaturesPayload::Generic(_) => true,
+            ValidSignaturesPayload::Multiple(p) => {
+                p.iter().any(|p| p.is_none())
+            }
+        }
+    }
+}
 
 
 
@@ -36,8 +70,6 @@ pub struct AssetsResponse {
 pub struct FullInfoResponse {
     /// Current owner of the token account that is ideally a holder of an NFT
     pub ownership: cw_ownable::Ownership<Addr>,
-    /// Public key that is used to verify signed messages
-    pub pubkey: Binary,
     /// Token info
     pub token_info: TokenInfo,
     /// Registry address
@@ -59,9 +91,6 @@ pub type KnownTokensResponse = Vec<TokenInfo>;
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsgBase <T = Empty, Q: JsonSchema = Empty> {
-    /// Public key that is used to verify signed messages
-    #[returns(Binary)]
-    Pubkey {},
 
     /// Status of the account telling whether it iz frozen
     #[returns(Status)]

@@ -1,11 +1,10 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Empty};
 use cw83::{registry_query, registry_execute, 
-    CreateAccountMsg as CreateAccountMsgBase,
     AccountQuery as AccountQueryBase,
     AccountInfoResponse as AccountInfoResponseBase,
 };
-use cw_tba::{MigrateAccountMsg, TokenInfo, RegistryParams, CreateAccountPayload};
+use cw_tba::{MigrateAccountMsg, TokenInfo, RegistryParams, CreateAccountMsg};
 
 
 
@@ -63,7 +62,6 @@ pub struct CollectionAccountsResponse {
 
 pub type AccountQuery = AccountQueryBase<TokenInfo>;
 pub type AccountInfoResponse = AccountInfoResponseBase<Empty>;
-pub type CreateAccountMsg = CreateAccountMsgBase<CreateAccountPayload>;
 
 
 
