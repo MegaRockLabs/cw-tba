@@ -137,7 +137,7 @@ pub fn execute(mut deps: DepsMut, env : Env, info : MessageInfo, msg : ExecuteMs
     match msg {
         ExecuteMsg::Execute { 
             msgs 
-        } => execute::try_executing(deps.as_ref(), info, msgs),
+        } => execute::try_executing(deps.as_ref(), env, info, msgs),
 
         ExecuteMsg::UpdateOwnership { 
             new_owner, 
@@ -159,7 +159,7 @@ pub fn execute(mut deps: DepsMut, env : Env, info : MessageInfo, msg : ExecuteMs
         ExecuteMsg::Extension { 
             msg 
         } => {
-            assert_valid_signed_actions(deps.as_ref(), &msg)?;
+            assert_valid_signed_actions(deps.as_ref(), &env, &msg)?;
             for action in msg.data.actions {
                 execute_action(deps.borrow_mut(), &env, &info, action)?;
             }
@@ -193,7 +193,7 @@ pub fn query(deps: Deps, env : Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::CanExecute { 
             sender, 
             msg 
-        } => to_json_binary(&can_execute(deps, sender, msg)?),
+        } => to_json_binary(&can_execute(deps, env, sender, msg)?),
         QueryMsg::ValidSignature { 
             signature, 
             data, 

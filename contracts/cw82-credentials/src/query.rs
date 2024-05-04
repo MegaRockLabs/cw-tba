@@ -18,6 +18,7 @@ const DEFAULT_BATCH_SIZE : u32 = 100;
 
 pub fn can_execute(
     deps    : Deps,
+    env     : Env,
     sender  : String,
     msg     : CosmosMsg<SignedCosmosMsgs>
 ) -> StdResult<CanExecuteResponse> {
@@ -29,7 +30,8 @@ pub fn can_execute(
     
     Ok(CanExecuteResponse {
         can_execute: assert_executable_msg(
-            deps, 
+            deps,
+            &env,
             sender.as_str(), 
             &msg
         ).is_ok()

@@ -39,6 +39,12 @@ pub enum ContractError {
     #[error("Deleted")]
     Deleted {},
 
+    #[error("Provided credential is expired")]
+    Expired {},
+
+    #[error("{0}")]
+    Generic(String),
+
     #[error("Semver parsing error: {0}")]
     SemVer(String),
 }

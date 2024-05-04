@@ -16,32 +16,13 @@ pub const MINT_REPLY_ID: u64 = 1;
 
 pub fn try_executing(
     deps    :   Deps,
+    env     :   Env,
     info    :   MessageInfo,
     msgs    :   Vec<CosmosMsg<SignedCosmosMsgs>>
 ) -> ContractResult {
     assert_status(deps.storage)?;
-    assert_executable_msgs(deps, info.sender.as_str(), &msgs)?;
+    assert_executable_msgs(deps, &env, info.sender.as_str(), &msgs)?;
     Ok(Response::new().add_messages(msgs))
-}
-
-
-
-pub fn try_freezing(
-    deps    :  DepsMut,
-) -> ContractResult {
-    let token =   TOKEN_INFO.load(deps.storage)?;
-    let owner      =   cw_ownable::get_ownership(deps.storage)?.owner.unwrap();
-
-    ensure!(
-        verify_nft_ownership(&deps.querier, owner.as_str(), token).is_err(),
-        ContractError::Unauthorized {}
-    );
-
-    STATUS.save(deps.storage, &Status { frozen: true })?;
-
-    Ok(Response::default()
-        .add_attribute("action", "freeze")
-    )
 }
 
 
@@ -73,6 +54,29 @@ pub fn try_updating_account_data(
 
 
 
+pub fn try_updating_ownership(
+    deps              :   DepsMut,
+    env               :   Env,
+    info              :   MessageInfo,
+    new_owner         :   String,
+    new_account_data  :   Option<CredentialData>,
+) -> ContractResult {
+    assert_registry(deps.storage, &info.sender)?;
+
+    if new_account_data.is_some() {
+        let data = new_account_data.clone().unwrap();
+        STATUS.save(deps.storage, &Status { frozen: false })?;
+        save_credentials(deps, env, info, data, new_owner.clone())?;
+    } else {
+        STATUS.save(deps.storage, &Status { frozen: true })?;
+    }
+
+    Ok(Response::default()
+        .add_attribute("action", "update_ownership")
+        .add_attribute("new_owner", new_owner.as_str())
+    )
+}
+
 
 pub fn try_updating_known_on_receive(
     deps: DepsMut,
@@ -95,25 +99,22 @@ pub fn try_updating_known_on_receive(
 
 
 
-pub fn try_updating_ownership(
-    deps              :   DepsMut,
-    env               :   Env,
-    info              :   MessageInfo,
-    new_owner         :   String,
-    new_account_data  :   Option<CredentialData>,
-) -> ContractResult {
-    assert_registry(deps.storage, &info.sender)?;
 
-    if new_account_data.is_some() {
-        STATUS.save(deps.storage, &Status { frozen: false })?;
-        save_credentials(deps, env, info, new_account_data.unwrap(), new_owner.clone())?;
-    } else {
-        STATUS.save(deps.storage, &Status { frozen: true })?;
-    }
+pub fn try_freezing(
+    deps    :  DepsMut,
+) -> ContractResult {
+    let token =   TOKEN_INFO.load(deps.storage)?;
+    let owner      =   cw_ownable::get_ownership(deps.storage)?.owner.unwrap();
+
+    ensure!(
+        verify_nft_ownership(&deps.querier, owner.as_str(), token).is_err(),
+        ContractError::Unauthorized {}
+    );
+
+    STATUS.save(deps.storage, &Status { frozen: true })?;
 
     Ok(Response::default()
-        .add_attribute("action", "update_ownership")
-        .add_attribute("new_owner", new_owner.as_str())
+        .add_attribute("action", "freeze")
     )
 }
 

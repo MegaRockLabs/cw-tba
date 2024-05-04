@@ -1,4 +1,4 @@
-use cosmwasm_std::{from_json, to_json_binary, Addr, Api, Binary, CosmosMsg, Deps, Empty, QuerierWrapper, StdError, StdResult, Storage, WasmMsg};
+use cosmwasm_std::{from_json, to_json_binary, Addr, Api, Binary, CosmosMsg, Deps, Empty, Env, QuerierWrapper, StdError, StdResult, Storage, WasmMsg};
 use cw_ownable::is_owner;
 use cw_tba::ExecuteAccountMsg;
 use saa::{
@@ -10,7 +10,7 @@ use saa::{
 use std::collections::HashSet;
 
 
-use crate::{error::ContractError, msg::{AccountActionDataToSign, AuthPayload, CosmosMsgDataToSign, SignedAccountActions, SignedCosmosMsgs, ValidSignaturesPayload}, state::{CredentialInfo, CREDENTIALS, REGISTRY_ADDRESS, STATUS, VERIFYING_CRED_ID, WITH_CALLER}};
+use crate::{error::ContractError, msg::{AccountActionDataToSign, AuthPayload, CosmosMsgDataToSign, SignedAccountActions, SignedCosmosMsgs, ValidSignaturesPayload}, state::{CredentialInfo, CREDENTIALS, REGISTRY_ADDRESS, SECS_TO_EXPIRE, STATUS, VERIFYING_CRED_ID, WITH_CALLER}};
 
 
 const ONLY_ONE_ERR : &str = "Only one of the 'address' or 'hrp' can be provided";
@@ -502,6 +502,7 @@ fn assert_valid_signed_action(
 
 pub fn assert_valid_signed_actions(
     deps      :   Deps,
+    env       :   &Env,
     signed    :   &SignedAccountActions,
 ) -> Result<(), ContractError> {
     
@@ -511,6 +512,13 @@ pub fn assert_valid_signed_actions(
         signed.signature.clone(), 
         &signed.payload
     )?;
+
+    if signed.data
+        .timestamp
+        .plus_seconds(SECS_TO_EXPIRE.load(deps.storage)?)
+        .seconds() > env.block.time.seconds() {
+        return Err(ContractError::Expired {});
+    }
 
     credential.verify()?;
 
@@ -525,6 +533,7 @@ pub fn assert_valid_signed_actions(
 
 pub fn assert_executable_msg(
     deps     :  Deps,
+    env      :  &Env,
     sender   :  &str,
     msg      :  &CosmosMsg<SignedCosmosMsgs>,
 ) -> Result<(), ContractError> {
@@ -539,8 +548,15 @@ pub fn assert_executable_msg(
                 &signed.payload
             )?;
 
-            credential.verify()?;
+            if signed.data
+                .timestamp
+                .plus_seconds(SECS_TO_EXPIRE.load(deps.storage)?)
+                .seconds() > env.block.time.seconds() {
+                return Err(ContractError::Expired {});
+            }
 
+            credential.verify()?;
+            
             signed.data.messages
                 .iter()
                 .map(|msg| assert_ok_cosmos_msg(msg))
@@ -569,6 +585,7 @@ pub fn assert_executable_msg(
 
 pub fn assert_executable_msgs(
     deps     :  Deps,
+    env      :  &Env,
     sender   :  &str,
     msgs     :  &Vec<CosmosMsg<SignedCosmosMsgs>>,
 ) -> Result<(), ContractError> {
@@ -580,7 +597,7 @@ pub fn assert_executable_msgs(
     }
 
     msgs.iter()
-        .map(|msg| assert_executable_msg(deps, sender, msg))
+        .map(|msg| assert_executable_msg(deps, env, sender, msg))
         .collect::<Result<Vec<()>, ContractError>>()?;
 
     Ok(())

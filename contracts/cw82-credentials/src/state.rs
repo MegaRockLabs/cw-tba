@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Binary, DepsMut, Env, MessageInfo};
+use cosmwasm_std::{ensure, Addr, Binary, DepsMut, Env, MessageInfo};
 use cw_ownable::initialize_owner;
 use cw_storage_plus::{Item, Map};
 use cw_tba::TokenInfo;
@@ -32,6 +32,7 @@ pub static KNOWN_TOKENS       : Map<(&str, &str), bool>           = Map::new("k"
 
 
 const DEFAULT_SECS_TO_EXPIRE : u64 = 300;
+const MIN_SECS_TO_EXPIRE     : u64 = 10;
 
 pub fn save_credentials(
     deps      :     DepsMut,
@@ -43,7 +44,14 @@ pub fn save_credentials(
 
     let with_caller = data.with_caller.unwrap_or_default();
     WITH_CALLER.save(deps.storage, &with_caller)?;
+
+    let secs_to_expire = data.secs_to_expire.unwrap_or(DEFAULT_SECS_TO_EXPIRE);
+    ensure!(
+        secs_to_expire > MIN_SECS_TO_EXPIRE, 
+        ContractError::Generic("secs_to_expire must be greater than 10".to_string())
+    );
     SECS_TO_EXPIRE.save(deps.storage, &data.secs_to_expire.unwrap_or(DEFAULT_SECS_TO_EXPIRE))?;
+
 
     let info = if with_caller {
         MessageInfo {
@@ -54,9 +62,9 @@ pub fn save_credentials(
         info.clone()
     };
 
-    
     data.verified_cosmwasm(deps.api, &env, &info)?;
     initialize_owner(deps.storage, deps.api, Some(owner.as_str()))?;
+
 
     let mut key_found = false;
 
@@ -66,6 +74,9 @@ pub fn save_credentials(
     }
 
     for cred in data.credentials.iter() {
+
+        let id: Vec<u8> = cred.value().id();
+
         if !key_found {
             match cred {
                 // doesn't have a key or anything to check the signature
@@ -74,7 +85,7 @@ pub fn save_credentials(
                 _ => {
                     VERIFYING_CRED_ID.save(
                         deps.storage, 
-                        &cred.value().id()
+                        &id
                     )?;
                     key_found = true;
                 }
@@ -89,7 +100,7 @@ pub fn save_credentials(
 
         CREDENTIALS.save(
             deps.storage, 
-            cred.value().id(),
+            id,
             &CredentialInfo {
                 name: cred.name().to_string(),
                 extra: None,
