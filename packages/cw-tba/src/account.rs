@@ -25,7 +25,7 @@ pub struct MigrateAccountMsg<T = Empty> {
 
 
 #[cw_serde]
-pub enum ExecuteAccountMsg<T = Empty, A = Binary> {
+pub enum ExecuteAccountMsg<T = Empty,  E = Option<Empty>, A = Binary> {
     /// Proxy method for executing cosmos messages
     /// Wasm and Stargate messages aren't supported
     /// Only the current holder can execute this method
@@ -101,5 +101,10 @@ pub enum ExecuteAccountMsg<T = Empty, A = Binary> {
     Unfreeze {},
 
     /// Remove all the data from the contract and make it unsuable
-    Purge {}
+    Purge {},
+
+    /// Extension
+    Extension {
+        msg: E
+    }
 }

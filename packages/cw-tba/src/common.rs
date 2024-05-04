@@ -9,23 +9,29 @@ pub struct TokenInfo {
     pub id: String
 }
 
+impl TokenInfo {
+    pub fn key_tuple(&self) -> (&str, &str) {
+        (self.collection.as_str(), &self.id.as_str())
+    }
+}
+
 
 pub fn verify_nft_ownership(
-    querier: &QuerierWrapper,
-    sender: &str,
-    token_info: TokenInfo
+    querier     :   &QuerierWrapper,
+    address     :   &str,
+    token_info  :   TokenInfo
 ) -> StdResult<()> {
 
     let owner_res = querier
             .query_wasm_smart::<cw721::OwnerOfResponse>(
                 token_info.collection, 
             &cw721::Cw721QueryMsg::OwnerOf {
-                token_id: token_info.id,
-                include_expired: None
+                    token_id: token_info.id,
+                    include_expired: None
             }
     )?;
 
-    if owner_res.owner.as_str() != sender {
+    if owner_res.owner.as_str() != address {
         return Err(StdError::generic_err("Unauthorized"));
     }
 

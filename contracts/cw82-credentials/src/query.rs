@@ -1,15 +1,14 @@
 use cosmwasm_std::{from_json, Binary, CosmosMsg, Deps, Env, Order, StdError, StdResult};
 use cw82::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
-use cw_ownable::is_owner;
-use cw_tba::TokenInfo;
 use saa::{ensure, Verifiable};
+use cw_tba::TokenInfo;
 
 
 use crate::{
-    msg::{AssetsResponse, FullInfoResponse, ValidSignaturesPayload}, 
+    msg::{AssetsResponse, FullInfoResponse, SignedCosmosMsgs, ValidSignaturesPayload}, 
     state::{KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO}, 
     utils::{
-        get_verifying_credential, get_verifying_indexed_credential, is_ok_cosmos_msg, status_ok, validate_multi_payload
+        assert_executable_msg, get_verifying_credential, get_verifying_indexed_credential, status_ok, validate_multi_payload
     }
 };
 
@@ -20,20 +19,21 @@ const DEFAULT_BATCH_SIZE : u32 = 100;
 pub fn can_execute(
     deps    : Deps,
     sender  : String,
-    msg     : &CosmosMsg
+    msg     : CosmosMsg<SignedCosmosMsgs>
 ) -> StdResult<CanExecuteResponse> {
 
-    let cant = CanExecuteResponse { can_execute: false };
 
-    if !status_ok(deps.storage) { return Ok(cant) };
-
-    let addr_validity = deps.api.addr_validate(&sender);
-    if addr_validity.is_err() { return Ok(cant) };
-
-    let res = is_owner(deps.storage, &addr_validity.unwrap());
-    if res.is_err() || res.unwrap() == false { return Ok(cant) };
-
-    Ok(CanExecuteResponse { can_execute: is_ok_cosmos_msg(msg) })
+    if !status_ok(deps.storage) { 
+        return Ok(CanExecuteResponse { can_execute: false }) 
+    };
+    
+    Ok(CanExecuteResponse {
+        can_execute: assert_executable_msg(
+            deps, 
+            sender.as_str(), 
+            &msg
+        ).is_ok()
+    })
 }
 
 
@@ -131,6 +131,7 @@ pub fn assets(
 }
 
 
+
 pub fn known_tokens(
     deps: Deps,
     skip: Option<u32>,
@@ -141,20 +142,21 @@ pub fn known_tokens(
     let limit = limit.unwrap_or(DEFAULT_BATCH_SIZE) as usize;
 
     let tokens : StdResult<Vec<TokenInfo>> = KNOWN_TOKENS
-    .keys(
-        deps.storage, 
-        None, 
-        None, 
-        Order::Ascending
-    )
-    .enumerate()
-    .filter(|(i, _)| *i >= skip)
-    .take(limit)
-    .map(|(_, kt)| {
-        let kp = kt?;
-        Ok(TokenInfo { collection: kp.0, id: kp.1 })
-    })
-    .collect();
+        .keys(
+            deps.storage, 
+            None, 
+            None, 
+            Order::Ascending
+        )
+        .enumerate()
+        .filter(|(i, _)| *i >= skip)
+        .take(limit)
+        .map(|(_, kt)| {
+            let kp = kt?;
+            Ok(TokenInfo { collection: kp.0, id: kp.1 })
+        })
+        .collect();
+
     tokens
 }
 

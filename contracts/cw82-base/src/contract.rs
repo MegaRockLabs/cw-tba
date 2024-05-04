@@ -125,6 +125,7 @@ pub fn execute(deps: DepsMut, env : Env, info : MessageInfo, msg : ExecuteMsg)
         } => try_updating_ownership(deps, info.sender, new_owner, new_account_data),
         ExecuteMsg::UpdateAccountData { new_account_data } => try_changing_pubkey(deps, info.sender, new_account_data),
         ExecuteMsg::Purge {} => try_purging(deps, info.sender),
+        ExecuteMsg::Extension { .. } => Err(ContractError::NotSupported {})
     }
 }
 

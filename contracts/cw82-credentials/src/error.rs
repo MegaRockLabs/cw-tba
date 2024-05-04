@@ -27,6 +27,15 @@ pub enum ContractError {
     #[error("Not Supported")]
     NotSupported {},
 
+    #[error("Can't derive owner from provided credentials")]
+    NotDerivable {},
+
+    #[error("Invalid signed action: {0}")]
+    BadSignedAction(String),
+
+    #[error("Account is frozen until ownership or credentials updates")]
+    Frozen {},
+
     #[error("Deleted")]
     Deleted {},
 

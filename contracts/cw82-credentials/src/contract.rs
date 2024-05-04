@@ -1,16 +1,24 @@
+use std::borrow::BorrowMut;
+
 use cosmwasm_std::{
-    Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Response, Reply, StdError, to_json_binary,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult
 };
-use cw_ownable::get_ownership;
+use cw_ownable::{get_ownership, is_owner};
 
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use cw_tba::ExecuteAccountMsg;
 
 use crate::{
-    error::ContractError, execute::{
-        try_changing_pubkey, try_executing, try_forgeting_tokens, try_freezing, try_minting_token, try_purging, try_sending_token, try_transfering_token, try_unfreezing, try_updating_known_on_receive, try_updating_known_tokens, try_updating_ownership, MINT_REPLY_ID
-    }, msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Status}, query::{assets, can_execute, full_info, known_tokens, valid_signature, valid_signatures}, state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO} 
+    action::MINT_REPLY_ID,
+    action,
+    execute, 
+    error::ContractError, 
+    msg::{ContractResult, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Status}, 
+    query::{assets, can_execute, full_info, known_tokens, valid_signature, valid_signatures}, 
+    state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER}, 
+    utils::assert_valid_signed_actions 
 };
 
 
@@ -22,8 +30,8 @@ pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn instantiate(deps: DepsMut, env : Env, info : MessageInfo, msg : InstantiateMsg) 
--> Result<Response, ContractError> {
+pub fn instantiate(deps: DepsMut, env : Env, info : MessageInfo, msg : InstantiateMsg) -> ContractResult {
+
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     cw22::set_contract_supported_interface(
         deps.storage, 
@@ -46,8 +54,10 @@ pub fn instantiate(deps: DepsMut, env : Env, info : MessageInfo, msg : Instantia
     if !query_if_registry(&deps.querier, info.sender.clone())? {
         return Err(ContractError::Unauthorized {})
     };
+    
     TOKEN_INFO.save(deps.storage, &msg.token_info)?;
     REGISTRY_ADDRESS.save(deps.storage, &info.sender.to_string())?;
+
     STATUS.save(deps.storage, &Status { frozen: false })?;
     SERIAL.save(deps.storage, &0u128)?;
     
@@ -57,60 +67,112 @@ pub fn instantiate(deps: DepsMut, env : Env, info : MessageInfo, msg : Instantia
 }
 
 
+pub fn execute_action<T, E, A>(
+    deps       :   &mut DepsMut, 
+    env        :   &Env, 
+    info       :   &MessageInfo, 
+    msg        :   ExecuteAccountMsg<T, E, A>,
+) -> ContractResult {
+    
+    type Action<T, E, A> = ExecuteAccountMsg<T, E, A>;
+
+    match msg {
+        Action::MintToken { 
+            minter: 
+            collection, 
+            msg 
+        } => action::try_minting_token(deps, info, collection, msg),
+
+        Action::TransferToken { 
+            collection, 
+            token_id, 
+            recipient 
+        } => action::try_transfering_token(deps, collection, token_id, recipient, info.funds.clone()),
+
+        Action::SendToken { 
+            collection, 
+            token_id, 
+            contract, 
+            msg 
+        } => action::try_sending_token(deps, collection, token_id, contract, msg, info.funds.clone()),
+
+        Action::UpdateKnownTokens { 
+            collection, 
+            start_after, 
+            limit 
+        } => action::try_updating_known_tokens(
+            deps, 
+            env, 
+            collection, 
+            start_after, 
+            limit
+        ),
+        Action::ForgetTokens { 
+            collection, 
+            token_ids 
+        } => action::try_forgeting_tokens(
+            deps, 
+            collection, 
+            token_ids
+        ),
+
+        Action::Freeze {} => action::try_freezing(deps),
+
+        Action::Unfreeze {} => action::try_unfreezing(deps),
+    
+        _ => Err(ContractError::NotSupported {})
+    }
+}
+
+
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(deps: DepsMut, env : Env, info : MessageInfo, msg : ExecuteMsg) 
--> Result<Response, ContractError> {
+pub fn execute(mut deps: DepsMut, env : Env, info : MessageInfo, msg : ExecuteMsg) -> ContractResult {
     if REGISTRY_ADDRESS.load(deps.storage).is_err() {
         return Err(ContractError::Deleted {})
     }
     SERIAL.update(deps.storage, |s| Ok::<u128, StdError>((s + 1) % u128::MAX))?;
 
     match msg {
-        ExecuteMsg::Execute { msgs } => try_executing(deps.as_ref(), info.sender, msgs),
-        ExecuteMsg::MintToken { 
-            minter: 
-            collection, 
-            msg 
-        } => try_minting_token(deps, info.sender, collection, msg, info.funds),
-        ExecuteMsg::TransferToken { 
-            collection, 
-            token_id, 
-            recipient 
-        } => try_transfering_token(deps, collection, token_id, recipient, info.funds),
-        ExecuteMsg::SendToken { 
-            collection, 
-            token_id, 
-            contract, 
-            msg 
-        } => try_sending_token(deps, collection, token_id, contract, msg, info.funds),
-        ExecuteMsg::UpdateKnownTokens { 
-            collection, 
-            start_after, 
-            limit 
-        } => try_updating_known_tokens(
-            deps, 
-            env, 
-            info.sender, 
-            collection, 
-            start_after, 
-            limit
-        ),
-        ExecuteMsg::Freeze {} => try_freezing(deps, info.sender),
-        ExecuteMsg::Unfreeze {} => try_unfreezing(deps),
-        ExecuteMsg::ForgetTokens { 
-            collection, 
-            token_ids 
-        } => try_forgeting_tokens(deps, info.sender, collection, token_ids),
-        ExecuteMsg::ReceiveNft(
-            msg
-        ) => try_updating_known_on_receive(deps, info.sender.to_string(), msg.token_id),
+        ExecuteMsg::Execute { 
+            msgs 
+        } => execute::try_executing(deps.as_ref(), info, msgs),
+
         ExecuteMsg::UpdateOwnership { 
             new_owner, 
             new_account_data 
-        } => try_updating_ownership(deps, info.sender, new_owner, new_account_data),
-        ExecuteMsg::UpdateAccountData { new_account_data } => try_changing_pubkey(deps, info.sender, new_account_data),
-        ExecuteMsg::Purge {} => try_purging(deps, info.sender),
+        } => execute::try_updating_ownership(deps, env, info, new_owner, new_account_data),
+
+        ExecuteMsg::UpdateAccountData { 
+            new_account_data 
+        } => execute::try_updating_account_data(deps, env, info, new_account_data),
+
+        ExecuteMsg::ReceiveNft(
+            msg
+        ) => execute::try_updating_known_on_receive(deps, info.sender.to_string(), msg.token_id),
+
+        ExecuteMsg::Purge {} => execute::try_purging(deps, info.sender),
+
+        ExecuteMsg::Freeze {} => execute::try_freezing(deps),
+
+        ExecuteMsg::Extension { 
+            msg 
+        } => {
+            assert_valid_signed_actions(deps.as_ref(), &msg)?;
+            for action in msg.data.actions {
+                execute_action(deps.borrow_mut(), &env, &info, action)?;
+            }
+            Ok(Response::default())
+        },
+
+        _ => {
+            if WITH_CALLER.load(deps.storage)? && is_owner(deps.storage, &info.sender)? {
+                execute_action(deps.borrow_mut(), &env, &info, msg)
+            } else {
+                Err(ContractError::Unauthorized {})
+            }
+        }
     }
 }
 
@@ -131,7 +193,7 @@ pub fn query(deps: Deps, env : Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::CanExecute { 
             sender, 
             msg 
-        } => to_json_binary(&can_execute(deps, sender, &msg)?),
+        } => to_json_binary(&can_execute(deps, sender, msg)?),
         QueryMsg::ValidSignature { 
             signature, 
             data, 
@@ -156,29 +218,28 @@ pub fn query(deps: Deps, env : Env, msg: QueryMsg) -> StdResult<Binary> {
         } => to_json_binary(&full_info(deps, env, skip, limit)?),
         QueryMsg::Extension { 
             .. 
-        } => Ok(Binary::default())
+        } => to_json_binary(&String::from("signed_cosmos_msgs"))
     }
 }
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _: Env, _: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(deps: DepsMut, _: Env, _: MigrateMsg) -> ContractResult {
     STATUS.save(deps.storage, &Status { frozen: false })?;
     Ok(Response::default())
 }
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(mut deps: DepsMut, env: Env, msg: Reply) -> ContractResult {
     match msg.id {
         MINT_REPLY_ID => {
             let collection = MINT_CACHE.load(deps.storage)?;
             MINT_CACHE.remove(deps.storage);
             // query all the held tokens for the collection stored in CACHE
-            try_updating_known_tokens(
-                deps, 
-                env.clone(), 
-                env.contract.address, 
+            action::try_updating_known_tokens(
+                deps.borrow_mut(), 
+                &env, 
                 collection.to_string(), 
                 None, 
                 None

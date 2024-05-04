@@ -37,9 +37,9 @@ cw22                    = { git = "https://github.com/aura-nw/cw-plus",       pa
 cw721                   = "0.18.0"
 cw721-base              = "0.18.0"
 cw82-base               = { path = "contracts/cw82-base" }
+cw82-credentials        = { path = "contracts/cw82-credentials" }
 cw83-base               = { path = "contracts/cw83-base" }
 cw-tba                  = { path = "packages/cw-tba"     }
-
 
 
 

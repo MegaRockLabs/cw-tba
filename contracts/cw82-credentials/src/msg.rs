@@ -1,4 +1,4 @@
-use cosmwasm_std::{Empty, Coin, Addr};
+use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg, CustomMsg, Empty, Response, Timestamp};
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
 pub use cw82::{
     smart_account_query, 
@@ -10,14 +10,12 @@ use cw_ownable::cw_ownable_query;
 use cw_tba::{TokenInfo, InstantiateAccountMsg, ExecuteAccountMsg, MigrateAccountMsg};
 use saa::{CredentialData, CredentialId};
 
+use crate::error::ContractError;
 
-pub type InstantiateMsg = InstantiateAccountMsg<CredentialData>;
-pub type MigrateMsg = MigrateAccountMsg;
-pub type ExecuteMsg = ExecuteAccountMsg;
 
 
 #[cw_serde]
-pub struct ValidSignaturePayload {
+pub struct AuthPayload {
     pub hrp:              Option<String>,
     pub address:          Option<String>,
     pub credential_id:    Option<CredentialId>,
@@ -25,28 +23,51 @@ pub struct ValidSignaturePayload {
 
 
 #[cw_serde]
-pub struct IndexedSignaturePayload {
-    pub payload: ValidSignaturePayload,
+pub struct IndexedAuthPayload {
+    pub payload: AuthPayload,
     pub index: u8
 }
 
+
 #[cw_serde]
 pub enum ValidSignaturesPayload {
-    Generic(ValidSignaturePayload),
-    Multiple(Vec<Option<IndexedSignaturePayload>>)
+    Generic(AuthPayload),
+    Multiple(Vec<Option<IndexedAuthPayload>>)
 }
 
 
-impl ValidSignaturesPayload {
-    pub fn generic_credential_needed(&self) -> bool {
-        match self {
-            ValidSignaturesPayload::Generic(_) => true,
-            ValidSignaturesPayload::Multiple(p) => {
-                p.iter().any(|p| p.is_none())
-            }
-        }
-    }
+#[cw_serde]
+pub struct CosmosMsgDataToSign {
+    pub messages   :  Vec<CosmosMsg<Empty>>,
+    pub chain_id   :  String,
+    pub timestamp  :  Timestamp
 }
+
+impl CustomMsg for CosmosMsgDataToSign {}
+
+
+#[cw_serde]
+pub struct AccountActionDataToSign {
+    pub actions    :  Vec<ExecuteAccountMsg>,
+    pub chain_id   :  String,
+    pub timestamp  :  Timestamp
+}
+
+
+#[cw_serde]
+pub struct SignedCosmosMsgs {
+    pub data        : CosmosMsgDataToSign,
+    pub payload     : Option<AuthPayload>,
+    pub signature   : Binary,
+}
+
+#[cw_serde]
+pub struct SignedAccountActions {
+    pub data        : AccountActionDataToSign,
+    pub payload     : Option<AuthPayload>,
+    pub signature   : Binary,
+}
+
 
 
 
@@ -86,11 +107,12 @@ pub struct FullInfoResponse {
 pub type KnownTokensResponse = Vec<TokenInfo>;
 
 
+
 #[smart_account_query]
 #[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsgBase <T = Empty, Q: JsonSchema = Empty> {
+pub enum QueryMsgBase <T = SignedCosmosMsgs, Q: JsonSchema = Empty> {
 
     /// Status of the account telling whether it iz frozen
     #[returns(Status)]
@@ -135,4 +157,13 @@ pub enum QueryMsgBase <T = Empty, Q: JsonSchema = Empty> {
 
 /// [TokenInfo] is used as a to query the account info
 /// so no need to return any additional data
-pub type QueryMsg = QueryMsgBase<Empty, Empty>;
+
+
+
+pub type ContractResponse = Response::<SignedCosmosMsgs>;
+pub type ContractResult = Result<ContractResponse, ContractError>;
+
+pub type InstantiateMsg = InstantiateAccountMsg<CredentialData>;
+pub type ExecuteMsg = ExecuteAccountMsg<SignedCosmosMsgs, SignedAccountActions, CredentialData>;
+pub type QueryMsg = QueryMsgBase<SignedCosmosMsgs, Empty>;
+pub type MigrateMsg = MigrateAccountMsg;

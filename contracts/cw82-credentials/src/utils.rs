@@ -1,9 +1,16 @@
-use cosmwasm_std::{from_json, to_json_binary, Addr, Binary, CosmosMsg, Deps, QuerierWrapper, StdError, StdResult, Storage, WasmMsg};
-use saa::{ensure, CosmosArbitrary, Credential, CredentialId, Ed25519, EvmCredential, Secp256k1};
+use cosmwasm_std::{from_json, to_json_binary, Addr, Api, Binary, CosmosMsg, Deps, Empty, QuerierWrapper, StdError, StdResult, Storage, WasmMsg};
+use cw_ownable::is_owner;
+use cw_tba::ExecuteAccountMsg;
+use saa::{
+    cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, 
+    hashes::sha256, ensure, 
+    Caller, CosmosArbitrary, Credential, CredentialData, CredentialId, Ed25519, EvmCredential, Secp256k1,
+    Verifiable
+};
 use std::collections::HashSet;
 
 
-use crate::{error::ContractError, msg::{ValidSignaturePayload, ValidSignaturesPayload}, state::{CredentialInfo, CREDENTIALS, REGISTRY_ADDRESS, STATUS, VERIFYING_CRED_ID}};
+use crate::{error::ContractError, msg::{AccountActionDataToSign, AuthPayload, CosmosMsgDataToSign, SignedAccountActions, SignedCosmosMsgs, ValidSignaturesPayload}, state::{CredentialInfo, CREDENTIALS, REGISTRY_ADDRESS, STATUS, VERIFYING_CRED_ID, WITH_CALLER}};
 
 
 const ONLY_ONE_ERR : &str = "Only one of the 'address' or 'hrp' can be provided";
@@ -13,8 +20,10 @@ pub fn assert_status(
     store: &dyn Storage
 ) -> StdResult<bool>{
     let status = STATUS.load(store)?;
-    Ok(!status.frozen)
+    ensure!(!status.frozen, StdError::GenericErr { msg: ContractError::Frozen {}.to_string() });
+    Ok(true)
 }   
+
 
 pub fn status_ok(
     store: &dyn Storage
@@ -28,15 +37,14 @@ pub fn assert_ok_wasm_msg(
 ) -> StdResult<()> {
     let bad_wasm_error  = StdError::GenericErr { msg: "Not Supported".into() };
     match msg {
-        // todo: add whitelististed messages
         WasmMsg::Execute { .. } => Err(bad_wasm_error),
         _ => Err(bad_wasm_error)
     }
 }
 
 
-pub fn assert_ok_cosmos_msg(
-    msg: &CosmosMsg
+pub fn assert_ok_cosmos_custom_msg(
+    msg: &CosmosMsg<SignedCosmosMsgs>
 ) -> StdResult<()> {
     let bad_msg_error = StdError::GenericErr { msg: "Not Supported".into() };
     match msg {
@@ -46,11 +54,32 @@ pub fn assert_ok_cosmos_msg(
     }
 }
 
+pub fn is_ok_cosmos_custom_msg(
+    msg: &CosmosMsg<SignedCosmosMsgs>
+) -> bool {
+    assert_ok_cosmos_custom_msg(msg).is_ok()
+}
+
+
+pub fn assert_ok_cosmos_msg(
+    msg: &CosmosMsg<Empty>
+) -> StdResult<()> {
+    let bad_msg_error = StdError::GenericErr { msg: "Not Supported".into() };
+    match msg {
+        CosmosMsg::Wasm(msg) => assert_ok_wasm_msg(msg),
+        CosmosMsg::Stargate { .. } => Err(bad_msg_error),
+        _ => Ok(())
+    }
+}
+
+
+
 pub fn is_ok_cosmos_msg(
-    msg: &CosmosMsg
+    msg: &CosmosMsg<Empty>
 ) -> bool {
     assert_ok_cosmos_msg(msg).is_ok()
 }
+
 
 
 pub fn query_if_registry(
@@ -66,7 +95,7 @@ pub fn assert_registry(
     store: &dyn Storage,
     addr: &Addr
 ) -> Result<(), ContractError> {
-    if is_registry(store, addr)? {
+    if is_registry(store, addr) {
         Ok(())
     } else {
         Err(ContractError::Unauthorized {})
@@ -77,15 +106,19 @@ pub fn assert_registry(
 pub fn is_registry(
     store: &dyn Storage,
     addr: &Addr
-) -> StdResult<bool> {
-    REGISTRY_ADDRESS.load(store).map(|a| a == addr.to_string())
+) -> bool {
+    let res = REGISTRY_ADDRESS
+            .load(store)
+            .map(|a| a == addr.to_string());
+    
+    res.is_ok() && res.unwrap()
 }
 
 
 
 fn validate_payload(
     storage: &dyn Storage,
-    payload: &ValidSignaturePayload,
+    payload: &AuthPayload,
 ) -> StdResult<()> {
     
     if payload.hrp.is_some() {
@@ -110,15 +143,17 @@ fn validate_payload(
 
 
         if payload.hrp.is_some() {
+            let name = info_res.unwrap().name;
             ensure!(
-                info_res.unwrap().name == "cosmos-arbitrary",
-                StdError::generic_err("hrp can only be used with cosmos-arbitrary")
+                name == "cosmos-arbitrary" || name == "secp256k1",
+                StdError::generic_err("'hrp' can only be used with 'cosmos-arbitrary' or 'secp256k1'")
             );
         }
     }
 
     Ok(())
 }
+
 
 
 pub fn validate_multi_payload(
@@ -157,9 +192,9 @@ pub fn validate_multi_payload(
 
 
 
-fn get_verifying_credential_tuple(
+pub fn get_verifying_credential_tuple(
     storage  : &dyn Storage,
-    payload  : &Option<ValidSignaturePayload>,
+    payload  : &Option<AuthPayload>,
     validate : bool
 ) -> StdResult<(CredentialId, CredentialInfo)> {
     let id = match payload {
@@ -181,12 +216,12 @@ fn get_verifying_credential_tuple(
 
 
 
-fn get_credential_from_args(
+pub fn get_credential_from_args(
     id          : CredentialId,
     info        : CredentialInfo,
-    data        : Binary,
-    signature   : Binary,
-    payload     : &Option<ValidSignaturePayload>
+    message     : Vec<u8>,
+    signature   : Vec<u8>,
+    payload     : &Option<AuthPayload>
 ) -> StdResult<Credential> {
     
     let credential = match info.name.as_str() {
@@ -207,31 +242,40 @@ fn get_credential_from_args(
                 None => id
             };
             Credential::Evm(EvmCredential {
-                message: data.into(),
-                signature: signature.into(),
+                message,
+                signature,
                 signer,
             })
         }
         "cosmos-arbitrary" => {
             Credential::CosmosArbitrary(CosmosArbitrary {
                 pubkey: id,
-                message: data.into(),
-                signature: signature.into(),
+                message,
+                signature,
                 hrp: payload.clone().map(|p| p.hrp).unwrap_or(info.hrp)
             })
         }
         "ed25519" => {
             Credential::Ed25519(Ed25519 {
-                pubkey: id,
-                message: data.into(),
-                signature: signature.into()
+                pubkey   : id,
+                message,
+                signature
             })
         },
         "secp256k1" => {
             Credential::Secp256k1(Secp256k1 {
-                pubkey: id,
-                message: data.into(),
-                signature: signature.into()
+                pubkey  : id,
+                message,
+                signature,
+                hrp  : payload
+                        .clone()
+                        .map(|p| p.hrp)
+                        .unwrap_or(info.hrp)
+            })
+        },
+        "caller" => {
+            Credential::Caller(Caller {
+                id
             })
         },
         _ => {
@@ -258,11 +302,15 @@ pub fn get_verifying_credential(
 
     let (id, info) = get_verifying_credential_tuple(deps.storage, &payload, true)?;
 
+    if info.name == "caller" {
+        return Err(StdError::generic_err("Cannot verify payload with 'caller'"));
+    }
+
     get_credential_from_args(
         id, 
         info, 
-        data, 
-        signature, 
+        data.0, 
+        signature.0, 
         &payload
     )
 }
@@ -293,13 +341,248 @@ pub fn get_verifying_indexed_credential(
         None => None
     };
 
-    let (id, info) = get_verifying_credential_tuple(deps.storage, &payload, true)?;
+    let (id, info) = get_verifying_credential_tuple(deps.storage, &payload, false)?;
+    if info.name == "caller" {
+        return Err(StdError::generic_err("Cannot verify payload with 'caller'"));
+    }
 
     get_credential_from_args(
         id, 
         info,
-        data, 
-        signature, 
+        data.0, 
+        signature.0, 
         &payload
     )
 }
+
+
+fn get_digest_credential(
+    deps        : Deps,
+    digest      : Vec<u8>,
+    signature   : Vec<u8>,
+    payload     : &Option<AuthPayload>,
+) -> Result<Credential, ContractError> {
+
+    let (id, info) = get_verifying_credential_tuple(
+        deps.storage, 
+        &payload, 
+        true
+    )?;
+
+    let cred = get_credential_from_args(
+        id, 
+        info, 
+        digest, 
+        signature, 
+        &payload
+    )?;
+
+    Ok(cred)
+}
+
+fn get_cosmos_msg_credential(
+    deps        : Deps,
+    data        : &CosmosMsgDataToSign,
+    signature   : Binary,
+    payload     : &Option<AuthPayload>,
+) -> Result<Credential, ContractError> {
+    let data = sha256(&to_json_binary(data)?);
+    get_digest_credential(
+        deps, 
+        data, 
+        signature.0,
+        &payload
+    )
+}
+
+
+pub fn get_account_action_credential(
+    deps        : Deps,
+    data        : &AccountActionDataToSign,
+    signature   : Binary,
+    payload     : &Option<AuthPayload>,
+) -> Result<Credential, ContractError> {
+    let data = sha256(&to_json_binary(data)?);
+    get_digest_credential(
+        deps, 
+        data, 
+        signature.0, 
+        &payload
+    )
+}
+
+
+
+
+fn derive_cosmos_address(
+    api     : &dyn Api,
+    pubkey  : &[u8],
+    hrp     : &Option<String>
+) -> Result<Addr, ContractError> {
+    let address = if hrp.is_some() {
+        api.addr_validate(
+            &pubkey_to_account( pubkey, hrp.as_ref().unwrap() )?
+        )?
+    } else {
+        let canoncial = pubkey_to_canonical(pubkey);
+        api.addr_humanize(&canoncial)?
+    };
+    Ok(address)
+}
+
+
+
+pub fn assert_owner_derivable(
+    deps     :  Deps,
+    data     :  &CredentialData
+) -> Result<(), ContractError> {    
+
+    for cred in data.credentials.iter() {
+
+        match cred {
+            Credential::CosmosArbitrary(ca) => {
+                if is_owner(
+                    deps.storage, 
+                    &derive_cosmos_address(deps.api, &ca.pubkey, &ca.hrp)?
+                )? {
+                    return Ok(());
+                }
+            },
+            Credential::Secp256k1(s) => {
+                if is_owner(
+                    deps.storage, 
+                    &derive_cosmos_address(deps.api, &s.pubkey, &s.hrp)?
+                )? {
+                    return Ok(());
+                }
+            },
+            _ => {}
+        }
+    }
+
+    Err(ContractError::NotDerivable {})
+}
+
+
+
+fn has_custom_msg(
+    msgs: &Vec<CosmosMsg<SignedCosmosMsgs>>
+) -> bool {
+    msgs.iter().any(|msg| {
+        match msg {
+            CosmosMsg::Custom(_) => true,
+            _ => false
+        }
+    })
+}
+
+
+fn assert_valid_signed_action(
+    action    :  &ExecuteAccountMsg,
+) -> Result<(), ContractError> {
+    
+    match action {
+        ExecuteAccountMsg::Execute { .. } => Err(ContractError::BadSignedAction(
+            String::from("'Execute' must be called directly")
+        )),
+        ExecuteAccountMsg::UpdateAccountData { .. } => Err(ContractError::BadSignedAction(
+            String::from("'UpdateAccountData' must be called directly")
+        )),
+        ExecuteAccountMsg::Extension { .. } => Err(ContractError::BadSignedAction(
+            String::from("Nested 'Extension' is not supported")
+        )),
+        ExecuteAccountMsg::UpdateOwnership { .. } => Err(ContractError::Unauthorized {}),
+        ExecuteAccountMsg::ReceiveNft { .. } => Err(ContractError::Unauthorized {}),
+        ExecuteAccountMsg::Purge {} => Err(ContractError::Unauthorized {}),
+        _ => Ok(())
+    }
+}
+
+
+
+pub fn assert_valid_signed_actions(
+    deps      :   Deps,
+    signed    :   &SignedAccountActions,
+) -> Result<(), ContractError> {
+    
+    let credential = get_account_action_credential(
+        deps, 
+        &signed.data, 
+        signed.signature.clone(), 
+        &signed.payload
+    )?;
+
+    credential.verify()?;
+
+    signed.data.actions
+        .iter()
+        .map(|action| assert_valid_signed_action(action))
+        .collect::<Result<Vec<()>, ContractError>>()?;
+
+    Ok(())
+}
+
+
+pub fn assert_executable_msg(
+    deps     :  Deps,
+    sender   :  &str,
+    msg      :  &CosmosMsg<SignedCosmosMsgs>,
+) -> Result<(), ContractError> {
+    
+    match msg {
+        CosmosMsg::Custom(signed) => {
+            
+            let credential = get_cosmos_msg_credential(
+                deps, 
+                &signed.data,  
+                signed.signature.clone(), 
+                &signed.payload
+            )?;
+
+            credential.verify()?;
+
+            signed.data.messages
+                .iter()
+                .map(|msg| assert_ok_cosmos_msg(msg))
+                .collect::<StdResult<Vec<()>>>()?;
+
+            Ok(())
+        },
+        
+        _ => {
+            ensure!(
+                WITH_CALLER.load(deps.storage)?, 
+                StdError::generic_err("Calling directly is not allowed. Message must be signed")
+            );
+
+            ensure!(
+                is_owner(deps.storage, &deps.api.addr_validate(sender)?)?,
+                ContractError::Unauthorized {}
+            );
+
+            Ok(())
+        }
+    }
+}
+
+
+
+pub fn assert_executable_msgs(
+    deps     :  Deps,
+    sender   :  &str,
+    msgs     :  &Vec<CosmosMsg<SignedCosmosMsgs>>,
+) -> Result<(), ContractError> {
+
+    if WITH_CALLER.load(deps.storage)? &&
+       is_owner(deps.storage, &deps.api.addr_validate(sender)?)? &&
+       !has_custom_msg(msgs) {
+        return Ok(());
+    }
+
+    msgs.iter()
+        .map(|msg| assert_executable_msg(deps, sender, msg))
+        .collect::<Result<Vec<()>, ContractError>>()?;
+
+    Ok(())
+}
+

@@ -1,9 +1,9 @@
 [package]
-name = "cw82-credentials"
+name        = "cw82-credentials"
 version     = { workspace = true }
 edition     = { workspace = true }
 repository  = { workspace = true }
-authors = [ "Kromsten <s@noreply.megarock.labs>" ]
+authors     = [ "Kromsten <s@noreply.megarock.labs>" ]
 description = "Token Bound Account Credentials"
 
 exclude = [
