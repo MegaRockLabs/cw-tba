@@ -73,6 +73,7 @@ pub fn execute_action<T, E, A>(
     info       :   &MessageInfo, 
     msg        :   ExecuteAccountMsg<T, E, A>,
 ) -> ContractResult {
+
     
     type Action<T, E, A> = ExecuteAccountMsg<T, E, A>;
 

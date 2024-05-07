@@ -1,0 +1,323 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InstantiateMsg",
+  "type": "object",
+  "required": [
+    "account_data",
+    "owner",
+    "token_info"
+  ],
+  "properties": {
+    "account_data": {
+      "description": "Customiable payload specififc for account implementation",
+      "allOf": [
+        {
+          "$ref": "#/definitions/CredentialData"
+        }
+      ]
+    },
+    "owner": {
+      "description": "Token owner that had been verified by the registry",
+      "type": "string"
+    },
+    "token_info": {
+      "description": "Token info",
+      "allOf": [
+        {
+          "$ref": "#/definitions/TokenInfo"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "Caller": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "CosmosArbitrary": {
+      "type": "object",
+      "required": [
+        "message",
+        "pubkey",
+        "signature"
+      ],
+      "properties": {
+        "hrp": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "pubkey": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "signature": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Credential": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "caller"
+          ],
+          "properties": {
+            "caller": {
+              "$ref": "#/definitions/Caller"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "evm"
+          ],
+          "properties": {
+            "evm": {
+              "$ref": "#/definitions/EvmCredential"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "secp256k1"
+          ],
+          "properties": {
+            "secp256k1": {
+              "$ref": "#/definitions/Secp256k1"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "ed25519"
+          ],
+          "properties": {
+            "ed25519": {
+              "$ref": "#/definitions/Ed25519"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "cosmos_arbitrary"
+          ],
+          "properties": {
+            "cosmos_arbitrary": {
+              "$ref": "#/definitions/CosmosArbitrary"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "CredentialData": {
+      "type": "object",
+      "required": [
+        "credentials"
+      ],
+      "properties": {
+        "credentials": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Credential"
+          }
+        },
+        "primary_index": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "secs_to_expire": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "with_caller": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "Ed25519": {
+      "type": "object",
+      "required": [
+        "message",
+        "pubkey",
+        "signature"
+      ],
+      "properties": {
+        "message": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "pubkey": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "signature": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "EvmCredential": {
+      "type": "object",
+      "required": [
+        "message",
+        "signature",
+        "signer"
+      ],
+      "properties": {
+        "message": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "signature": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "signer": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Secp256k1": {
+      "type": "object",
+      "required": [
+        "message",
+        "pubkey",
+        "signature"
+      ],
+      "properties": {
+        "hrp": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "pubkey": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "signature": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "TokenInfo": {
+      "type": "object",
+      "required": [
+        "collection",
+        "id"
+      ],
+      "properties": {
+        "collection": {
+          "description": "Contract address of the collection",
+          "type": "string"
+        },
+        "id": {
+          "description": "Token id",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

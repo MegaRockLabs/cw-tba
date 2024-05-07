@@ -9,7 +9,6 @@ use saa::{
 };
 use std::collections::HashSet;
 
-
 use crate::{error::ContractError, msg::{AccountActionDataToSign, AuthPayload, CosmosMsgDataToSign, SignedAccountActions, SignedCosmosMsgs, ValidSignaturesPayload}, state::{CredentialInfo, CREDENTIALS, REGISTRY_ADDRESS, SECS_TO_EXPIRE, STATUS, VERIFYING_CRED_ID, WITH_CALLER}};
 
 

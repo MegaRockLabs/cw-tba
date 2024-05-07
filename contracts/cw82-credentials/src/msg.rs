@@ -61,6 +61,7 @@ pub struct SignedCosmosMsgs {
     pub signature   : Binary,
 }
 
+
 #[cw_serde]
 pub struct SignedAccountActions {
     pub data        : AccountActionDataToSign,
@@ -69,6 +70,8 @@ pub struct SignedAccountActions {
 }
 
 
+impl CustomMsg for SignedCosmosMsgs {}
+impl CustomMsg for SignedAccountActions {}
 
 
 #[cw_serde]
