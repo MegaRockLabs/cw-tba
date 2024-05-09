@@ -43,7 +43,6 @@ cw83-base               = { path = "contracts/cw83-base" }
 cw-tba                  = { path = "packages/cw-tba"     }
 
 
-
 [profile.release]
 rpath            = false
 lto              = true

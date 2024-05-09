@@ -1,8 +1,9 @@
 chain_cfg: 
-  denom: "ustars"
-  prefix: "stars"
+  denom: "aarch"
+  prefix: "archway"
   chain_id: "testing"
+  rpc_endpoint: "http://localhost:26657"
   grpc_endpoint: "http://localhost:9090"
-  gas_prices: 0.1
-  gas_adjustment: 1.5
+  gas_price: 900000000000
+  gas_adjustment: 1.8
   derivation_path: "m/44'/118'/0'/0/0"

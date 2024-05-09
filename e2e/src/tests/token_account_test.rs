@@ -200,7 +200,8 @@ fn known_assets(chain: &mut Chain) {
             &TxOptions { 
                 timeout_height: None, 
                 fee: None, 
-                memo: String::default()
+                memo: String::default(),
+                sequence: None
             }
         )
         .await 

@@ -5,8 +5,8 @@ use cosm_orc::orchestrator::error::{ProcessError, CosmwasmError};
 use cosm_orc::orchestrator::{Coin as OrcCoin, ExecResponse, Address, ChainTxResponse, QueryResponse, Denom};
 use cosm_orc::orchestrator::{InstantiateResponse, SigningKey};
 use cosm_tome::chain::request::TxOptions;
+use cosm_tome::clients::client::CosmosClient;
 use cosm_tome::modules::bank::model::SendRequest;
-use cosmrs::crypto::secp256k1;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Timestamp, Empty, CosmosMsg, Binary, from_json, Coin,};
 
@@ -28,22 +28,22 @@ pub const CREATION_FB_FEE: u128 = 100_000_000;
 pub const MINT_PRICE: u128 = 100_000_000;
 
 
-pub fn creation_fees_wasm (chain: &Chain) -> Vec<Coin> {
+pub fn creation_fees_wasm<C: CosmosClient> (chain: &Chain<C>) -> Vec<Coin> {
     vec![Coin {
         denom: chain.cfg.orc_cfg.chain_cfg.denom.clone(),
         amount: CREATION_FB_FEE.into(),
     }]
 }
 
-pub fn creation_fees(chain: &Chain) -> Vec<OrcCoin> {
+pub fn creation_fee<C: CosmosClient>(chain: &Chain<C>) -> Vec<OrcCoin> {
     vec![OrcCoin {
         denom: Denom::from_str(&chain.cfg.orc_cfg.chain_cfg.denom).unwrap(),
         amount: CREATION_FB_FEE.into(),
     }]
 }
 
-pub fn instantiate_registry(
-    chain: &mut Chain,
+pub fn instantiate_registry<C: CosmosClient>(
+    chain: &mut Chain<C>,
     creator_addr: String,
     key: &SigningKey
 ) -> Result<InstantiateResponse, ProcessError> {
@@ -68,8 +68,8 @@ pub fn instantiate_registry(
 }
 
 
-pub fn instantiate_collection(
-    chain: &mut Chain,
+pub fn instantiate_collection<C: CosmosClient>(
+    chain: &mut Chain<C>,
     minter: String,
     nonce: Option<&str>,
     key: &SigningKey,
@@ -92,8 +92,8 @@ pub fn instantiate_collection(
 
 
 
-pub fn mint_token(
-    chain: &mut Chain,
+pub fn mint_token<C: CosmosClient>(
+    chain: &mut Chain<C>,
     token_id: String,
     owner: String,
     key: &SigningKey,
@@ -116,8 +116,8 @@ pub fn mint_token(
 }
 
 
-pub fn send_token(
-    chain: &mut Chain,
+pub fn send_token<C: CosmosClient>(
+    chain: &mut Chain<C>,
     token_id: String,
     recipient: String,
     msg: Binary,
@@ -142,8 +142,8 @@ pub fn send_token(
 
 
 
-pub fn create_token_account(
-    chain: &mut Chain,
+pub fn create_token_account<C: CosmosClient>(
+    chain: &mut Chain<C>,
     token_contract: String,
     token_id: String,
     pubkey: Binary,
@@ -175,13 +175,13 @@ pub fn create_token_account(
             }
         ), 
         key, 
-        creation_fees(&chain)
+        creation_fee(&chain)
     )
 }
 
 
-pub fn reset_token_account(
-    chain: &mut Chain,
+pub fn reset_token_account<C: CosmosClient>(
+    chain: &mut Chain<C>,
     token_contract: String,
     token_id: String,
     pubkey: Binary,
@@ -212,14 +212,14 @@ pub fn reset_token_account(
             }
         ), 
         key, 
-        creation_fees(&chain)
+        creation_fee(&chain)
     )
 }
 
 
 
-pub fn migrate_token_account(
-    chain: &mut Chain,
+pub fn migrate_token_account<C: CosmosClient>(
+    chain: &mut Chain<C>,
     token_contract: String,
     token_id: String,
     key: &SigningKey,
@@ -272,8 +272,8 @@ pub fn get_init_address(
 }
 
 
-pub fn full_setup(
-    chain: &mut Chain,
+pub fn full_setup<C: CosmosClient>(
+    chain: &mut Chain<C>,
 ) -> Result<FullSetupData, ProcessError> {
 
     let _start_time = latest_block_time(chain).plus_seconds(60);
@@ -312,9 +312,7 @@ pub fn full_setup(
                 )[0].value.clone();
             
 
-    let signing : secp256k1::SigningKey = user.key.clone().try_into().unwrap();
-    let pubkey : Binary = signing.public_key().to_bytes().into();
-    
+    let pubkey : Binary = user.key.public_key().unwrap().to_bytes().into();
 
     let create_res = create_token_account(
         chain, 
@@ -345,8 +343,8 @@ pub fn full_setup(
 
 
 
-pub fn wasm_query<S: Serialize>(
-    chain: &mut Chain,
+pub fn wasm_query<C : CosmosClient, S: Serialize>(
+    chain: &mut Chain<C>,
     address: &String,
     msg: &S
 ) -> Result<QueryResponse, CosmwasmError> {
@@ -362,12 +360,14 @@ pub fn wasm_query<S: Serialize>(
     res
 }
 
-pub fn wasm_query_typed<R, S> (
-    chain: &mut Chain,
+pub fn wasm_query_typed<C, R, S> (
+    chain: &mut Chain<C>,
     address: &String,
     msg: &S
 ) -> Result<R, CosmwasmError> 
-where S: Serialize,
+where 
+      C: CosmosClient,
+      S: Serialize,
       R: DeserializeOwned
 {
     let res = tokio_block(async { 
@@ -388,8 +388,8 @@ where S: Serialize,
 
 
 
-pub fn query_token_owner(
-    chain: &mut Chain,
+pub fn query_token_owner<C: CosmosClient>(
+    chain: &mut Chain<C>,
     collection: String,
     token_id: String,
 ) -> Result<cw721::OwnerOfResponse, CosmwasmError> {
@@ -413,26 +413,25 @@ pub fn query_token_owner(
 
 // gen_users will create `num_users` random SigningKeys
 // and then transfer `init_balance` of funds to each of them.
-pub fn gen_users(
-    chain: &mut Chain,
+pub fn gen_users<C: CosmosClient>(
+    chain: &mut Chain<C>,
     num_users: u32,
     init_balance: u128,
     denom: Option<&String>,
 ) -> Vec<SigningKey> {
-    let prefix = &chain.cfg.orc_cfg.chain_cfg.prefix;
-    let base_denom = &chain.cfg.orc_cfg.chain_cfg.denom;
+    let cfg = &chain.cfg.orc_cfg.chain_cfg;
     let from_user = &chain.cfg.users[1];
 
     let mut users = vec![];
     for n in 0..num_users {
-        users.push(SigningKey::random_mnemonic(n.to_string()));
+        users.push(SigningKey::random_mnemonic(n.to_string(), cfg.derivation_path.clone()));
     }
 
     let mut reqs = vec![];
     for user in &users {
         let mut amounts = vec![OrcCoin {
             amount: init_balance,
-            denom: base_denom.parse().unwrap(),
+            denom: cfg.denom.parse().unwrap(),
         }];
         // add extra denom if specified
         if let Some(denom) = denom {
@@ -443,7 +442,7 @@ pub fn gen_users(
         }
         reqs.push(SendRequest {
             from: from_user.account.address.parse().unwrap(),
-            to: user.to_addr(prefix).unwrap(),
+            to: user.to_addr(&cfg.prefix).unwrap(),
             amounts,
         });
     }
@@ -459,7 +458,7 @@ pub fn gen_users(
     users
 }
 
-pub fn latest_block_time(chain: &Chain) -> Timestamp {
+pub fn latest_block_time<C: CosmosClient>(chain: &Chain<C>) -> Timestamp {
     let now = tokio_block(chain.orc.client.tendermint_query_latest_block())
         .unwrap()
         .block
@@ -473,8 +472,8 @@ pub fn latest_block_time(chain: &Chain) -> Timestamp {
 
 
 
-pub fn can_execute(
-    chain: &mut Chain, 
+pub fn can_execute<C: CosmosClient>(
+    chain: &mut Chain<C>, 
     token_account: &String, 
     sender: String, 
     msg: CosmosMsg

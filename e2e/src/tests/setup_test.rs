@@ -12,7 +12,8 @@ use crate::helpers::{
 #[test_context(Chain)]
 #[test]
 #[ignore]
-fn test_instantiate_registry(chain: &mut Chain) {
+fn test_instantiate_registry(chain: &mut Chain) 
+{
     let user = chain.cfg.users[0].clone();
     instantiate_registry(chain, user.account.address, &user.key).unwrap();
 }
