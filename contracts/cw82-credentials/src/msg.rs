@@ -163,9 +163,7 @@ pub enum QueryMsgBase <T = SignedCosmosMsgs, Q: JsonSchema = Empty> {
 
 
 
-pub type ContractResponse = Response::<SignedCosmosMsgs>;
-pub type ContractResult = Result<ContractResponse, ContractError>;
-
+pub type ContractResult = Result<Response, ContractError>;
 pub type InstantiateMsg = InstantiateAccountMsg<CredentialData>;
 pub type ExecuteMsg = ExecuteAccountMsg<SignedCosmosMsgs, SignedAccountActions, CredentialData>;
 pub type QueryMsg = QueryMsgBase<SignedCosmosMsgs, Empty>;

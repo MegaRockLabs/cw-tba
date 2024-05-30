@@ -72,7 +72,6 @@ pub fn assert_ok_cosmos_msg(
 }
 
 
-
 pub fn is_ok_cosmos_msg(
     msg: &CosmosMsg<Empty>
 ) -> bool {
@@ -530,14 +529,14 @@ pub fn assert_valid_signed_actions(
 }
 
 
-pub fn assert_executable_msg(
+pub fn checked_execute_msg(
     deps     :  Deps,
     env      :  &Env,
     sender   :  &str,
     msg      :  &CosmosMsg<SignedCosmosMsgs>,
-) -> Result<(), ContractError> {
+) -> Result<Vec<CosmosMsg>, ContractError> {
     
-    match msg {
+    match msg.clone() {
         CosmosMsg::Custom(signed) => {
             
             let credential = get_cosmos_msg_credential(
@@ -561,10 +560,10 @@ pub fn assert_executable_msg(
                 .map(|msg| assert_ok_cosmos_msg(msg))
                 .collect::<StdResult<Vec<()>>>()?;
 
-            Ok(())
+            Ok(signed.data.messages)
         },
         
-        _ => {
+        msg => {
             ensure!(
                 WITH_CALLER.load(deps.storage)?, 
                 StdError::generic_err("Calling directly is not allowed. Message must be signed")
@@ -575,30 +574,49 @@ pub fn assert_executable_msg(
                 ContractError::Unauthorized {}
             );
 
-            Ok(())
+            let msg : CosmosMsg = match msg {
+                CosmosMsg::Bank(b) => b.into(),
+                CosmosMsg::Staking(s) => s.into(),
+                CosmosMsg::Distribution(d) => d.into(),
+                CosmosMsg::Gov(g) => g.into(),
+                CosmosMsg::Ibc(ibc) => ibc.into(),
+                CosmosMsg::Wasm(w) => w.into(),
+                CosmosMsg::Stargate { 
+                    type_url, 
+                    value 
+                } => CosmosMsg::Stargate {
+                    type_url,
+                    value
+                },
+                CosmosMsg::Custom(_) => unreachable!(),
+                _ => return Err(ContractError::NotSupported {})
+            };
+            assert_ok_cosmos_msg(&msg)?;
+            Ok(vec![msg])
         }
     }
 }
 
 
 
-pub fn assert_executable_msgs(
+pub fn checked_execute_msgs(
     deps     :  Deps,
     env      :  &Env,
     sender   :  &str,
     msgs     :  &Vec<CosmosMsg<SignedCosmosMsgs>>,
-) -> Result<(), ContractError> {
+) -> Result<Vec<CosmosMsg>, ContractError> {
 
-    if WITH_CALLER.load(deps.storage)? &&
-       is_owner(deps.storage, &deps.api.addr_validate(sender)?)? &&
-       !has_custom_msg(msgs) {
-        return Ok(());
-    }
+    
+    let nested = msgs.iter()
+        .map(|msg| checked_execute_msg(deps, env, sender, msg))
+        .collect::<Result<Vec<Vec<CosmosMsg>>, ContractError>>()?;
 
-    msgs.iter()
-        .map(|msg| assert_executable_msg(deps, env, sender, msg))
-        .collect::<Result<Vec<()>, ContractError>>()?;
+    let msgs = nested
+        .iter()
+        .flatten()
+        .cloned()
+        .collect::<Vec<CosmosMsg>>();
 
-    Ok(())
+    Ok(msgs)
 }
 

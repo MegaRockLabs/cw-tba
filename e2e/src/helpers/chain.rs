@@ -165,7 +165,7 @@ fn test_accounts(cfg: &ChainConfig) -> Vec<SigningAccount> {
         .collect()
 }
 
-fn save_gas_report<C: cosm_orc::cosm_tome::clients::client::CosmosClient >(orc: &CosmOrc<C>, gas_report_dir: &str) {
+fn save_gas_report<C: CosmosClient >(orc: &CosmOrc<C>, gas_report_dir: &str) {
     let report = orc
         .gas_profiler_report()
         .expect("error fetching profile reports");

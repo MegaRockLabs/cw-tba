@@ -25,6 +25,7 @@ pub struct MigrateAccountMsg<T = Empty> {
 
 
 #[cw_serde]
+
 pub enum ExecuteAccountMsg<T = Empty,  E = Option<Empty>, A = Binary> {
     /// Proxy method for executing cosmos messages
     /// Wasm and Stargate messages aren't supported

@@ -8,7 +8,7 @@ use crate::{
     error::ContractError, 
     msg::{ContractResult, SignedCosmosMsgs, Status}, 
     state::{save_credentials, CREDENTIALS, KNOWN_TOKENS, MINT_CACHE, REGISTRY_ADDRESS, SECS_TO_EXPIRE, SERIAL, STATUS, TOKEN_INFO, VERIFYING_CRED_ID, WITH_CALLER}, 
-    utils::{assert_executable_msgs, assert_owner_derivable, assert_registry, assert_status}
+    utils::{checked_execute_msgs, assert_owner_derivable, assert_registry, assert_status}
 };
 
 pub const MINT_REPLY_ID: u64 = 1;
@@ -21,10 +21,9 @@ pub fn try_executing(
     msgs    :   Vec<CosmosMsg<SignedCosmosMsgs>>
 ) -> ContractResult {
     assert_status(deps.storage)?;
-    assert_executable_msgs(deps, &env, info.sender.as_str(), &msgs)?;
+    let msgs = checked_execute_msgs(deps, &env, info.sender.as_str(), &msgs)?;
     Ok(Response::new().add_messages(msgs))
 }
-
 
 
 

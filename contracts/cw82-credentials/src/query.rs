@@ -8,7 +8,7 @@ use crate::{
     msg::{AssetsResponse, FullInfoResponse, SignedCosmosMsgs, ValidSignaturesPayload}, 
     state::{KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO}, 
     utils::{
-        assert_executable_msg, get_verifying_credential, get_verifying_indexed_credential, status_ok, validate_multi_payload
+        checked_execute_msg, get_verifying_credential, get_verifying_indexed_credential, status_ok, validate_multi_payload
     }
 };
 
@@ -29,7 +29,7 @@ pub fn can_execute(
     };
     
     Ok(CanExecuteResponse {
-        can_execute: assert_executable_msg(
+        can_execute: checked_execute_msg(
             deps,
             &env,
             sender.as_str(), 
