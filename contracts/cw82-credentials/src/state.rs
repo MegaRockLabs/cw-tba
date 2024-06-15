@@ -1,12 +1,11 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{ensure, Addr, Binary, DepsMut, Env, MessageInfo};
+use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo};
 use cw_ownable::initialize_owner;
 use cw_storage_plus::{Item, Map};
 use cw_tba::TokenInfo;
-use saa::{Credential, CredentialData, CredentialId, CredentialsWrapper};
-use saa::Verifiable;
-
+use saa::{Credential, CredentialData, CredentialId, CredentialsWrapper, Binary, Verifiable};
 use crate::{error::ContractError, msg::Status};
+
 
 #[cw_serde]
 pub struct CredentialInfo {
@@ -29,10 +28,12 @@ pub static SECS_TO_EXPIRE     : Item<u64>                 = Item::new("e");
 
 pub static CREDENTIALS        : Map<CredentialId, CredentialInfo> = Map::new("c"); 
 pub static KNOWN_TOKENS       : Map<(&str, &str), bool>           = Map::new("k");
+pub static NONCES             : Map<u128, bool>                   = Map::new("n");
 
 
 const DEFAULT_SECS_TO_EXPIRE : u64 = 300;
 const MIN_SECS_TO_EXPIRE     : u64 = 10;
+
 
 pub fn save_credentials(
     deps      :     DepsMut,
@@ -44,13 +45,6 @@ pub fn save_credentials(
 
     let with_caller = data.with_caller.unwrap_or_default();
     WITH_CALLER.save(deps.storage, &with_caller)?;
-
-    let secs_to_expire = data.secs_to_expire.unwrap_or(DEFAULT_SECS_TO_EXPIRE);
-    ensure!(
-        secs_to_expire > MIN_SECS_TO_EXPIRE, 
-        ContractError::Generic("secs_to_expire must be greater than 10".to_string())
-    );
-    SECS_TO_EXPIRE.save(deps.storage, &data.secs_to_expire.unwrap_or(DEFAULT_SECS_TO_EXPIRE))?;
 
 
     let info = if with_caller {

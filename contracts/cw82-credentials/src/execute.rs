@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    ensure, Addr, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response
+    ensure, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response
 };
 use cw_ownable::{get_ownership, is_owner};
 use cw_tba::verify_nft_ownership;
@@ -7,15 +7,16 @@ use saa::CredentialData;
 use crate::{
     error::ContractError, 
     msg::{ContractResult, SignedCosmosMsgs, Status}, 
-    state::{save_credentials, CREDENTIALS, KNOWN_TOKENS, MINT_CACHE, REGISTRY_ADDRESS, SECS_TO_EXPIRE, SERIAL, STATUS, TOKEN_INFO, VERIFYING_CRED_ID, WITH_CALLER}, 
+    state::{save_credentials, CREDENTIALS, KNOWN_TOKENS, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, VERIFYING_CRED_ID, WITH_CALLER}, 
     utils::{checked_execute_msgs, assert_owner_derivable, assert_registry, assert_status}
 };
 
 pub const MINT_REPLY_ID: u64 = 1;
 
 
+
 pub fn try_executing(
-    deps    :   Deps,
+    deps    :   DepsMut,
     env     :   Env,
     info    :   MessageInfo,
     msgs    :   Vec<CosmosMsg<SignedCosmosMsgs>>
@@ -131,7 +132,6 @@ pub fn try_purging(
     SERIAL.remove(deps.storage);
     VERIFYING_CRED_ID.remove(deps.storage);
     WITH_CALLER.remove(deps.storage);
-    SECS_TO_EXPIRE.remove(deps.storage);
     CREDENTIALS.clear(deps.storage);
     KNOWN_TOKENS.clear(deps.storage);
     

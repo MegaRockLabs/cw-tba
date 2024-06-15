@@ -41,13 +41,13 @@ pub fn verify_nft_ownership(
 
 pub fn query_tokens(
     querier:        &QuerierWrapper,
-    contract_addr:  &str,
+    collection:     &str,
     owner:          String,
     start_after:    Option<String>,
     limit:          Option<u32>
 ) -> StdResult<cw721::TokensResponse> {
     querier.query_wasm_smart(
-        contract_addr, 
+        collection, 
         &cw721::Cw721QueryMsg::Tokens { 
             owner, 
             start_after, 

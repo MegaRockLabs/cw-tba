@@ -3,7 +3,7 @@ use cosmwasm_std::{
 };
 use cw_tba::{query_tokens, verify_nft_ownership};
 use crate::{
-    msg::{ContractResult, SignedCosmosMsgs, Status}, 
+    msg::{ContractResult, Status}, 
     state::{KNOWN_TOKENS, MINT_CACHE, STATUS, TOKEN_INFO}, 
     utils::assert_status
 };
@@ -144,7 +144,7 @@ pub fn try_transfering_token(
         (collection.as_str(), token_id.as_str()),
     );
 
-    let msg : CosmosMsg::<SignedCosmosMsgs> = WasmMsg::Execute { 
+    let msg : CosmosMsg = WasmMsg::Execute { 
         contract_addr: collection, 
         msg: to_json_binary(&cw721_base::ExecuteMsg::<Empty, Empty>::TransferNft { 
             recipient, 
@@ -175,7 +175,7 @@ pub fn try_sending_token(
         deps.storage, 
         (collection.as_str(), token_id.as_str()),
     );
-    let msg : CosmosMsg::<SignedCosmosMsgs> = WasmMsg::Execute { 
+    let msg : CosmosMsg = WasmMsg::Execute { 
         contract_addr: collection, 
         msg: to_json_binary(&cw721_base::ExecuteMsg::<Empty, Empty>::SendNft { 
             contract, 

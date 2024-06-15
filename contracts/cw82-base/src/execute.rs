@@ -163,7 +163,7 @@ pub fn try_updating_known_tokens(
     deps: DepsMut,
     env: Env,
     sender: Addr,
-    contract_addr: String,
+    collection: String,
     start_after: Option<String>,
     limit: Option<u32>
 ) -> Result<Response, ContractError> {
@@ -175,19 +175,22 @@ pub fn try_updating_known_tokens(
 
     let res = query_tokens(
         &deps.querier, 
-        &contract_addr, 
+        &collection, 
         env.contract.address.to_string(), 
         start_after, 
         limit
     )?;
 
+
     for id in res.tokens {
         KNOWN_TOKENS.save(
             deps.storage, 
-            (contract_addr.as_str(), id.as_str()),
+            (collection.as_str(), id.as_str()),
             &true
         )?;
     }
+
+
 
     Ok(Response::new().add_attribute("action", "update_known_tokens"))
 }

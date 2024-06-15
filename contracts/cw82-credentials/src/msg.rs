@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg, CustomMsg, Empty, Response, Timestamp};
+use cosmwasm_std::{Addr, Coin, CosmosMsg, CustomMsg, Empty, Response, Timestamp, Uint128};
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
 pub use cw82::{
     smart_account_query, 
@@ -8,7 +8,7 @@ pub use cw82::{
 };
 use cw_ownable::cw_ownable_query;
 use cw_tba::{TokenInfo, InstantiateAccountMsg, ExecuteAccountMsg, MigrateAccountMsg};
-use saa::{CredentialData, CredentialId};
+use saa::{CredentialData, CredentialId, Binary};
 
 use crate::error::ContractError;
 
@@ -40,7 +40,8 @@ pub enum ValidSignaturesPayload {
 pub struct CosmosMsgDataToSign {
     pub messages   :  Vec<CosmosMsg<Empty>>,
     pub chain_id   :  String,
-    pub timestamp  :  Timestamp
+    pub timestamp  :  Option<Timestamp>,
+    pub nonce      :  Option<Uint128>,
 }
 
 impl CustomMsg for CosmosMsgDataToSign {}
@@ -50,7 +51,8 @@ impl CustomMsg for CosmosMsgDataToSign {}
 pub struct AccountActionDataToSign {
     pub actions    :  Vec<ExecuteAccountMsg>,
     pub chain_id   :  String,
-    pub timestamp  :  Timestamp
+    pub timestamp  :  Option<Timestamp>,
+    pub nonce      :  Option<Uint128>,
 }
 
 

@@ -11,14 +11,7 @@ use cosmwasm_std::entry_point;
 use cw_tba::ExecuteAccountMsg;
 
 use crate::{
-    action::MINT_REPLY_ID,
-    action,
-    execute, 
-    error::ContractError, 
-    msg::{ContractResult, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Status}, 
-    query::{assets, can_execute, full_info, known_tokens, valid_signature, valid_signatures}, 
-    state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER}, 
-    utils::assert_valid_signed_actions 
+    action::{self, MINT_REPLY_ID}, error::ContractError, execute, msg::{ContractResult, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Status}, query::{assets, can_execute, full_info, known_tokens, valid_signature, valid_signatures}, state::{save_credentials, MINT_CACHE, NONCES, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER}, utils::assert_signed_actions 
 };
 
 
@@ -138,7 +131,7 @@ pub fn execute(mut deps: DepsMut, env : Env, info : MessageInfo, msg : ExecuteMs
     match msg {
         ExecuteMsg::Execute { 
             msgs 
-        } => execute::try_executing(deps.as_ref(), env, info, msgs),
+        } => execute::try_executing(deps, env, info, msgs),
 
         ExecuteMsg::UpdateOwnership { 
             new_owner, 
@@ -160,7 +153,10 @@ pub fn execute(mut deps: DepsMut, env : Env, info : MessageInfo, msg : ExecuteMs
         ExecuteMsg::Extension { 
             msg 
         } => {
-            assert_valid_signed_actions(deps.as_ref(), &env, &msg)?;
+            assert_signed_actions(deps.as_ref(), &env, &msg)?;
+            if msg.data.nonce.is_some() {
+                NONCES.save(deps.storage, msg.data.nonce.unwrap().u128(), &true)?;
+            }
             for action in msg.data.actions {
                 execute_action(deps.borrow_mut(), &env, &info, action)?;
             }

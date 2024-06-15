@@ -1,15 +1,15 @@
-use cosmwasm_std::{from_json, to_json_binary, Addr, Api, Binary, CosmosMsg, Deps, Empty, Env, QuerierWrapper, StdError, StdResult, Storage, WasmMsg};
+use cosmwasm_std::{from_json, to_json_binary, Addr, Api, CosmosMsg, Deps, DepsMut, Empty, Env, QuerierWrapper, StdError, StdResult, Storage, WasmMsg};
 use cw_ownable::is_owner;
 use cw_tba::ExecuteAccountMsg;
 use saa::{
     cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, 
     hashes::sha256, ensure, 
     Caller, CosmosArbitrary, Credential, CredentialData, CredentialId, Ed25519, EvmCredential, Secp256k1,
-    Verifiable
+    Verifiable, Binary
 };
 use std::collections::HashSet;
 
-use crate::{error::ContractError, msg::{AccountActionDataToSign, AuthPayload, CosmosMsgDataToSign, SignedAccountActions, SignedCosmosMsgs, ValidSignaturesPayload}, state::{CredentialInfo, CREDENTIALS, REGISTRY_ADDRESS, SECS_TO_EXPIRE, STATUS, VERIFYING_CRED_ID, WITH_CALLER}};
+use crate::{error::ContractError, msg::{AccountActionDataToSign, AuthPayload, CosmosMsgDataToSign, SignedAccountActions, SignedCosmosMsgs, ValidSignaturesPayload}, state::{CredentialInfo, CREDENTIALS, NONCES, REGISTRY_ADDRESS, SECS_TO_EXPIRE, STATUS, VERIFYING_CRED_ID, WITH_CALLER}};
 
 
 const ONLY_ONE_ERR : &str = "Only one of the 'address' or 'hrp' can be provided";
@@ -217,8 +217,8 @@ pub fn get_verifying_credential_tuple(
 pub fn get_credential_from_args(
     id          : CredentialId,
     info        : CredentialInfo,
-    message     : Vec<u8>,
-    signature   : Vec<u8>,
+    message     : Binary,
+    signature   : Binary,
     payload     : &Option<AuthPayload>
 ) -> StdResult<Credential> {
     
@@ -232,12 +232,12 @@ pub fn get_credential_from_args(
                     );
                     match payload.address.as_ref() {
                         Some(address) => {
-                            to_json_binary(address)?.0
+                            address.clone()
                         },
-                        None => id
+                        None => String::from_utf8(id)?
                     }
                 },
-                None => id
+                None => String::from_utf8(id)?
             };
             Credential::Evm(EvmCredential {
                 message,
@@ -247,7 +247,7 @@ pub fn get_credential_from_args(
         }
         "cosmos-arbitrary" => {
             Credential::CosmosArbitrary(CosmosArbitrary {
-                pubkey: id,
+                pubkey: Binary(id),
                 message,
                 signature,
                 hrp: payload.clone().map(|p| p.hrp).unwrap_or(info.hrp)
@@ -255,14 +255,14 @@ pub fn get_credential_from_args(
         }
         "ed25519" => {
             Credential::Ed25519(Ed25519 {
-                pubkey   : id,
+                pubkey   : Binary(id),
                 message,
                 signature
             })
         },
         "secp256k1" => {
             Credential::Secp256k1(Secp256k1 {
-                pubkey  : id,
+                pubkey  : Binary(id),
                 message,
                 signature,
                 hrp  : payload
@@ -288,13 +288,13 @@ pub fn get_credential_from_args(
 
 pub fn get_verifying_credential(
     deps        : Deps,
-    data        : Binary,
-    signature   : Binary,
-    payload     : &Option<Binary>,
+    data        : impl Into<Binary>,
+    signature   : impl Into<Binary>,
+    payload     : Option<impl Into<Binary>>,
 ) -> StdResult<Credential> {
 
     let payload = match payload {
-        Some(payload) => Some(from_json(payload)?),
+        Some(payload) => Some(from_json::<AuthPayload>(&payload.into())?),
         None => None
     };
 
@@ -307,8 +307,8 @@ pub fn get_verifying_credential(
     get_credential_from_args(
         id, 
         info, 
-        data.0, 
-        signature.0, 
+        data.into(), 
+        signature.into(), 
         &payload
     )
 }
@@ -347,8 +347,8 @@ pub fn get_verifying_indexed_credential(
     get_credential_from_args(
         id, 
         info,
-        data.0, 
-        signature.0, 
+        data, 
+        signature, 
         &payload
     )
 }
@@ -356,8 +356,8 @@ pub fn get_verifying_indexed_credential(
 
 fn get_digest_credential(
     deps        : Deps,
-    digest      : Vec<u8>,
-    signature   : Vec<u8>,
+    digest      : impl Into<Binary>,
+    signature   : impl Into<Binary>,
     payload     : &Option<AuthPayload>,
 ) -> Result<Credential, ContractError> {
 
@@ -370,8 +370,8 @@ fn get_digest_credential(
     let cred = get_credential_from_args(
         id, 
         info, 
-        digest, 
-        signature, 
+        digest.into(), 
+        signature.into(), 
         &payload
     )?;
 
@@ -387,8 +387,8 @@ fn get_cosmos_msg_credential(
     let data = sha256(&to_json_binary(data)?);
     get_digest_credential(
         deps, 
-        data, 
-        signature.0,
+        Binary(data), 
+        signature,
         &payload
     )
 }
@@ -403,8 +403,8 @@ pub fn get_account_action_credential(
     let data = sha256(&to_json_binary(data)?);
     get_digest_credential(
         deps, 
-        data, 
-        signature.0, 
+        Binary(data), 
+        signature, 
         &payload
     )
 }
@@ -463,17 +463,6 @@ pub fn assert_owner_derivable(
 
 
 
-fn has_custom_msg(
-    msgs: &Vec<CosmosMsg<SignedCosmosMsgs>>
-) -> bool {
-    msgs.iter().any(|msg| {
-        match msg {
-            CosmosMsg::Custom(_) => true,
-            _ => false
-        }
-    })
-}
-
 
 fn assert_valid_signed_action(
     action    :  &ExecuteAccountMsg,
@@ -498,7 +487,7 @@ fn assert_valid_signed_action(
 
 
 
-pub fn assert_valid_signed_actions(
+pub fn assert_signed_actions(
     deps      :   Deps,
     env       :   &Env,
     signed    :   &SignedAccountActions,
@@ -511,11 +500,17 @@ pub fn assert_valid_signed_actions(
         &signed.payload
     )?;
 
-    if signed.data
+    if signed.data.timestamp.is_some() && signed.data
         .timestamp
+        .unwrap()
         .plus_seconds(SECS_TO_EXPIRE.load(deps.storage)?)
         .seconds() > env.block.time.seconds() {
         return Err(ContractError::Expired {});
+    }
+
+    if signed.data.nonce.is_some() {
+        let n = signed.data.nonce.unwrap().u128();
+        ensure!(NONCES.has(deps.storage, n), ContractError::NonceExists {});
     }
 
     credential.verify()?;
@@ -529,6 +524,77 @@ pub fn assert_valid_signed_actions(
 }
 
 
+pub fn assert_signed_msg(
+    deps     :  Deps,
+    env      :  &Env,
+    _sender   :  &str,
+    msg      :  &SignedCosmosMsgs
+) -> Result<(), ContractError> {
+
+    let credential = get_cosmos_msg_credential(
+        deps, 
+        &msg.data,  
+        msg.signature.clone(), 
+        &msg.payload
+    )?;
+
+    if msg.data.timestamp.is_some() && msg.data
+        .timestamp
+        .unwrap()
+        .plus_seconds(SECS_TO_EXPIRE.load(deps.storage)?)
+        .seconds() > env.block.time.seconds() {
+        return Err(ContractError::Expired {});
+    };
+
+    credential.verify()?;
+
+    Ok(())
+}
+
+
+
+pub fn assert_simple_msg(
+    deps     :  Deps,
+    _env      :  &Env,
+    sender   :  &str,
+    _msg      :  &CosmosMsg<SignedCosmosMsgs>
+) -> Result<(), ContractError> {
+    ensure!(
+        WITH_CALLER.load(deps.storage)?, 
+        StdError::generic_err("Calling directly is not allowed. Message must be signed")
+    );
+
+    ensure!(
+        is_owner(deps.storage, &deps.api.addr_validate(sender)?)?,
+        ContractError::Unauthorized {}
+    );
+
+    if let CosmosMsg::Custom(_) = _msg {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    Ok(())
+}
+
+
+pub fn assert_cosmos_msg(
+    deps     :  Deps,
+    env      :  &Env,
+    sender   :  &str,
+    msg      :  &CosmosMsg<SignedCosmosMsgs>
+) -> Result<(), ContractError> {
+    match msg {
+        CosmosMsg::Custom(signed) => {
+            assert_signed_msg(deps, env, sender, signed)
+        },
+        _ => {
+            assert_simple_msg(deps, env, sender, msg)
+        }
+    }
+}
+
+
+
 pub fn checked_execute_msg(
     deps     :  Deps,
     env      :  &Env,
@@ -539,21 +605,7 @@ pub fn checked_execute_msg(
     match msg.clone() {
         CosmosMsg::Custom(signed) => {
             
-            let credential = get_cosmos_msg_credential(
-                deps, 
-                &signed.data,  
-                signed.signature.clone(), 
-                &signed.payload
-            )?;
-
-            if signed.data
-                .timestamp
-                .plus_seconds(SECS_TO_EXPIRE.load(deps.storage)?)
-                .seconds() > env.block.time.seconds() {
-                return Err(ContractError::Expired {});
-            }
-
-            credential.verify()?;
+            assert_signed_msg(deps, env, sender, &signed)?;
             
             signed.data.messages
                 .iter()
@@ -564,15 +616,7 @@ pub fn checked_execute_msg(
         },
         
         msg => {
-            ensure!(
-                WITH_CALLER.load(deps.storage)?, 
-                StdError::generic_err("Calling directly is not allowed. Message must be signed")
-            );
-
-            ensure!(
-                is_owner(deps.storage, &deps.api.addr_validate(sender)?)?,
-                ContractError::Unauthorized {}
-            );
+            assert_simple_msg(deps, env, sender, &msg)?;
 
             let msg : CosmosMsg = match msg {
                 CosmosMsg::Bank(b) => b.into(),
@@ -600,23 +644,27 @@ pub fn checked_execute_msg(
 
 
 pub fn checked_execute_msgs(
-    deps     :  Deps,
+    deps     :  DepsMut,
     env      :  &Env,
     sender   :  &str,
     msgs     :  &Vec<CosmosMsg<SignedCosmosMsgs>>,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
 
+    let mut checked : Vec<CosmosMsg> = Vec::with_capacity(msgs.len() + 2);
     
-    let nested = msgs.iter()
-        .map(|msg| checked_execute_msg(deps, env, sender, msg))
-        .collect::<Result<Vec<Vec<CosmosMsg>>, ContractError>>()?;
+    for msg in msgs.iter() {
+        let extracted = checked_execute_msg(deps.as_ref(), env, sender, msg)?;
+        
+        if extracted.len() > 1 {
+            if let CosmosMsg::Custom(signed) = &msg {
+                NONCES.save(deps.storage, signed.data.nonce.unwrap().u128(), &true)?;
+            }
+        }
 
-    let msgs = nested
-        .iter()
-        .flatten()
-        .cloned()
-        .collect::<Vec<CosmosMsg>>();
+        checked.extend(extracted);
 
-    Ok(msgs)
+    }
+
+    Ok(checked)
 }
 

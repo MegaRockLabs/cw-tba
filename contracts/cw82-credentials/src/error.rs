@@ -30,6 +30,7 @@ pub enum ContractError {
     #[error("Can't derive owner from provided credentials")]
     NotDerivable {},
 
+
     #[error("Invalid signed action: {0}")]
     BadSignedAction(String),
 
@@ -41,6 +42,9 @@ pub enum ContractError {
 
     #[error("Provided credential is expired")]
     Expired {},
+
+    #[error("Provided nonce has already been used")]
+    NonceExists {},
 
     #[error("{0}")]
     Generic(String),

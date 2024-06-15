@@ -1,4 +1,4 @@
-use cosmwasm_std::{from_json, Binary, CosmosMsg, Deps, Env, Order, StdError, StdResult};
+use cosmwasm_std::{from_json, CosmosMsg, Deps, Env, Order, StdError, StdResult, Binary};
 use cw82::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
 use saa::{ensure, Verifiable};
 use cw_tba::TokenInfo;
@@ -8,7 +8,7 @@ use crate::{
     msg::{AssetsResponse, FullInfoResponse, SignedCosmosMsgs, ValidSignaturesPayload}, 
     state::{KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO}, 
     utils::{
-        checked_execute_msg, get_verifying_credential, get_verifying_indexed_credential, status_ok, validate_multi_payload
+        assert_signed_msg, assert_simple_msg, get_verifying_credential, get_verifying_indexed_credential, status_ok, validate_multi_payload
     }
 };
 
@@ -27,15 +27,17 @@ pub fn can_execute(
     if !status_ok(deps.storage) { 
         return Ok(CanExecuteResponse { can_execute: false }) 
     };
+
+    let can_execute = match msg {
+        CosmosMsg::Custom(signed) => {
+            assert_signed_msg(deps, &env, &sender, &signed).is_ok()
+        },
+        _ => {
+            assert_simple_msg(deps, &env, &sender, &msg).is_ok()
+        }
+    };
     
-    Ok(CanExecuteResponse {
-        can_execute: checked_execute_msg(
-            deps,
-            &env,
-            sender.as_str(), 
-            &msg
-        ).is_ok()
-    })
+    Ok(CanExecuteResponse { can_execute })
 }
 
 
@@ -47,7 +49,12 @@ pub fn valid_signature(
 ) -> StdResult<ValidSignatureResponse> {
 
     let is_valid = if status_ok(deps.storage) {
-        let credential = get_verifying_credential(deps, data, signature, &payload)?;
+        let credential = get_verifying_credential(
+            deps, 
+            data, 
+            signature, 
+            payload
+        )?;
         credential.verify().is_ok()
     } else {
         false
@@ -94,8 +101,8 @@ pub fn valid_signatures(
             let data = data[index].clone();
             let credential_res = get_verifying_indexed_credential(
                 deps, 
-                data, 
-                signature, 
+                data.into(), 
+                signature.into(), 
                 index,
                 &payload
             );
