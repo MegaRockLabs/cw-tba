@@ -31,9 +31,9 @@ pub static KNOWN_TOKENS       : Map<(&str, &str), bool>           = Map::new("k"
 pub static NONCES             : Map<u128, bool>                   = Map::new("n");
 
 
-const DEFAULT_SECS_TO_EXPIRE : u64 = 300;
+/* const DEFAULT_SECS_TO_EXPIRE : u64 = 300;
 const MIN_SECS_TO_EXPIRE     : u64 = 10;
-
+ */
 
 pub fn save_credentials(
     deps      :     DepsMut,
@@ -45,7 +45,6 @@ pub fn save_credentials(
 
     let with_caller = data.with_caller.unwrap_or_default();
     WITH_CALLER.save(deps.storage, &with_caller)?;
-
 
     let info = if with_caller {
         MessageInfo {

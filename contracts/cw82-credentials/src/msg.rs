@@ -38,8 +38,8 @@ pub enum ValidSignaturesPayload {
 
 #[cw_serde]
 pub struct CosmosMsgDataToSign {
-    pub messages   :  Vec<CosmosMsg<Empty>>,
     pub chain_id   :  String,
+    pub messages   :  Vec<CosmosMsg<Empty>>,
     pub timestamp  :  Option<Timestamp>,
     pub nonce      :  Option<Uint128>,
 }
@@ -165,8 +165,9 @@ pub enum QueryMsgBase <T = SignedCosmosMsgs, Q: JsonSchema = Empty> {
 
 
 
-pub type ContractResult = Result<Response, ContractError>;
 pub type InstantiateMsg = InstantiateAccountMsg<CredentialData>;
 pub type ExecuteMsg = ExecuteAccountMsg<SignedCosmosMsgs, SignedAccountActions, CredentialData>;
 pub type QueryMsg = QueryMsgBase<SignedCosmosMsgs, Empty>;
 pub type MigrateMsg = MigrateAccountMsg;
+
+pub type ContractResult = Result<Response, ContractError>;
