@@ -1,5 +1,5 @@
 {
-  "contract_name": "cw82_credentials",
+  "contract_name": "cw82_base",
   "contract_version": "0.1.0",
   "idl_version": "1.0.0",
   "instantiate": {
@@ -16,7 +16,7 @@
         "description": "Customiable payload specififc for account implementation",
         "allOf": [
           {
-            "$ref": "#/definitions/CredentialData"
+            "$ref": "#/definitions/Binary"
           }
         ]
       },
@@ -36,209 +36,8 @@
     "additionalProperties": false,
     "definitions": {
       "Binary": {
+        "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
         "type": "string"
-      },
-      "Caller": {
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "properties": {
-          "id": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "format": "uint8",
-              "minimum": 0.0
-            }
-          }
-        },
-        "additionalProperties": false
-      },
-      "CosmosArbitrary": {
-        "type": "object",
-        "required": [
-          "message",
-          "pubkey",
-          "signature"
-        ],
-        "properties": {
-          "hrp": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "message": {
-            "$ref": "#/definitions/Binary"
-          },
-          "pubkey": {
-            "$ref": "#/definitions/Binary"
-          },
-          "signature": {
-            "$ref": "#/definitions/Binary"
-          }
-        },
-        "additionalProperties": false
-      },
-      "Credential": {
-        "oneOf": [
-          {
-            "type": "object",
-            "required": [
-              "caller"
-            ],
-            "properties": {
-              "caller": {
-                "$ref": "#/definitions/Caller"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "evm"
-            ],
-            "properties": {
-              "evm": {
-                "$ref": "#/definitions/EvmCredential"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "secp256k1"
-            ],
-            "properties": {
-              "secp256k1": {
-                "$ref": "#/definitions/Secp256k1"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "ed25519"
-            ],
-            "properties": {
-              "ed25519": {
-                "$ref": "#/definitions/Ed25519"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "cosmos_arbitrary"
-            ],
-            "properties": {
-              "cosmos_arbitrary": {
-                "$ref": "#/definitions/CosmosArbitrary"
-              }
-            },
-            "additionalProperties": false
-          }
-        ]
-      },
-      "CredentialData": {
-        "type": "object",
-        "required": [
-          "credentials"
-        ],
-        "properties": {
-          "credentials": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/Credential"
-            }
-          },
-          "primary_index": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "uint8",
-            "minimum": 0.0
-          },
-          "with_caller": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          }
-        },
-        "additionalProperties": false
-      },
-      "Ed25519": {
-        "type": "object",
-        "required": [
-          "message",
-          "pubkey",
-          "signature"
-        ],
-        "properties": {
-          "message": {
-            "$ref": "#/definitions/Binary"
-          },
-          "pubkey": {
-            "$ref": "#/definitions/Binary"
-          },
-          "signature": {
-            "$ref": "#/definitions/Binary"
-          }
-        },
-        "additionalProperties": false
-      },
-      "EvmCredential": {
-        "type": "object",
-        "required": [
-          "message",
-          "signature",
-          "signer"
-        ],
-        "properties": {
-          "message": {
-            "$ref": "#/definitions/Binary"
-          },
-          "signature": {
-            "$ref": "#/definitions/Binary"
-          },
-          "signer": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
-      "Secp256k1": {
-        "type": "object",
-        "required": [
-          "message",
-          "pubkey",
-          "signature"
-        ],
-        "properties": {
-          "hrp": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "message": {
-            "$ref": "#/definitions/Binary"
-          },
-          "pubkey": {
-            "$ref": "#/definitions/Binary"
-          },
-          "signature": {
-            "$ref": "#/definitions/Binary"
-          }
-        },
-        "additionalProperties": false
       },
       "TokenInfo": {
         "type": "object",
@@ -280,7 +79,7 @@
               "msgs": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/definitions/CosmosMsg_for_SignedCosmosMsgs"
+                  "$ref": "#/definitions/CosmosMsg_for_Empty"
                 }
               }
             },
@@ -478,7 +277,7 @@
                 "description": "New account data",
                 "anyOf": [
                   {
-                    "$ref": "#/definitions/CredentialData"
+                    "$ref": "#/definitions/Binary"
                   },
                   {
                     "type": "null"
@@ -512,7 +311,7 @@
                 "description": "New account data",
                 "allOf": [
                   {
-                    "$ref": "#/definitions/CredentialData"
+                    "$ref": "#/definitions/Binary"
                   }
                 ]
               }
@@ -586,12 +385,16 @@
         "properties": {
           "extension": {
             "type": "object",
-            "required": [
-              "msg"
-            ],
             "properties": {
               "msg": {
-                "$ref": "#/definitions/SignedAccountActions"
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Empty"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false
@@ -601,74 +404,6 @@
       }
     ],
     "definitions": {
-      "AccountActionDataToSign": {
-        "type": "object",
-        "required": [
-          "actions",
-          "chain_id"
-        ],
-        "properties": {
-          "actions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/ExecuteAccountMsg_for_Empty_and_Nullable_Empty_and_Binary"
-            }
-          },
-          "chain_id": {
-            "type": "string"
-          },
-          "nonce": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Uint128"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "timestamp": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Timestamp"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "additionalProperties": false
-      },
-      "AuthPayload": {
-        "type": "object",
-        "properties": {
-          "address": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "credential_id": {
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "type": "integer",
-              "format": "uint8",
-              "minimum": 0.0
-            }
-          },
-          "hrp": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "additionalProperties": false
-      },
       "BankMsg": {
         "description": "The message types of the bank module.\n\nSee https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/bank/v1beta1/tx.proto",
         "oneOf": [
@@ -730,26 +465,6 @@
         "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
         "type": "string"
       },
-      "Binary2": {
-        "type": "string"
-      },
-      "Caller": {
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "properties": {
-          "id": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "format": "uint8",
-              "minimum": 0.0
-            }
-          }
-        },
-        "additionalProperties": false
-      },
       "Coin": {
         "type": "object",
         "required": [
@@ -764,71 +479,6 @@
             "type": "string"
           }
         }
-      },
-      "CosmosArbitrary": {
-        "type": "object",
-        "required": [
-          "message",
-          "pubkey",
-          "signature"
-        ],
-        "properties": {
-          "hrp": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "message": {
-            "$ref": "#/definitions/Binary2"
-          },
-          "pubkey": {
-            "$ref": "#/definitions/Binary2"
-          },
-          "signature": {
-            "$ref": "#/definitions/Binary2"
-          }
-        },
-        "additionalProperties": false
-      },
-      "CosmosMsgDataToSign": {
-        "type": "object",
-        "required": [
-          "chain_id",
-          "messages"
-        ],
-        "properties": {
-          "chain_id": {
-            "type": "string"
-          },
-          "messages": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/CosmosMsg_for_Empty"
-            }
-          },
-          "nonce": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Uint128"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "timestamp": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Timestamp"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "additionalProperties": false
       },
       "CosmosMsg_for_Empty": {
         "oneOf": [
@@ -943,212 +593,6 @@
           }
         ]
       },
-      "CosmosMsg_for_SignedCosmosMsgs": {
-        "oneOf": [
-          {
-            "type": "object",
-            "required": [
-              "bank"
-            ],
-            "properties": {
-              "bank": {
-                "$ref": "#/definitions/BankMsg"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "custom"
-            ],
-            "properties": {
-              "custom": {
-                "$ref": "#/definitions/SignedCosmosMsgs"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "staking"
-            ],
-            "properties": {
-              "staking": {
-                "$ref": "#/definitions/StakingMsg"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "distribution"
-            ],
-            "properties": {
-              "distribution": {
-                "$ref": "#/definitions/DistributionMsg"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "A Stargate message encoded the same way as a protobuf [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto). This is the same structure as messages in `TxBody` from [ADR-020](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-020-protobuf-transaction-encoding.md)",
-            "type": "object",
-            "required": [
-              "stargate"
-            ],
-            "properties": {
-              "stargate": {
-                "type": "object",
-                "required": [
-                  "type_url",
-                  "value"
-                ],
-                "properties": {
-                  "type_url": {
-                    "type": "string"
-                  },
-                  "value": {
-                    "$ref": "#/definitions/Binary"
-                  }
-                }
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "ibc"
-            ],
-            "properties": {
-              "ibc": {
-                "$ref": "#/definitions/IbcMsg"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "wasm"
-            ],
-            "properties": {
-              "wasm": {
-                "$ref": "#/definitions/WasmMsg"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "gov"
-            ],
-            "properties": {
-              "gov": {
-                "$ref": "#/definitions/GovMsg"
-              }
-            },
-            "additionalProperties": false
-          }
-        ]
-      },
-      "Credential": {
-        "oneOf": [
-          {
-            "type": "object",
-            "required": [
-              "caller"
-            ],
-            "properties": {
-              "caller": {
-                "$ref": "#/definitions/Caller"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "evm"
-            ],
-            "properties": {
-              "evm": {
-                "$ref": "#/definitions/EvmCredential"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "secp256k1"
-            ],
-            "properties": {
-              "secp256k1": {
-                "$ref": "#/definitions/Secp256k1"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "ed25519"
-            ],
-            "properties": {
-              "ed25519": {
-                "$ref": "#/definitions/Ed25519"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "cosmos_arbitrary"
-            ],
-            "properties": {
-              "cosmos_arbitrary": {
-                "$ref": "#/definitions/CosmosArbitrary"
-              }
-            },
-            "additionalProperties": false
-          }
-        ]
-      },
-      "CredentialData": {
-        "type": "object",
-        "required": [
-          "credentials"
-        ],
-        "properties": {
-          "credentials": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/Credential"
-            }
-          },
-          "primary_index": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "uint8",
-            "minimum": 0.0
-          },
-          "with_caller": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          }
-        },
-        "additionalProperties": false
-      },
       "Cw721ReceiveMsg": {
         "description": "Cw721ReceiveMsg should be de/serialized under `Receive()` variant in a ExecuteMsg",
         "type": "object",
@@ -1248,392 +692,9 @@
           }
         ]
       },
-      "Ed25519": {
-        "type": "object",
-        "required": [
-          "message",
-          "pubkey",
-          "signature"
-        ],
-        "properties": {
-          "message": {
-            "$ref": "#/definitions/Binary2"
-          },
-          "pubkey": {
-            "$ref": "#/definitions/Binary2"
-          },
-          "signature": {
-            "$ref": "#/definitions/Binary2"
-          }
-        },
-        "additionalProperties": false
-      },
       "Empty": {
         "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressable in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
         "type": "object"
-      },
-      "EvmCredential": {
-        "type": "object",
-        "required": [
-          "message",
-          "signature",
-          "signer"
-        ],
-        "properties": {
-          "message": {
-            "$ref": "#/definitions/Binary2"
-          },
-          "signature": {
-            "$ref": "#/definitions/Binary2"
-          },
-          "signer": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
-      "ExecuteAccountMsg_for_Empty_and_Nullable_Empty_and_Binary": {
-        "oneOf": [
-          {
-            "description": "Proxy method for executing cosmos messages Wasm and Stargate messages aren't supported Only the current holder can execute this method",
-            "type": "object",
-            "required": [
-              "execute"
-            ],
-            "properties": {
-              "execute": {
-                "type": "object",
-                "required": [
-                  "msgs"
-                ],
-                "properties": {
-                  "msgs": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/definitions/CosmosMsg_for_Empty"
-                    }
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Mint NFTs directly from token account",
-            "type": "object",
-            "required": [
-              "mint_token"
-            ],
-            "properties": {
-              "mint_token": {
-                "type": "object",
-                "required": [
-                  "minter",
-                  "msg"
-                ],
-                "properties": {
-                  "minter": {
-                    "description": "Contract address of the minter",
-                    "type": "string"
-                  },
-                  "msg": {
-                    "$ref": "#/definitions/Binary"
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Send NFT to a contract",
-            "type": "object",
-            "required": [
-              "send_token"
-            ],
-            "properties": {
-              "send_token": {
-                "type": "object",
-                "required": [
-                  "collection",
-                  "contract",
-                  "msg",
-                  "token_id"
-                ],
-                "properties": {
-                  "collection": {
-                    "description": "Contract address of the collection",
-                    "type": "string"
-                  },
-                  "contract": {
-                    "description": "Recipient contract address",
-                    "type": "string"
-                  },
-                  "msg": {
-                    "description": "Send message to pass a recipient contract",
-                    "allOf": [
-                      {
-                        "$ref": "#/definitions/Binary"
-                      }
-                    ]
-                  },
-                  "token_id": {
-                    "description": "Token id",
-                    "type": "string"
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Simple NFT transfer",
-            "type": "object",
-            "required": [
-              "transfer_token"
-            ],
-            "properties": {
-              "transfer_token": {
-                "type": "object",
-                "required": [
-                  "collection",
-                  "recipient",
-                  "token_id"
-                ],
-                "properties": {
-                  "collection": {
-                    "description": "Contract address of the collection",
-                    "type": "string"
-                  },
-                  "recipient": {
-                    "description": "Recipient address",
-                    "type": "string"
-                  },
-                  "token_id": {
-                    "description": "Token id",
-                    "type": "string"
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Owner only method to make the account forget about certain tokens",
-            "type": "object",
-            "required": [
-              "forget_tokens"
-            ],
-            "properties": {
-              "forget_tokens": {
-                "type": "object",
-                "required": [
-                  "collection",
-                  "token_ids"
-                ],
-                "properties": {
-                  "collection": {
-                    "description": "Contract address of the collection",
-                    "type": "string"
-                  },
-                  "token_ids": {
-                    "description": "Optional list of token ids to forget. If not provided, all tokens will be forgotten",
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Owner only method that make the account aware of certain tokens to simplify the future queries",
-            "type": "object",
-            "required": [
-              "update_known_tokens"
-            ],
-            "properties": {
-              "update_known_tokens": {
-                "type": "object",
-                "required": [
-                  "collection"
-                ],
-                "properties": {
-                  "collection": {
-                    "description": "Contract address of the collection",
-                    "type": "string"
-                  },
-                  "limit": {
-                    "description": "Limit of the tokens to return",
-                    "type": [
-                      "integer",
-                      "null"
-                    ],
-                    "format": "uint32",
-                    "minimum": 0.0
-                  },
-                  "start_after": {
-                    "description": "Token id to start after",
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Registry only method to update the owner to the current NFT holder",
-            "type": "object",
-            "required": [
-              "update_ownership"
-            ],
-            "properties": {
-              "update_ownership": {
-                "type": "object",
-                "required": [
-                  "new_owner"
-                ],
-                "properties": {
-                  "new_account_data": {
-                    "description": "New account data",
-                    "anyOf": [
-                      {
-                        "$ref": "#/definitions/Binary"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "new_owner": {
-                    "description": "Current NFT holder",
-                    "type": "string"
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Owner only method to update account data",
-            "type": "object",
-            "required": [
-              "update_account_data"
-            ],
-            "properties": {
-              "update_account_data": {
-                "type": "object",
-                "required": [
-                  "new_account_data"
-                ],
-                "properties": {
-                  "new_account_data": {
-                    "description": "New account data",
-                    "allOf": [
-                      {
-                        "$ref": "#/definitions/Binary"
-                      }
-                    ]
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Registering a token as known on receiving",
-            "type": "object",
-            "required": [
-              "receive_nft"
-            ],
-            "properties": {
-              "receive_nft": {
-                "$ref": "#/definitions/Cw721ReceiveMsg"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Registry only method to call when a token is moved to escrow",
-            "type": "object",
-            "required": [
-              "freeze"
-            ],
-            "properties": {
-              "freeze": {
-                "type": "object",
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Registry only method to call after the token is released from escrow",
-            "type": "object",
-            "required": [
-              "unfreeze"
-            ],
-            "properties": {
-              "unfreeze": {
-                "type": "object",
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Remove all the data from the contract and make it unsuable",
-            "type": "object",
-            "required": [
-              "purge"
-            ],
-            "properties": {
-              "purge": {
-                "type": "object",
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Extension",
-            "type": "object",
-            "required": [
-              "extension"
-            ],
-            "properties": {
-              "extension": {
-                "type": "object",
-                "properties": {
-                  "msg": {
-                    "anyOf": [
-                      {
-                        "$ref": "#/definitions/Empty"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          }
-        ]
       },
       "GovMsg": {
         "description": "This message type allows the contract interact with the [x/gov] module in order to cast votes.\n\n[x/gov]: https://github.com/cosmos/cosmos-sdk/tree/v0.45.12/x/gov\n\n## Examples\n\nCast a simple vote:\n\n``` # use cosmwasm_std::{ #     HexBinary, #     Storage, Api, Querier, DepsMut, Deps, entry_point, Env, StdError, MessageInfo, #     Response, QueryResponse, # }; # type ExecuteMsg = (); use cosmwasm_std::{GovMsg, VoteOption};\n\n#[entry_point] pub fn execute( deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg, ) -> Result<Response, StdError> { // ... Ok(Response::new().add_message(GovMsg::Vote { proposal_id: 4, vote: VoteOption::Yes, })) } ```\n\nCast a weighted vote:\n\n``` # use cosmwasm_std::{ #     HexBinary, #     Storage, Api, Querier, DepsMut, Deps, entry_point, Env, StdError, MessageInfo, #     Response, QueryResponse, # }; # type ExecuteMsg = (); # #[cfg(feature = \"cosmwasm_1_2\")] use cosmwasm_std::{Decimal, GovMsg, VoteOption, WeightedVoteOption};\n\n# #[cfg(feature = \"cosmwasm_1_2\")] #[entry_point] pub fn execute( deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg, ) -> Result<Response, StdError> { // ... Ok(Response::new().add_message(GovMsg::VoteWeighted { proposal_id: 4, options: vec![ WeightedVoteOption { option: VoteOption::Yes, weight: Decimal::percent(65), }, WeightedVoteOption { option: VoteOption::Abstain, weight: Decimal::percent(35), }, ], })) } ```",
@@ -1854,84 +915,6 @@
             "minimum": 0.0
           }
         }
-      },
-      "Secp256k1": {
-        "type": "object",
-        "required": [
-          "message",
-          "pubkey",
-          "signature"
-        ],
-        "properties": {
-          "hrp": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "message": {
-            "$ref": "#/definitions/Binary2"
-          },
-          "pubkey": {
-            "$ref": "#/definitions/Binary2"
-          },
-          "signature": {
-            "$ref": "#/definitions/Binary2"
-          }
-        },
-        "additionalProperties": false
-      },
-      "SignedAccountActions": {
-        "type": "object",
-        "required": [
-          "data",
-          "signature"
-        ],
-        "properties": {
-          "data": {
-            "$ref": "#/definitions/AccountActionDataToSign"
-          },
-          "payload": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/AuthPayload"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "signature": {
-            "$ref": "#/definitions/Binary2"
-          }
-        },
-        "additionalProperties": false
-      },
-      "SignedCosmosMsgs": {
-        "type": "object",
-        "required": [
-          "data",
-          "signature"
-        ],
-        "properties": {
-          "data": {
-            "$ref": "#/definitions/CosmosMsgDataToSign"
-          },
-          "payload": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/AuthPayload"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "signature": {
-            "$ref": "#/definitions/Binary2"
-          }
-        },
-        "additionalProperties": false
       },
       "StakingMsg": {
         "description": "The message types of the staking module.\n\nSee https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/staking/v1beta1/tx.proto",
@@ -2293,6 +1276,20 @@
     "title": "QueryMsg",
     "oneOf": [
       {
+        "description": "Public key that is used to verify signed messages",
+        "type": "object",
+        "required": [
+          "pubkey"
+        ],
+        "properties": {
+          "pubkey": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Status of the account telling whether it iz frozen",
         "type": "object",
         "required": [
@@ -2480,7 +1477,7 @@
             ],
             "properties": {
               "msg": {
-                "$ref": "#/definitions/CosmosMsg_for_SignedCosmosMsgs"
+                "$ref": "#/definitions/CosmosMsg_for_Empty"
               },
               "sender": {
                 "type": "string"
@@ -2584,35 +1581,6 @@
       }
     ],
     "definitions": {
-      "AuthPayload": {
-        "type": "object",
-        "properties": {
-          "address": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "credential_id": {
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "type": "integer",
-              "format": "uint8",
-              "minimum": 0.0
-            }
-          },
-          "hrp": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "additionalProperties": false
-      },
       "BankMsg": {
         "description": "The message types of the bank module.\n\nSee https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/bank/v1beta1/tx.proto",
         "oneOf": [
@@ -2674,9 +1642,6 @@
         "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
         "type": "string"
       },
-      "Binary2": {
-        "type": "string"
-      },
       "Coin": {
         "type": "object",
         "required": [
@@ -2691,45 +1656,6 @@
             "type": "string"
           }
         }
-      },
-      "CosmosMsgDataToSign": {
-        "type": "object",
-        "required": [
-          "chain_id",
-          "messages"
-        ],
-        "properties": {
-          "chain_id": {
-            "type": "string"
-          },
-          "messages": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/CosmosMsg_for_Empty"
-            }
-          },
-          "nonce": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Uint128"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "timestamp": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/Timestamp"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "additionalProperties": false
       },
       "CosmosMsg_for_Empty": {
         "oneOf": [
@@ -2753,119 +1679,6 @@
             "properties": {
               "custom": {
                 "$ref": "#/definitions/Empty"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "staking"
-            ],
-            "properties": {
-              "staking": {
-                "$ref": "#/definitions/StakingMsg"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "distribution"
-            ],
-            "properties": {
-              "distribution": {
-                "$ref": "#/definitions/DistributionMsg"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "A Stargate message encoded the same way as a protobuf [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto). This is the same structure as messages in `TxBody` from [ADR-020](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-020-protobuf-transaction-encoding.md)",
-            "type": "object",
-            "required": [
-              "stargate"
-            ],
-            "properties": {
-              "stargate": {
-                "type": "object",
-                "required": [
-                  "type_url",
-                  "value"
-                ],
-                "properties": {
-                  "type_url": {
-                    "type": "string"
-                  },
-                  "value": {
-                    "$ref": "#/definitions/Binary"
-                  }
-                }
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "ibc"
-            ],
-            "properties": {
-              "ibc": {
-                "$ref": "#/definitions/IbcMsg"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "wasm"
-            ],
-            "properties": {
-              "wasm": {
-                "$ref": "#/definitions/WasmMsg"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "gov"
-            ],
-            "properties": {
-              "gov": {
-                "$ref": "#/definitions/GovMsg"
-              }
-            },
-            "additionalProperties": false
-          }
-        ]
-      },
-      "CosmosMsg_for_SignedCosmosMsgs": {
-        "oneOf": [
-          {
-            "type": "object",
-            "required": [
-              "bank"
-            ],
-            "properties": {
-              "bank": {
-                "$ref": "#/definitions/BankMsg"
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "custom"
-            ],
-            "properties": {
-              "custom": {
-                "$ref": "#/definitions/SignedCosmosMsgs"
               }
             },
             "additionalProperties": false
@@ -3258,32 +2071,6 @@
             "minimum": 0.0
           }
         }
-      },
-      "SignedCosmosMsgs": {
-        "type": "object",
-        "required": [
-          "data",
-          "signature"
-        ],
-        "properties": {
-          "data": {
-            "$ref": "#/definitions/CosmosMsgDataToSign"
-          },
-          "payload": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/AuthPayload"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "signature": {
-            "$ref": "#/definitions/Binary2"
-          }
-        },
-        "additionalProperties": false
       },
       "StakingMsg": {
         "description": "The message types of the staking module.\n\nSee https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/staking/v1beta1/tx.proto",
@@ -3757,6 +2544,7 @@
       "required": [
         "balances",
         "ownership",
+        "pubkey",
         "registry",
         "status",
         "token_info",
@@ -3775,6 +2563,14 @@
           "allOf": [
             {
               "$ref": "#/definitions/Ownership_for_Addr"
+            }
+          ]
+        },
+        "pubkey": {
+          "description": "Public key that is used to verify signed messages",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Binary"
             }
           ]
         },
@@ -3810,6 +2606,10 @@
       "definitions": {
         "Addr": {
           "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        },
+        "Binary": {
+          "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
           "type": "string"
         },
         "Coin": {
@@ -4085,6 +2885,12 @@
           "type": "string"
         }
       }
+    },
+    "pubkey": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Binary",
+      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+      "type": "string"
     },
     "registry": {
       "$schema": "http://json-schema.org/draft-07/schema#",

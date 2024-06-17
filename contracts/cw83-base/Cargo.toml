@@ -4,7 +4,7 @@ version     = { workspace = true }
 edition     = { workspace = true }
 repository  = { workspace = true }
 authors = [ "Kromsten <s@noreply.megarock.labs>" ]
-description = "Stargaze Token Bound Account Registry"
+description = "Token Bound Account Registry"
 
 exclude = [
   "contract.wasm",
@@ -30,3 +30,4 @@ cw83                = { workspace = true }
 cw22                = { workspace = true }
 cw721               = { workspace = true }
 cw-tba              = { workspace = true }
+saa                 = { workspace = true }

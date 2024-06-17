@@ -1,4 +1,5 @@
 use cosmwasm_schema::write_api;
+use cosmwasm_std::Binary;
 use cw83_base::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 fn main() {
@@ -6,7 +7,7 @@ fn main() {
         name: "cw83_base",
         instantiate: InstantiateMsg,
         query: QueryMsg,
-        execute: ExecuteMsg,
+        execute: ExecuteMsg<Binary>,
         migrate: MigrateMsg,
     }
 }

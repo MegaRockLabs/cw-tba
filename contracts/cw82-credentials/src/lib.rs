@@ -1,9 +1,9 @@
-pub mod contract;
-pub mod msg;
-pub mod execute;
 pub mod action;
-pub mod query;
+pub mod contract;
 pub mod error;
+pub mod execute;
+pub mod msg;
+pub mod query;
 pub mod state;
-pub mod utils;
 mod tests;
+pub mod utils;

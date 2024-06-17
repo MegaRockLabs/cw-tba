@@ -34,5 +34,7 @@ cw83                 = { workspace = true }
 cw721                = { workspace = true }
 cw721-base           = { workspace = true }
 cw82-base            = { workspace = true }
+cw82-credentials     = { workspace = true }
 cw83-base            = { workspace = true }
 cw-tba               = { workspace = true }
+saa                  = { workspace = true }

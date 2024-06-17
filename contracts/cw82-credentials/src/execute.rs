@@ -1,40 +1,36 @@
-use cosmwasm_std::{
-    ensure, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response
+use crate::{
+    error::ContractError,
+    msg::{ContractResult, SignedCosmosMsgs, Status},
+    state::{
+        save_credentials, CREDENTIALS, KNOWN_TOKENS, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS,
+        TOKEN_INFO, VERIFYING_CRED_ID, WITH_CALLER,
+    },
+    utils::{assert_owner_derivable, assert_registry, assert_status, checked_execute_msgs},
 };
+use cosmwasm_std::{ensure, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response};
 use cw_ownable::{get_ownership, is_owner};
 use cw_tba::verify_nft_ownership;
 use saa::CredentialData;
-use crate::{
-    error::ContractError, 
-    msg::{ContractResult, SignedCosmosMsgs, Status}, 
-    state::{save_credentials, CREDENTIALS, KNOWN_TOKENS, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, VERIFYING_CRED_ID, WITH_CALLER}, 
-    utils::{checked_execute_msgs, assert_owner_derivable, assert_registry, assert_status}
-};
 
 pub const MINT_REPLY_ID: u64 = 1;
 
-
-
 pub fn try_executing(
-    deps    :   DepsMut,
-    env     :   Env,
-    info    :   MessageInfo,
-    msgs    :   Vec<CosmosMsg<SignedCosmosMsgs>>
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msgs: Vec<CosmosMsg<SignedCosmosMsgs>>,
 ) -> ContractResult {
     assert_status(deps.storage)?;
     let msgs = checked_execute_msgs(deps, &env, info.sender.as_str(), &msgs)?;
     Ok(Response::new().add_messages(msgs))
 }
 
-
-
 pub fn try_updating_account_data(
-    deps     :   DepsMut,
-    env      :   Env,
-    info     :   MessageInfo,
-    data     :   CredentialData
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    data: CredentialData,
 ) -> ContractResult {
-
     let owner = if is_owner(deps.storage, &info.sender)? {
         info.sender.clone()
     } else {
@@ -44,21 +40,15 @@ pub fn try_updating_account_data(
 
     save_credentials(deps, env, info, data, owner.to_string())?;
 
-    Ok(Response::new()
-        .add_attributes(vec![
-            ("action", "update_account_data"),
-        ])
-    )
+    Ok(Response::new().add_attributes(vec![("action", "update_account_data")]))
 }
 
-
-
 pub fn try_updating_ownership(
-    deps              :   DepsMut,
-    env               :   Env,
-    info              :   MessageInfo,
-    new_owner         :   String,
-    new_account_data  :   Option<CredentialData>,
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    new_owner: String,
+    new_account_data: Option<CredentialData>,
 ) -> ContractResult {
     assert_registry(deps.storage, &info.sender)?;
 
@@ -72,10 +62,8 @@ pub fn try_updating_ownership(
 
     Ok(Response::default()
         .add_attribute("action", "update_ownership")
-        .add_attribute("new_owner", new_owner.as_str())
-    )
+        .add_attribute("new_owner", new_owner.as_str()))
 }
-
 
 pub fn try_updating_known_on_receive(
     deps: DepsMut,
@@ -83,27 +71,20 @@ pub fn try_updating_known_on_receive(
     token_id: String,
 ) -> ContractResult {
     KNOWN_TOKENS.save(
-        deps.storage, 
+        deps.storage,
         (collection.as_str(), token_id.as_str()),
-        &true
+        &true,
     )?;
-    Ok(Response::default()
-        .add_attributes(vec![
-            ("action", "update_known_on_receive"),
-            ("collection", collection.as_str()),
-            ("token_id", token_id.as_str())
-        ])
-    )
+    Ok(Response::default().add_attributes(vec![
+        ("action", "update_known_on_receive"),
+        ("collection", collection.as_str()),
+        ("token_id", token_id.as_str()),
+    ]))
 }
 
-
-
-
-pub fn try_freezing(
-    deps    :  DepsMut,
-) -> ContractResult {
-    let token =   TOKEN_INFO.load(deps.storage)?;
-    let owner      =   cw_ownable::get_ownership(deps.storage)?.owner.unwrap();
+pub fn try_freezing(deps: DepsMut) -> ContractResult {
+    let token = TOKEN_INFO.load(deps.storage)?;
+    let owner = cw_ownable::get_ownership(deps.storage)?.owner.unwrap();
 
     ensure!(
         verify_nft_ownership(&deps.querier, owner.as_str(), token).is_err(),
@@ -112,17 +93,10 @@ pub fn try_freezing(
 
     STATUS.save(deps.storage, &Status { frozen: true })?;
 
-    Ok(Response::default()
-        .add_attribute("action", "freeze")
-    )
+    Ok(Response::default().add_attribute("action", "freeze"))
 }
 
-
-
-pub fn try_purging(
-    deps: DepsMut,
-    sender: Addr
-) -> ContractResult {
+pub fn try_purging(deps: DepsMut, sender: Addr) -> ContractResult {
     assert_registry(deps.storage, &sender)?;
 
     REGISTRY_ADDRESS.remove(deps.storage);
@@ -134,8 +108,6 @@ pub fn try_purging(
     WITH_CALLER.remove(deps.storage);
     CREDENTIALS.clear(deps.storage);
     KNOWN_TOKENS.clear(deps.storage);
-    
-    Ok(Response::default()
-        .add_attribute("action", "purge")
-    )
+
+    Ok(Response::default().add_attribute("action", "purge"))
 }

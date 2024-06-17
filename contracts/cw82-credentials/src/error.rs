@@ -30,7 +30,6 @@ pub enum ContractError {
     #[error("Can't derive owner from provided credentials")]
     NotDerivable {},
 
-
     #[error("Invalid signed action: {0}")]
     BadSignedAction(String),
 
