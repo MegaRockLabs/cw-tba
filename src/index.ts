@@ -24,7 +24,6 @@ export const getClient = async (wallet: DirectSecp256k1HdWallet) => {
 
         console.log("granterAddress: ", granterAddress);
         const endpoint = process.env.PUBLIC_ENDPOINT!;
-        console.log("endpoint: ", endpoint);
         client = await SigningArchwayClient.connectWithSigner(endpoint, wallet);
     }
     return client
