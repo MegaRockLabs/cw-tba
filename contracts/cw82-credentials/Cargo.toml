@@ -15,6 +15,10 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
+default = ["archway"]
+archway = [
+  "dep:prost",
+]
 library = []
 
 [dependencies]
@@ -33,3 +37,6 @@ cw83            = { workspace = true }
 cw721-base      = { workspace = true }
 cw-tba          = { workspace = true }
 saa             = { workspace = true }
+
+
+prost = { version = "0.12.3", optional = true }

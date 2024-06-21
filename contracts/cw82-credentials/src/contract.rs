@@ -1,26 +1,22 @@
 use std::borrow::BorrowMut;
 
 use cosmwasm_std::{
-    from_json, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult
+    from_json, to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult
 };
 use cw_ownable::{get_ownership, is_owner};
 
+#[cfg(feature = "archway")]
+use crate::grants;
+
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-
 use cw_tba::ExecuteAccountMsg;
 
 use crate::{
-    action::{self, MINT_REPLY_ID},
-    error::ContractError,
-    execute,
-    msg::{ContractResult, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Status},
-    query::{assets, can_execute, full_info, known_tokens, valid_signature, valid_signatures},
-    state::{
+    action::{self, MINT_REPLY_ID}, error::ContractError, execute,  msg::{ContractResult, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Status}, query::{assets, can_execute, full_info, known_tokens, valid_signature, valid_signatures}, state::{
         save_credentials, MINT_CACHE, NONCES, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO,
         WITH_CALLER,
-    },
-    utils::assert_signed_actions,
+    }, utils::assert_signed_actions
 };
 
 #[cfg(target_arch = "wasm32")]
@@ -66,9 +62,14 @@ pub fn instantiate(
     STATUS.save(deps.storage, &Status { frozen: false })?;
     SERIAL.save(deps.storage, &0u128)?;
 
-    save_credentials(deps, env, info, from_json(&msg.account_data)?, msg.owner)?;
+    save_credentials(deps, env.clone(), info, from_json(&msg.account_data)?, msg.owner)?;
 
-    Ok(Response::default())
+    let mut msgs: Vec<CosmosMsg> = Vec::with_capacity(1);
+    #[cfg(feature = "archway")]
+    msgs.push(grants::register_granter_msg(&env)?);
+    
+
+    Ok(Response::default().add_messages(msgs))
 }
 
 
@@ -203,15 +204,22 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::KnownTokens { skip, limit } => to_json_binary(&known_tokens(deps, skip, limit)?),
         QueryMsg::Assets { skip, limit } => to_json_binary(&assets(deps, env, skip, limit)?),
         QueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),
-        QueryMsg::Extension { .. } => to_json_binary(&String::from("signed_cosmos_msgs")),
+        
+        #[cfg(not(feature = "archway"))]
+        QueryMsg::Extension { .. } => to_json_binary(&cosmwasm_std::Empty {}),
+
+        #[cfg(feature = "archway")]
+        QueryMsg::Extension { .. } => to_json_binary(&crate::grants::GRANT_TEST.load(deps.storage)?),
     }
 }
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _: Env, _: MigrateMsg) -> ContractResult {
     STATUS.save(deps.storage, &Status { frozen: false })?;
     Ok(Response::default())
 }
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(mut deps: DepsMut, env: Env, msg: Reply) -> ContractResult {
@@ -229,5 +237,20 @@ pub fn reply(mut deps: DepsMut, env: Env, msg: Reply) -> ContractResult {
             )
         }
         _ => Err(ContractError::NotSupported {}),
+    }
+}
+
+
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn sudo(
+    deps: DepsMut,
+    env: Env,
+    msg: crate::grants::SudoMsg,
+) -> Result<Response, ContractError> {
+    return match msg {
+        crate::grants::SudoMsg::CwGrant(grant) => {
+            crate::grants::sudo_grant(deps, env, grant)
+        }
     }
 }

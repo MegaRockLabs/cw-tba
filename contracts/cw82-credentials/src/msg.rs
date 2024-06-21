@@ -7,7 +7,7 @@ use cw_ownable::cw_ownable_query;
 use cw_tba::{ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo};
 use saa::{CredentialData, CredentialId};
 
-use crate::error::ContractError;
+use crate::{error::ContractError, grants};
 
 #[cw_serde]
 pub struct AuthPayload {
@@ -144,7 +144,11 @@ pub enum QueryMsgBase<T = SignedCosmosMsgs, Q: JsonSchema = Empty> {
 
 pub type InstantiateMsg = InstantiateAccountMsg<Binary>;
 pub type ExecuteMsg = ExecuteAccountMsg<SignedCosmosMsgs, SignedAccountActions, CredentialData>;
-pub type QueryMsg = QueryMsgBase<SignedCosmosMsgs, Empty>;
-pub type MigrateMsg = MigrateAccountMsg;
 
+pub type MigrateMsg = MigrateAccountMsg;
 pub type ContractResult = Result<Response, ContractError>;
+
+#[cfg(not(feature = "archway"))]
+pub type QueryMsg = QueryMsgBase<SignedCosmosMsgs, Empty>;
+#[cfg(feature = "archway")]
+pub type QueryMsg = QueryMsgBase<SignedCosmosMsgs, grants::GrantQuertMsg>;

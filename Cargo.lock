@@ -992,6 +992,7 @@ dependencies = [
  "cw721-base 0.18.0",
  "cw82",
  "cw83",
+ "prost",
  "semver",
  "sha2 0.10.8",
  "smart-account-auth",
