@@ -13,10 +13,7 @@ use std::path::Path;
 use std::time::Duration;
 use test_context::TestContext;
 
-
-
 static CONFIG: OnceCell<Cfg> = OnceCell::new();
-
 
 #[derive(Clone, Debug)]
 pub struct Cfg {
@@ -31,7 +28,6 @@ pub struct SigningAccount {
     pub key: SigningKey,
 }
 
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Account {
     pub name: String,
@@ -39,10 +35,10 @@ pub struct Account {
     pub mnemonic: String,
 }
 
-
 #[derive(Clone, Debug)]
-pub struct Chain<C = TendermintRPC> 
-where C: CosmosClient
+pub struct Chain<C = TendermintRPC>
+where
+    C: CosmosClient,
 {
     pub cfg: Cfg,
     pub orc: CosmOrc<C>,
@@ -59,9 +55,9 @@ impl TestContext for Chain<CosmosgRPC> {
 
         let orc = CosmOrc::new(cfg.orc_cfg.clone(), true).unwrap();
 
-        Self { 
-            cfg: cfg.clone(), 
-            orc 
+        Self {
+            cfg: cfg.clone(),
+            orc,
         }
     }
 
@@ -70,29 +66,20 @@ impl TestContext for Chain<CosmosgRPC> {
         save_gas_report(&self.orc, &cfg.gas_report_dir);
     }
 }
-
-
-
 
 impl TestContext for Chain<TendermintRPC> {
     fn setup() -> Self {
         let cfg = CONFIG.get_or_init(|| {
             let orc_cfg = init_orc_config().unwrap();
-            let orc = CosmOrc::new_tendermint_rpc(
-                orc_cfg.clone(), 
-                true)
-                .unwrap();
+            let orc = CosmOrc::new_tendermint_rpc(orc_cfg.clone(), true).unwrap();
             global_setup(orc, orc_cfg)
         });
 
-        let orc = CosmOrc::new_tendermint_rpc(
-            cfg.orc_cfg.clone(), 
-            true
-        ).unwrap();
+        let orc = CosmOrc::new_tendermint_rpc(cfg.orc_cfg.clone(), true).unwrap();
 
-        Self { 
-            cfg: cfg.clone(), 
-            orc 
+        Self {
+            cfg: cfg.clone(),
+            orc,
         }
     }
 
@@ -102,25 +89,19 @@ impl TestContext for Chain<TendermintRPC> {
     }
 }
 
-
-
-
- fn init_orc_config () -> Result<Config, ConfigError> {
-    let config = env::var("CONFIG").expect("missing yaml CONFIG env var");
+fn init_orc_config() -> Result<Config, ConfigError> {
+    let mut config = env::var("CONFIG");
+    if config.is_err() {
+        config = Ok("configs/cosm-orc.yaml".to_string());
+    }
+    let config = config.expect("missing yaml CONFIG env var");
     Config::from_yaml(&config)
 }
-
-
-
-
 
 // global_setup() runs once before all of the tests:
 // - loads cosm orc / test account config files
 // - stores contracts on chain for all tests to reuse
-fn global_setup<C: CosmosClient>(
-    mut orc: CosmOrc<C>,
-    mut orc_cfg: Config
-) -> Cfg {
+fn global_setup<C: CosmosClient>(mut orc: CosmOrc<C>, mut orc_cfg: Config) -> Cfg {
     env_logger::init();
 
     let gas_report_dir = env::var("GAS_OUT_DIR").unwrap_or_else(|_| "gas_reports".to_string());
@@ -130,7 +111,7 @@ fn global_setup<C: CosmosClient>(
     orc.poll_for_n_blocks(1, Duration::from_millis(10_000), true)
         .unwrap();
 
-    let skip_storage = env::var("SKIP_CONTRACT_STORE").unwrap_or_else(|_| "false".to_string());
+    let skip_storage = env::var("SKIP_CONTRACT_STORE").unwrap_or_else(|_| "true".to_string());
     if !skip_storage.parse::<bool>().unwrap() {
         orc.store_contracts("../artifacts", &accounts[0].key, None)
             .unwrap();
@@ -139,6 +120,8 @@ fn global_setup<C: CosmosClient>(
 
         // persist stored code_ids in CONFIG, so we can reuse for all tests
         orc_cfg.contract_deploy_info = orc.contract_map.deploy_info().clone();
+
+        println!("Contract deploy info: {:?}", orc_cfg.contract_deploy_info)
     }
 
     Cfg {
@@ -159,13 +142,13 @@ fn test_accounts(cfg: &ChainConfig) -> Vec<SigningAccount> {
             key: SigningKey {
                 name: a.name,
                 key: Key::Mnemonic(a.mnemonic),
-                derivation_path: cfg.derivation_path.clone()
+                derivation_path: cfg.derivation_path.clone(),
             },
         })
         .collect()
 }
 
-fn save_gas_report<C: CosmosClient >(orc: &CosmOrc<C>, gas_report_dir: &str) {
+fn save_gas_report<C: CosmosClient>(orc: &CosmOrc<C>, gas_report_dir: &str) {
     let report = orc
         .gas_profiler_report()
         .expect("error fetching profile reports");

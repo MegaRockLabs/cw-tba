@@ -1,20 +1,14 @@
-use cosmwasm_std::{Binary, Empty, Coin, Addr};
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
+use cosmwasm_std::{Addr, Binary, Coin, Empty};
 pub use cw82::{
-    smart_account_query, 
-    CanExecuteResponse, 
-    ValidSignatureResponse, 
-    ValidSignaturesResponse
+    smart_account_query, CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse,
 };
 use cw_ownable::cw_ownable_query;
-use cw_tba::{TokenInfo, InstantiateAccountMsg, ExecuteAccountMsg, MigrateAccountMsg};
-
+use cw_tba::{ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo};
 
 pub type InstantiateMsg = InstantiateAccountMsg;
 pub type MigrateMsg = MigrateAccountMsg;
 pub type ExecuteMsg = ExecuteAccountMsg;
-
-
 
 #[cw_serde]
 pub struct Status {
@@ -27,10 +21,8 @@ pub struct AssetsResponse {
     /// Native fungible tokens held by an account
     pub balances: Vec<Coin>,
     /// NFT tokens the account is aware of
-    pub tokens: Vec<TokenInfo>
+    pub tokens: Vec<TokenInfo>,
 }
-
-
 
 #[cw_serde]
 pub struct FullInfoResponse {
@@ -47,18 +39,16 @@ pub struct FullInfoResponse {
     /// NFT tokens the account is aware of
     pub tokens: Vec<TokenInfo>,
     /// Whether the account is frozen
-    pub status: Status
+    pub status: Status,
 }
 
-
 pub type KnownTokensResponse = Vec<TokenInfo>;
-
 
 #[smart_account_query]
 #[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsgBase <T = Empty, Q: JsonSchema = Empty> {
+pub enum QueryMsgBase<T = Empty, Q: JsonSchema = Empty> {
     /// Public key that is used to verify signed messages
     #[returns(Binary)]
     Pubkey {},
@@ -79,21 +69,21 @@ pub enum QueryMsgBase <T = Empty, Q: JsonSchema = Empty> {
     #[returns(KnownTokensResponse)]
     KnownTokens {
         skip: Option<u32>,
-        limit: Option<u32>
+        limit: Option<u32>,
     },
 
     /// List of the assets (balances + tokens) the account is aware of
     #[returns(AssetsResponse)]
     Assets {
         skip: Option<u32>,
-        limit: Option<u32>
+        limit: Option<u32>,
     },
 
     /// Full info about the account
     #[returns(FullInfoResponse)]
     FullInfo {
         skip: Option<u32>,
-        limit: Option<u32>
+        limit: Option<u32>,
     },
 
     /// Incremental number telling wether a direct interaction with the account has occured
@@ -101,7 +91,7 @@ pub enum QueryMsgBase <T = Empty, Q: JsonSchema = Empty> {
     Serial {},
 
     #[returns(())]
-    Extension { msg: Q }
+    Extension { msg: Q },
 }
 
 /// [TokenInfo] is used as a to query the account info

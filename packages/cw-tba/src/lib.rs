@@ -1,17 +1,14 @@
 mod account;
-mod registry;
 mod common;
-
+mod registry;
 
 pub use account::*;
-pub use registry::*;
 pub use common::*;
+pub use registry::*;
 
 // re-exports for same version usage
-pub use cosmwasm_std;
 pub use cosmwasm_schema;
+pub use cosmwasm_std;
 pub use cw721;
 
-
-use cw83::CreateAccountMsg as CreateAccountMsgBase;
-pub type CreateAccountMsg = CreateAccountMsgBase<TokenAccount>;
+pub type CreateAccountMsg<T> = cw83::CreateAccountMsg<TokenAccount<T>>;

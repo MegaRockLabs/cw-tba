@@ -7,3 +7,13 @@ chain_cfg:
   gas_price: 900000000000
   gas_adjustment: 1.8
   derivation_path: "m/44'/118'/0'/0/0"
+
+contract_deploy_info:
+  cw82_base:
+    code_id: 75
+  cw83_base:
+    code_id: 88
+  cw721_base:
+    code_id: 74
+  cw82_credentials: 
+    code_id: 90

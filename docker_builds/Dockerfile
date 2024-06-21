@@ -1,4 +1,4 @@
-FROM ghcr.io/archway-network/archwayd-dev:v7.0.0-arm64v8
+FROM ghcr.io/archway-network/archwayd-dev:v7.0.1-arm64v8
 
 COPY ./entry-point.sh /data/entry-point.sh
 RUN chmod +x /data/entry-point.sh

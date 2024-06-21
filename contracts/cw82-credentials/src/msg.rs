@@ -1,80 +1,65 @@
-use cosmwasm_std::{Addr, Coin, CosmosMsg, CustomMsg, Empty, Response, Timestamp, Uint128};
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
+use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg, CustomMsg, Empty, Response, Uint128};
 pub use cw82::{
-    smart_account_query, 
-    CanExecuteResponse, 
-    ValidSignatureResponse, 
-    ValidSignaturesResponse
+    smart_account_query, CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse,
 };
 use cw_ownable::cw_ownable_query;
-use cw_tba::{TokenInfo, InstantiateAccountMsg, ExecuteAccountMsg, MigrateAccountMsg};
-use saa::{CredentialData, CredentialId, Binary};
+use cw_tba::{ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo};
+use saa::{CredentialData, CredentialId};
 
 use crate::error::ContractError;
 
-
-
 #[cw_serde]
 pub struct AuthPayload {
-    pub hrp:              Option<String>,
-    pub address:          Option<String>,
-    pub credential_id:    Option<CredentialId>,
+    pub hrp: Option<String>,
+    pub address: Option<String>,
+    pub credential_id: Option<CredentialId>,
 }
-
 
 #[cw_serde]
 pub struct IndexedAuthPayload {
     pub payload: AuthPayload,
-    pub index: u8
+    pub index: u8,
 }
-
 
 #[cw_serde]
 pub enum ValidSignaturesPayload {
     Generic(AuthPayload),
-    Multiple(Vec<Option<IndexedAuthPayload>>)
+    Multiple(Vec<Option<IndexedAuthPayload>>),
 }
-
 
 #[cw_serde]
 pub struct CosmosMsgDataToSign {
-    pub chain_id   :  String,
-    pub messages   :  Vec<CosmosMsg<Empty>>,
-    pub timestamp  :  Option<Timestamp>,
-    pub nonce      :  Option<Uint128>,
+    pub chain_id: String,
+    pub nonce: Uint128,
+    pub messages: Vec<CosmosMsg<Empty>>,
 }
 
 impl CustomMsg for CosmosMsgDataToSign {}
 
-
 #[cw_serde]
 pub struct AccountActionDataToSign {
-    pub actions    :  Vec<ExecuteAccountMsg>,
-    pub chain_id   :  String,
-    pub timestamp  :  Option<Timestamp>,
-    pub nonce      :  Option<Uint128>,
+    pub actions: Vec<ExecuteAccountMsg>,
+    pub chain_id: String,
+    pub nonce: Uint128,
 }
-
 
 #[cw_serde]
 pub struct SignedCosmosMsgs {
-    pub data        : CosmosMsgDataToSign,
-    pub payload     : Option<AuthPayload>,
-    pub signature   : Binary,
+    pub data: CosmosMsgDataToSign,
+    pub payload: Option<AuthPayload>,
+    pub signature: Binary,
 }
-
 
 #[cw_serde]
 pub struct SignedAccountActions {
-    pub data        : AccountActionDataToSign,
-    pub payload     : Option<AuthPayload>,
-    pub signature   : Binary,
+    pub data: AccountActionDataToSign,
+    pub payload: Option<AuthPayload>,
+    pub signature: Binary,
 }
-
 
 impl CustomMsg for SignedCosmosMsgs {}
 impl CustomMsg for SignedAccountActions {}
-
 
 #[cw_serde]
 pub struct Status {
@@ -87,10 +72,8 @@ pub struct AssetsResponse {
     /// Native fungible tokens held by an account
     pub balances: Vec<Coin>,
     /// NFT tokens the account is aware of
-    pub tokens: Vec<TokenInfo>
+    pub tokens: Vec<TokenInfo>,
 }
-
-
 
 #[cw_serde]
 pub struct FullInfoResponse {
@@ -105,20 +88,16 @@ pub struct FullInfoResponse {
     /// NFT tokens the account is aware of
     pub tokens: Vec<TokenInfo>,
     /// Whether the account is frozen
-    pub status: Status
+    pub status: Status,
 }
 
-
 pub type KnownTokensResponse = Vec<TokenInfo>;
-
-
 
 #[smart_account_query]
 #[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsgBase <T = SignedCosmosMsgs, Q: JsonSchema = Empty> {
-
+pub enum QueryMsgBase<T = SignedCosmosMsgs, Q: JsonSchema = Empty> {
     /// Status of the account telling whether it iz frozen
     #[returns(Status)]
     Status {},
@@ -135,21 +114,21 @@ pub enum QueryMsgBase <T = SignedCosmosMsgs, Q: JsonSchema = Empty> {
     #[returns(KnownTokensResponse)]
     KnownTokens {
         skip: Option<u32>,
-        limit: Option<u32>
+        limit: Option<u32>,
     },
 
     /// List of the assets (balances + tokens) the account is aware of
     #[returns(AssetsResponse)]
     Assets {
         skip: Option<u32>,
-        limit: Option<u32>
+        limit: Option<u32>,
     },
 
     /// Full info about the account
     #[returns(FullInfoResponse)]
     FullInfo {
         skip: Option<u32>,
-        limit: Option<u32>
+        limit: Option<u32>,
     },
 
     /// Incremental number telling wether a direct interaction with the account has occured
@@ -157,15 +136,13 @@ pub enum QueryMsgBase <T = SignedCosmosMsgs, Q: JsonSchema = Empty> {
     Serial {},
 
     #[returns(())]
-    Extension { msg: Q }
+    Extension { msg: Q },
 }
 
 /// [TokenInfo] is used as a to query the account info
 /// so no need to return any additional data
 
-
-
-pub type InstantiateMsg = InstantiateAccountMsg<CredentialData>;
+pub type InstantiateMsg = InstantiateAccountMsg<Binary>;
 pub type ExecuteMsg = ExecuteAccountMsg<SignedCosmosMsgs, SignedAccountActions, CredentialData>;
 pub type QueryMsg = QueryMsgBase<SignedCosmosMsgs, Empty>;
 pub type MigrateMsg = MigrateAccountMsg;

@@ -1,7 +1,12 @@
 .PHONY: deploy-local e2etest e2etest-full lint optimize publish-packages publish-contracts schema release
 
 TEST_ADDRS ?= $(shell jq -r '.[].address' ./e2e/configs/test_accounts.json | tr '\n' ' ')
-GAS_LIMIT ?= "75000000"
+GAS_LIMIT ?= "75000000000"
+
+
+build:
+	RUSTFLAGS='-C link-arg=-s' cargo build  --target wasm32-unknown-unknown
+
 
 deploy-local:
 	sudo docker kill archway || true

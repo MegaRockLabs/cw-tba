@@ -36,7 +36,6 @@ pub enum ContractError {
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),
-
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
 }
@@ -49,6 +48,8 @@ impl From<semver::Error> for ContractError {
 
 impl From<ParseReplyError> for ContractError {
     fn from(err: ParseReplyError) -> Self {
-        Self::Std(StdError::GenericErr { msg: err.to_string() })
+        Self::Std(StdError::GenericErr {
+            msg: err.to_string(),
+        })
     }
 }

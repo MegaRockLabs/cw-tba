@@ -1,25 +1,22 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_schema::{cw_serde, serde::Serialize, QueryResponses};
 use cosmwasm_std::{Binary, Empty};
-use cw83::{registry_query, registry_execute, 
+use cw83::{
+    registry_query, AccountInfoResponse as AccountInfoResponseBase,
     AccountQuery as AccountQueryBase,
-    AccountInfoResponse as AccountInfoResponseBase,
 };
-use cw_tba::{MigrateAccountMsg, TokenInfo, RegistryParams, CreateAccountMsg};
 
-
+use cw_tba::{CreateAccountMsg, MigrateAccountMsg, RegistryParams, TokenInfo};
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub params: RegistryParams
+    pub params: RegistryParams,
 }
-
 
 /// A List of the collections registered in the registry
 #[cw_serde]
 pub struct CollectionsResponse {
     /// Contract addresses of each collections
     pub collections: Vec<String>,
-
 }
 
 /// An full account stored in the registry
@@ -32,7 +29,7 @@ pub struct Account {
     pub address: String,
 }
 
-/// An entry without collection address 
+/// An entry without collection address
 #[cw_serde]
 pub struct CollectionAccount {
     /// Token id
@@ -41,35 +38,29 @@ pub struct CollectionAccount {
     pub address: String,
 }
 
-
 #[cw_serde]
 pub struct AccountsResponse {
     /// Total number of accounts in the registry
     pub total: u32,
     /// List of the accounts matching the query
-    pub accounts: Vec<Account>
+    pub accounts: Vec<Account>,
 }
-
 
 #[cw_serde]
 pub struct CollectionAccountsResponse {
     /// Total number of accounts of a specific collection
     pub total: u32,
     /// List of the accounts matching the query
-    pub accounts: Vec<CollectionAccount>
+    pub accounts: Vec<CollectionAccount>,
 }
-
 
 pub type AccountQuery = AccountQueryBase<TokenInfo>;
 pub type AccountInfoResponse = AccountInfoResponseBase<Empty>;
-
-
 
 #[registry_query]
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-
     /// Query all accounts in the registry in descending order
     #[returns(AccountsResponse)]
     Accounts {
@@ -97,7 +88,7 @@ pub enum QueryMsg {
         /// Number of collections to skip
         skip: Option<u32>,
         /// Limit how many collections to return
-        limit: Option<u32>
+        limit: Option<u32>,
     },
 
     /// Query params of the registry
@@ -108,10 +99,12 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct MigrateMsg {}
 
-
-#[registry_execute]
 #[cw_serde]
-pub enum ExecuteMsg {
+pub enum ExecuteMsg<T = Binary>
+where
+    T: Serialize,
+{
+    CreateAccount(CreateAccountMsg<T>),
 
     /// Update the owner of a token-bound account
     UpdateAccountOwnership {
@@ -124,7 +117,7 @@ pub enum ExecuteMsg {
     },
 
     /// Create a new token-bound account. Access the old one will be forever lost
-    ResetAccount(CreateAccountMsg),
+    ResetAccount(CreateAccountMsg<T>),
 
     /// Migrate an account to the newer code version if the code id is allowed
     MigrateAccount {
@@ -133,11 +126,9 @@ pub enum ExecuteMsg {
         /// New code id to migrate the account to
         new_code_id: u64,
         /// Migration message to be passed to the account contract
-        msg: MigrateAccountMsg
-    }
-
+        msg: MigrateAccountMsg,
+    },
 }
-
 
 #[cw_serde]
 pub enum SudoMsg {
@@ -146,11 +137,7 @@ pub enum SudoMsg {
     /// updating an address that is used for fair fee burning
     UpdateFairBurnAddress(String),
     /// updating the list of code ids that are allowed for account creation & migration
-    UpdateAllowedCodeIds {
-        code_ids: Vec<u64>
-    },
+    UpdateAllowedCodeIds { code_ids: Vec<u64> },
     /// manager contracts that can update an owner for an account if the latter is the new holder of the bound NFT
-    UpdateManagers {
-        managers: Vec<String>
-    },
+    UpdateManagers { managers: Vec<String> },
 }

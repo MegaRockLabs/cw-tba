@@ -21,10 +21,8 @@ library = []
 sha2            = { workspace = true }
 semver          = { workspace = true }
 thiserror       = { workspace = true }
-k256            = { workspace = true }
-
 cosmwasm-schema = { workspace = true }
-cosmwasm-std    = { workspace = true, features = ["staking", "stargate" ] }
+cosmwasm-std    = { workspace = true }
 cw-storage-plus = { workspace = true }
 cw-ownable      = { workspace = true }
 cw-utils        = { workspace = true }
@@ -32,10 +30,6 @@ cw2             = { workspace = true }
 cw22            = { workspace = true }
 cw82            = { workspace = true }
 cw83            = { workspace = true }
-cw721           = { workspace = true }
-
 cw721-base      = { workspace = true }
-cw82-base       = { workspace = true }
-
 cw-tba          = { workspace = true }
 saa             = { workspace = true }

@@ -30,7 +30,6 @@ pub enum ContractError {
     #[error("Can't derive owner from provided credentials")]
     NotDerivable {},
 
-
     #[error("Invalid signed action: {0}")]
     BadSignedAction(String),
 
@@ -45,6 +44,9 @@ pub enum ContractError {
 
     #[error("Provided nonce has already been used")]
     NonceExists {},
+
+    #[error("At least one of the provided credentials must be deriving into owner of the token")]
+    NoOwnerCred {},
 
     #[error("{0}")]
     Generic(String),
