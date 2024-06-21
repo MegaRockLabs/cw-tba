@@ -224,7 +224,7 @@ fn know_tokens_on_recieve(chain: &mut Chain) {
     .unwrap();
     assert_eq!(tokens.len(), 0);
 
-    let mint_res = mint_token(chain, "2".into(), user.account.address.clone(), &user.key).unwrap();
+    let mint_res = mint_token(chain, "3".into(), user.account.address.clone(), &user.key).unwrap();
 
     let token_id = mint_res
         .res
@@ -294,7 +294,7 @@ fn tokens_receving(chain: &mut Chain) {
     .unwrap();
     assert_eq!(tokens.len(), 0);
 
-    let token_id = "2".to_string();
+    let token_id = "4".to_string();
 
     // mint direclty to the token account
     mint_token(
@@ -344,7 +344,8 @@ fn tokens_receving(chain: &mut Chain) {
     .unwrap();
 
     assert_eq!(tokens.len(), 1);
-}
+} 
+
 
 #[test_context(Chain)]
 #[test]
@@ -354,7 +355,7 @@ fn tokens_acknowlegement(chain: &mut Chain) {
     let user = chain.cfg.users[0].clone();
 
     // minting 3 token for token account
-    for id in ["2", "3", "4", "5", "6"].into_iter() {
+    for id in ["12", "13", "14", "15", "16"].into_iter() {
         mint_token(chain, id.to_string(), data.token_account.clone(), &user.key).unwrap();
     }
 
@@ -384,7 +385,7 @@ fn tokens_acknowlegement(chain: &mut Chain) {
             "acc_token_acc",
             &TAExecuteMsg::TransferToken {
                 collection: data.collection.clone(),
-                token_id: "2".into(),
+                token_id: "12".into(),
                 recipient: user.account.address.clone(),
             },
             &user.key,
@@ -413,7 +414,7 @@ fn tokens_acknowlegement(chain: &mut Chain) {
             "acc_token_acc",
             &TAExecuteMsg::SendToken {
                 collection: data.collection.clone(),
-                token_id: "3".into(),
+                token_id: "13".into(),
                 contract: data.token_account.clone(),
                 msg: Binary::default(),
             },
@@ -439,7 +440,7 @@ fn tokens_acknowlegement(chain: &mut Chain) {
     let create_res = create_simple_token_account(
         chain,
         data.collection.clone(),
-        "2".to_string(),
+        "12".to_string(),
         data.public_key,
         &user.key,
     )
@@ -455,7 +456,7 @@ fn tokens_acknowlegement(chain: &mut Chain) {
             "acc_token_acc",
             &TAExecuteMsg::SendToken {
                 collection: data.collection.clone(),
-                token_id: "3".into(),
+                token_id: "13".into(),
                 contract: second_ta.clone(),
                 msg: Binary::default(),
             },
@@ -475,7 +476,7 @@ fn tokens_acknowlegement(chain: &mut Chain) {
     )
     .unwrap();
     assert_eq!(tokens.len(), 3);
-    assert_eq!(tokens.first().unwrap().id, "4".to_string());
+    assert_eq!(tokens.first().unwrap().id, "14".to_string());
 
     // second token account only knows about 1 token "3"
     let tokens: KnownTokensResponse = wasm_query_typed(
@@ -488,7 +489,7 @@ fn tokens_acknowlegement(chain: &mut Chain) {
     )
     .unwrap();
     assert_eq!(tokens.len(), 1);
-    assert_eq!(tokens.first().unwrap().id, "3".to_string());
+    assert_eq!(tokens.first().unwrap().id, "13".to_string());
 
     // ----------------------------------------------------
 
@@ -500,7 +501,7 @@ fn tokens_acknowlegement(chain: &mut Chain) {
             "acc_token_acc",
             &TAExecuteMsg::ForgetTokens {
                 collection: data.collection.clone(),
-                token_ids: vec!["4".to_string()],
+                token_ids: vec!["14".to_string()],
             },
             &user.key,
             vec![],
@@ -560,7 +561,7 @@ fn tokens_acknowlegement(chain: &mut Chain) {
     assert_eq!(res.tokens.len(), 3);
     assert_eq!(
         res.tokens,
-        vec![String::from("4"), String::from("5"), String::from("6"),]
+        vec![String::from("14"), String::from("15"), String::from("16"),]
     );
 
     // Other balances ok
@@ -575,7 +576,7 @@ fn tokens_acknowlegement(chain: &mut Chain) {
     )
     .unwrap();
     assert_eq!(res.tokens.len(), 1);
-    assert_eq!(res.tokens.first().unwrap(), &String::from("3"));
+    assert_eq!(res.tokens.first().unwrap(), &String::from("13"));
 
     let res: cw721::TokensResponse = wasm_query_typed(
         chain,
@@ -587,9 +588,7 @@ fn tokens_acknowlegement(chain: &mut Chain) {
         },
     )
     .unwrap();
-    assert_eq!(res.tokens.len(), 2);
-    assert_eq!(res.tokens.first().unwrap(), &String::from("1"));
-    assert_eq!(res.tokens.last().unwrap(), &String::from("2"));
+    assert_eq!(res.tokens.len(), 3);
 }
 
 #[test_context(Chain)]

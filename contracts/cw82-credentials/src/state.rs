@@ -1,10 +1,10 @@
 use crate::{error::ContractError, msg::Status};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo};
+use cosmwasm_std::{ensure, Addr, DepsMut, Env, MessageInfo};
 use cw_ownable::initialize_owner;
 use cw_storage_plus::{Item, Map};
 use cw_tba::TokenInfo;
-use saa::{Binary, Credential, CredentialData, CredentialId, CredentialsWrapper, Verifiable};
+use saa::{cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, Binary, Credential, CredentialData, CredentialId, CredentialsWrapper, Verifiable};
 
 #[cw_serde]
 pub struct CredentialInfo {
@@ -50,10 +50,11 @@ pub fn save_credentials(
         info.clone()
     };
 
-    data.verified_cosmwasm(deps.api, &env, &info)?;
+    data.verified_cosmwasm(deps.api, &env, &Some(info))?;
     initialize_owner(deps.storage, deps.api, Some(owner.as_str()))?;
 
     let mut key_found = false;
+    let mut owner_found = false;
 
     if data.primary_index.is_some() {
         VERIFYING_CRED_ID.save(deps.storage, &data.primary_id())?;
@@ -63,15 +64,37 @@ pub fn save_credentials(
     for cred in data.credentials.iter() {
         let id: Vec<u8> = cred.value().id();
 
-        if !key_found {
-            match cred {
-                // doesn't have a key or anything to check the signature
-                Credential::Caller(_) => {}
-                // all currently supported credentials have a public key as id. Save the first one
-                _ => {
+        let hrp = match cred {
+            Credential::Caller(_) => {
+                if String::from_utf8(id.clone()).unwrap() == owner {
+                    owner_found = true;
+                }
+                None
+            },
+            cred => {
+                if !key_found {
                     VERIFYING_CRED_ID.save(deps.storage, &id)?;
                     key_found = true;
                 }
+                if let Credential::CosmosArbitrary(c) = cred {
+                    c.hrp.clone()
+                } else if let Credential::Secp256k1(c) = cred {
+                    c.hrp.clone()
+                } else {
+                    None
+                }
+            }
+        };
+
+        if !owner_found  {
+            let addr = match hrp.as_ref() {
+                Some(hrp) => pubkey_to_account(&id, hrp)?,
+                None => deps.api.addr_humanize(&pubkey_to_canonical(&id))?.to_string()
+            };
+
+            if owner == addr {
+                VERIFYING_CRED_ID.save(deps.storage, &id)?;
+                owner_found = true;
             }
         }
 
@@ -90,5 +113,8 @@ pub fn save_credentials(
             },
         )?;
     }
+
+    ensure!(owner_found, ContractError::NoOwnerCred {});
+
     Ok(())
 }

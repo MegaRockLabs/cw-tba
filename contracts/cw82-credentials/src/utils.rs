@@ -1,13 +1,11 @@
 use cosmwasm_std::{
-    from_json, to_json_binary, Addr, Api, CosmosMsg, Deps, DepsMut, Empty, Env, QuerierWrapper,
-    StdError, StdResult, Storage, WasmMsg,
+    from_json, to_json_binary, to_json_string, Addr, Api, CosmosMsg, Deps, DepsMut, Empty, Env, QuerierWrapper, StdError, StdResult, Storage, WasmMsg
 };
 use cw_ownable::is_owner;
 use cw_tba::ExecuteAccountMsg;
 use saa::{
     cosmos_utils::{pubkey_to_account, pubkey_to_canonical},
     ensure,
-    hashes::sha256,
     Binary, Caller, CosmosArbitrary, Credential, CredentialData, CredentialId, Ed25519,
     EvmCredential, Secp256k1, Verifiable,
 };
@@ -20,7 +18,7 @@ use crate::{
         SignedCosmosMsgs, ValidSignaturesPayload,
     },
     state::{
-        CredentialInfo, CREDENTIALS, NONCES, REGISTRY_ADDRESS, SECS_TO_EXPIRE, STATUS,
+        CredentialInfo, CREDENTIALS, NONCES, REGISTRY_ADDRESS, STATUS,
         VERIFYING_CRED_ID, WITH_CALLER,
     },
 };
@@ -223,7 +221,7 @@ pub fn get_credential_from_args(
         }
         "cosmos-arbitrary" => Credential::CosmosArbitrary(CosmosArbitrary {
             pubkey: Binary(id),
-            message,
+            message: from_json(&message)?,
             signature,
             hrp: payload.clone().map(|p| p.hrp).unwrap_or(info.hrp),
         }),
@@ -298,13 +296,23 @@ pub fn get_verifying_indexed_credential(
 
 fn get_digest_credential(
     deps: Deps,
-    digest: impl Into<Binary>,
+    message: impl Into<Binary>,
     signature: impl Into<Binary>,
     payload: &Option<AuthPayload>,
 ) -> Result<Credential, ContractError> {
-    let (id, info) = get_verifying_credential_tuple(deps.storage, &payload, true)?;
 
-    let cred = get_credential_from_args(id, info, digest.into(), signature.into(), &payload)?;
+    let (
+        id, 
+        info
+    ) = get_verifying_credential_tuple(deps.storage, &payload, true)?;
+
+    let cred = get_credential_from_args(
+        id, 
+        info, 
+        message.into(), 
+        signature.into(), 
+        &payload
+    )?;
 
     Ok(cred)
 }
@@ -315,8 +323,8 @@ fn get_cosmos_msg_credential(
     signature: Binary,
     payload: &Option<AuthPayload>,
 ) -> Result<Credential, ContractError> {
-    let data = sha256(&to_json_binary(data)?);
-    get_digest_credential(deps, Binary(data), signature, &payload)
+    let data = to_json_binary(&to_json_string(&data)?)?;
+    get_digest_credential(deps, data, signature, &payload)
 }
 
 pub fn get_account_action_credential(
@@ -325,8 +333,8 @@ pub fn get_account_action_credential(
     signature: Binary,
     payload: &Option<AuthPayload>,
 ) -> Result<Credential, ContractError> {
-    let data = sha256(&to_json_binary(data)?);
-    get_digest_credential(deps, Binary(data), signature, &payload)
+    let data = to_json_binary(&to_json_string(&data)?)?;
+    get_digest_credential(deps, data, signature, &payload)
 }
 
 fn derive_cosmos_address(
@@ -369,6 +377,7 @@ pub fn assert_owner_derivable(deps: Deps, data: &CredentialData) -> Result<(), C
     Err(ContractError::NotDerivable {})
 }
 
+
 fn assert_valid_signed_action(action: &ExecuteAccountMsg) -> Result<(), ContractError> {
     match action {
         ExecuteAccountMsg::Execute { .. } => Err(ContractError::BadSignedAction(String::from(
@@ -392,32 +401,17 @@ pub fn assert_signed_actions(
     env: &Env,
     signed: &SignedAccountActions,
 ) -> Result<(), ContractError> {
+    ensure!(!NONCES.has(deps.storage, signed.data.nonce.u128()), ContractError::NonceExists {});
+
     let credential = get_account_action_credential(
         deps,
         &signed.data,
-        signed.signature.clone(),
+        signed.signature.clone().into(),
         &signed.payload,
     )?;
 
-    if signed.data.timestamp.is_some()
-        && signed
-            .data
-            .timestamp
-            .unwrap()
-            .plus_seconds(SECS_TO_EXPIRE.load(deps.storage)?)
-            .seconds()
-            > env.block.time.seconds()
-    {
-        return Err(ContractError::Expired {});
-    }
-
-    if signed.data.nonce.is_some() {
-        let n = signed.data.nonce.unwrap().u128();
-        ensure!(NONCES.has(deps.storage, n), ContractError::NonceExists {});
-    }
-
-    credential.verify()?;
-
+    credential.verified_cosmwasm(deps.api, &env, &None)?;
+    
     signed
         .data
         .actions
@@ -435,21 +429,10 @@ pub fn assert_signed_msg(
     msg: &SignedCosmosMsgs,
 ) -> Result<(), ContractError> {
     let credential =
-        get_cosmos_msg_credential(deps, &msg.data, msg.signature.clone(), &msg.payload)?;
+        get_cosmos_msg_credential(deps, &msg.data, msg.signature.clone().into(), &msg.payload)?;
 
-    if msg.data.timestamp.is_some()
-        && msg
-            .data
-            .timestamp
-            .unwrap()
-            .plus_seconds(SECS_TO_EXPIRE.load(deps.storage)?)
-            .seconds()
-            > env.block.time.seconds()
-    {
-        return Err(ContractError::Expired {});
-    };
-
-    credential.verify()?;
+    ensure!(!NONCES.has(deps.storage, msg.data.nonce.u128()), ContractError::NonceExists {});
+    credential.verified_cosmwasm(deps.api, env, &None)?;
 
     Ok(())
 }
@@ -542,7 +525,7 @@ pub fn checked_execute_msgs(
 
         if extracted.len() > 1 {
             if let CosmosMsg::Custom(signed) = &msg {
-                NONCES.save(deps.storage, signed.data.nonce.unwrap().u128(), &true)?;
+                NONCES.save(deps.storage, signed.data.nonce.u128(), &true)?;
             }
         }
 

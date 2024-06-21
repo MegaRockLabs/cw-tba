@@ -1,5 +1,0 @@
-[alias]
-unit-test = "test --lib"
-wasm-debug = "build --target wasm32-unknown-unknown"
-wasm = "build --release --target wasm32-unknown-unknown --lib"
-integration-test = "test --package e2e -- --ignored --test-threads 1"

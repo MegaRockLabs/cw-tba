@@ -1,12 +1,13 @@
 use std::borrow::BorrowMut;
 
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    from_json, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult
 };
 use cw_ownable::{get_ownership, is_owner};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+
 use cw_tba::ExecuteAccountMsg;
 
 use crate::{
@@ -27,6 +28,7 @@ use crate::utils::query_if_registry;
 
 pub const CONTRACT_NAME: &str = "crates:cw82-credential-token-account";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -64,10 +66,11 @@ pub fn instantiate(
     STATUS.save(deps.storage, &Status { frozen: false })?;
     SERIAL.save(deps.storage, &0u128)?;
 
-    save_credentials(deps, env, info, msg.account_data, msg.owner)?;
+    save_credentials(deps, env, info, from_json(&msg.account_data)?, msg.owner)?;
 
     Ok(Response::default())
 }
+
 
 pub fn execute_action<T, E, A>(
     deps: &mut DepsMut,
@@ -110,6 +113,7 @@ pub fn execute_action<T, E, A>(
             start_after,
             limit,
         } => action::try_updating_known_tokens(deps, env, collection, start_after, limit),
+
         Action::ForgetTokens {
             collection,
             token_ids,
@@ -131,7 +135,9 @@ pub fn execute(mut deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) 
     SERIAL.update(deps.storage, |s| Ok::<u128, StdError>((s + 1) % u128::MAX))?;
 
     match msg {
-        ExecuteMsg::Execute { msgs } => execute::try_executing(deps, env, info, msgs),
+        ExecuteMsg::Execute { 
+            msgs 
+        } => execute::try_executing(deps, env, info, msgs),
 
         ExecuteMsg::UpdateOwnership {
             new_owner,
@@ -152,15 +158,12 @@ pub fn execute(mut deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) 
 
         ExecuteMsg::Extension { msg } => {
             assert_signed_actions(deps.as_ref(), &env, &msg)?;
-            if msg.data.nonce.is_some() {
-                NONCES.save(deps.storage, msg.data.nonce.unwrap().u128(), &true)?;
-            }
+            NONCES.save(deps.storage, msg.data.nonce.u128(), &true)?;
             for action in msg.data.actions {
                 execute_action(deps.borrow_mut(), &env, &info, action)?;
             }
             Ok(Response::default())
         }
-
         _ => {
             if WITH_CALLER.load(deps.storage)? && is_owner(deps.storage, &info.sender)? {
                 execute_action(deps.borrow_mut(), &env, &info, msg)
@@ -191,12 +194,12 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             signature,
             data,
             payload,
-        } => to_json_binary(&valid_signature(deps, data, signature, payload)?),
+        } => to_json_binary(&valid_signature(deps, env, data, signature, payload)?),
         QueryMsg::ValidSignatures {
             signatures,
             data,
             payload,
-        } => to_json_binary(&valid_signatures(deps, data, signatures, payload)?),
+        } => to_json_binary(&valid_signatures(deps, env, data, signatures, payload)?),
         QueryMsg::KnownTokens { skip, limit } => to_json_binary(&known_tokens(deps, skip, limit)?),
         QueryMsg::Assets { skip, limit } => to_json_binary(&assets(deps, env, skip, limit)?),
         QueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),

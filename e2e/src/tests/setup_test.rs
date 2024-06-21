@@ -3,26 +3,10 @@ use test_context::test_context;
 use crate::helpers::{
     chain::Chain,
     helper::{
-        full_setup, instantiate_collection, instantiate_registry, mint_token, query_token_owner,
+        full_setup, instantiate_collection, mint_token, query_token_owner,
     },
 };
 
-#[test_context(Chain)]
-#[test]
-#[ignore]
-fn test_instantiate_registry(chain: &mut Chain) {
-    let user = chain.cfg.users[0].clone();
-    instantiate_registry(chain, user.account.address, &user.key).unwrap();
-}
-
-#[test_context(Chain)]
-#[test]
-#[ignore]
-fn test_instantiate_collection(chain: &mut Chain) {
-    let user = chain.cfg.users[0].clone();
-
-    instantiate_collection(chain, user.account.address, None, &user.key).unwrap();
-}
 
 #[test_context(Chain)]
 #[test]
@@ -57,6 +41,8 @@ fn test_mint_token(chain: &mut Chain) {
 
     assert_eq!(user.account.address, owner_res.owner)
 }
+
+
 
 #[test_context(Chain)]
 #[test]

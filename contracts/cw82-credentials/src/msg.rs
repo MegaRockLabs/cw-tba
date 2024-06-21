@@ -1,11 +1,11 @@
 use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
-use cosmwasm_std::{Addr, Coin, CosmosMsg, CustomMsg, Empty, Response, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg, CustomMsg, Empty, Response, Uint128};
 pub use cw82::{
     smart_account_query, CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse,
 };
 use cw_ownable::cw_ownable_query;
 use cw_tba::{ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo};
-use saa::{Binary, CredentialData, CredentialId};
+use saa::{CredentialData, CredentialId};
 
 use crate::error::ContractError;
 
@@ -31,9 +31,8 @@ pub enum ValidSignaturesPayload {
 #[cw_serde]
 pub struct CosmosMsgDataToSign {
     pub chain_id: String,
+    pub nonce: Uint128,
     pub messages: Vec<CosmosMsg<Empty>>,
-    pub timestamp: Option<Timestamp>,
-    pub nonce: Option<Uint128>,
 }
 
 impl CustomMsg for CosmosMsgDataToSign {}
@@ -42,8 +41,7 @@ impl CustomMsg for CosmosMsgDataToSign {}
 pub struct AccountActionDataToSign {
     pub actions: Vec<ExecuteAccountMsg>,
     pub chain_id: String,
-    pub timestamp: Option<Timestamp>,
-    pub nonce: Option<Uint128>,
+    pub nonce: Uint128,
 }
 
 #[cw_serde]
@@ -144,7 +142,7 @@ pub enum QueryMsgBase<T = SignedCosmosMsgs, Q: JsonSchema = Empty> {
 /// [TokenInfo] is used as a to query the account info
 /// so no need to return any additional data
 
-pub type InstantiateMsg = InstantiateAccountMsg<CredentialData>;
+pub type InstantiateMsg = InstantiateAccountMsg<Binary>;
 pub type ExecuteMsg = ExecuteAccountMsg<SignedCosmosMsgs, SignedAccountActions, CredentialData>;
 pub type QueryMsg = QueryMsgBase<SignedCosmosMsgs, Empty>;
 pub type MigrateMsg = MigrateAccountMsg;

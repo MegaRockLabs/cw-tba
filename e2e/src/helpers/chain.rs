@@ -44,6 +44,7 @@ where
     pub orc: CosmOrc<C>,
 }
 
+
 impl TestContext for Chain<CosmosgRPC> {
     fn setup() -> Self {
         let cfg = CONFIG.get_or_init(|| {
@@ -89,7 +90,11 @@ impl TestContext for Chain<TendermintRPC> {
 }
 
 fn init_orc_config() -> Result<Config, ConfigError> {
-    let config = env::var("CONFIG").expect("missing yaml CONFIG env var");
+    let mut config = env::var("CONFIG");
+    if config.is_err() {
+        config = Ok("configs/cosm-orc.yaml".to_string());
+    }
+    let config = config.expect("missing yaml CONFIG env var");
     Config::from_yaml(&config)
 }
 
@@ -106,7 +111,7 @@ fn global_setup<C: CosmosClient>(mut orc: CosmOrc<C>, mut orc_cfg: Config) -> Cf
     orc.poll_for_n_blocks(1, Duration::from_millis(10_000), true)
         .unwrap();
 
-    let skip_storage = env::var("SKIP_CONTRACT_STORE").unwrap_or_else(|_| "false".to_string());
+    let skip_storage = env::var("SKIP_CONTRACT_STORE").unwrap_or_else(|_| "true".to_string());
     if !skip_storage.parse::<bool>().unwrap() {
         orc.store_contracts("../artifacts", &accounts[0].key, None)
             .unwrap();
@@ -115,6 +120,8 @@ fn global_setup<C: CosmosClient>(mut orc: CosmOrc<C>, mut orc_cfg: Config) -> Cf
 
         // persist stored code_ids in CONFIG, so we can reuse for all tests
         orc_cfg.contract_deploy_info = orc.contract_map.deploy_info().clone();
+
+        println!("Contract deploy info: {:?}", orc_cfg.contract_deploy_info)
     }
 
     Cfg {

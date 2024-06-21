@@ -34,13 +34,14 @@ pub fn can_execute(
 
 pub fn valid_signature(
     deps: Deps,
+    env: Env,
     data: Binary,
     signature: Binary,
     payload: Option<Binary>,
 ) -> StdResult<ValidSignatureResponse> {
     let is_valid = if status_ok(deps.storage) {
         let credential = get_verifying_credential(deps, data, signature, payload)?;
-        credential.verify().is_ok()
+        credential.verified_cosmwasm(deps.api, &env, &None).is_ok()
     } else {
         false
     };
@@ -50,6 +51,7 @@ pub fn valid_signature(
 
 pub fn valid_signatures(
     deps: Deps,
+    env: Env,
     data: Vec<Binary>,
     signatures: Vec<Binary>,
     payload: Option<Binary>,
@@ -88,7 +90,8 @@ pub fn valid_signatures(
             if credential_res.is_err() {
                 return false;
             }
-            credential_res.unwrap().verify().is_ok()
+            credential_res.unwrap()
+            .verified_cosmwasm(deps.api, &env, &None).is_ok()
         })
         .collect();
 

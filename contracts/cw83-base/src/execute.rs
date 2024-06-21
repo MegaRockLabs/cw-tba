@@ -82,7 +82,8 @@ pub fn create_account<T: Serialize>(
         label = construct_label(&token_info, None);
     }
     LAST_ATTEMPTING.save(deps.storage, &token_info)?;
-    let init_msg = InstantiateAccountMsg {
+
+    let init_msg = InstantiateAccountMsg::<T> {
         owner: info.sender.to_string(),
         token_info: token_info.clone(),
         account_data,
@@ -101,6 +102,7 @@ pub fn create_account<T: Serialize>(
         gas_limit: None,
     }))
 }
+
 
 pub fn update_account_owner(
     deps: DepsMut,
@@ -140,6 +142,7 @@ pub fn update_account_owner(
         ("new_owner", owner.to_string().as_str()),
     ]))
 }
+
 
 pub fn migrate_account(
     deps: DepsMut,

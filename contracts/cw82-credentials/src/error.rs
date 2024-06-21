@@ -45,6 +45,9 @@ pub enum ContractError {
     #[error("Provided nonce has already been used")]
     NonceExists {},
 
+    #[error("At least one of the provided credentials must be deriving into owner of the token")]
+    NoOwnerCred {},
+
     #[error("{0}")]
     Generic(String),
 

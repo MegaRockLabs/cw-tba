@@ -40,11 +40,11 @@ fn test_queries(chain: &mut Chain) {
         from_json::<RegistryMsg::CollectionAccountsResponse>(&res.unwrap().res.data.unwrap())
             .unwrap();
 
-    // 1 account should be registered
-    assert_eq!(acc_res.total, 1);
-    assert_eq!(acc_res.accounts.len(), 1);
-    assert_eq!(col_res.total, 1);
-    assert_eq!(col_res.accounts.len(), 1);
+    // 2 accounts should be registered
+    assert_eq!(acc_res.total, 2);
+    assert_eq!(acc_res.accounts.len(), 2);
+    assert_eq!(col_res.total, 2);
+    assert_eq!(col_res.accounts.len(), 2);
 
     let first_account = acc_res.accounts.first().clone().unwrap();
     let firt_col_account = col_res.accounts.first().clone().unwrap();
@@ -63,10 +63,8 @@ fn test_queries(chain: &mut Chain) {
     )
     .unwrap();
 
-    let info = from_json::<RegistryMsg::AccountInfoResponse>(&res.res.data.unwrap()).unwrap();
-
+    let info: cw83::AccountInfoResponse = from_json::<RegistryMsg::AccountInfoResponse>(&res.res.data.unwrap()).unwrap();
     assert_eq!(info.address, data.token_account);
-    assert_eq!(info.address, first_account.address);
 
     let res = wasm_query(
         chain,

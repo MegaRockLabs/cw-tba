@@ -18,6 +18,7 @@ use crate::{
 pub const CONTRACT_NAME: &str = "crates:cw83-token-account-registry";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -33,11 +34,10 @@ pub fn instantiate(
             version: CONTRACT_VERSION.into(),
         }],
     )?;
-
     REGISTRY_PARAMS.save(deps.storage, &msg.params)?;
-
     Ok(Response::new().add_attributes(vec![("action", "instantiate")]))
 }
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
