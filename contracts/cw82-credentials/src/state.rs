@@ -41,6 +41,14 @@ pub fn save_credentials(
     let with_caller = data.with_caller.unwrap_or_default();
     WITH_CALLER.save(deps.storage, &with_caller)?;
 
+    let mut key_found = false;
+    
+    let mut owner_found = if with_caller { 
+        owner == info.sender.to_string()
+    } else { 
+        false 
+    };
+
     let info = if with_caller {
         MessageInfo {
             sender: Addr::unchecked(owner.clone()),
@@ -52,9 +60,7 @@ pub fn save_credentials(
 
     data.verified_cosmwasm(deps.api, &env, &Some(info))?;
     initialize_owner(deps.storage, deps.api, Some(owner.as_str()))?;
-
-    let mut key_found = false;
-    let mut owner_found = with_caller;
+    
 
     if data.primary_index.is_some() {
         VERIFYING_CRED_ID.save(deps.storage, &data.primary_id())?;
