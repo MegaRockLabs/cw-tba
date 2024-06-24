@@ -40,7 +40,7 @@ mod tests {
 
         let auth_data  = CredentialData {
             credentials: vec![cred],       
-            with_caller: None,
+            with_caller: Some(true),
             primary_index: None,
         };
 

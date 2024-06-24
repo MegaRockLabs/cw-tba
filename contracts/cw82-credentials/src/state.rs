@@ -54,7 +54,7 @@ pub fn save_credentials(
     initialize_owner(deps.storage, deps.api, Some(owner.as_str()))?;
 
     let mut key_found = false;
-    let mut owner_found = false;
+    let mut owner_found = with_caller;
 
     if data.primary_index.is_some() {
         VERIFYING_CRED_ID.save(deps.storage, &data.primary_id())?;
