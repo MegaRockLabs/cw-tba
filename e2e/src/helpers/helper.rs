@@ -70,7 +70,7 @@ pub fn instantiate_registry<C: CosmosClient>(
                 ],
                 creation_fees: creation_fees_wasm(&chain),
                 managers: vec![],
-                extension: Empty {},
+                extension: None,
             },
         },
         key,

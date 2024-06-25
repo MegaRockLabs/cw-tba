@@ -2,7 +2,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Binary, Coin, CosmosMsg, DepsMut, Env, Response};
 use cw_storage_plus::Item;
 
-use crate::error::ContractError;
+use crate::{error::ContractError, state::{OWNER, WITH_CALLER}};
 
 pub static GRANT_TEST: Item<CwGrantMessage> = Item::new("g");
 
@@ -38,10 +38,17 @@ pub struct CwGrantMessage {
 
 
 pub fn sudo_grant(deps: DepsMut, _env: Env, msg: CwGrant) -> Result<Response, ContractError> {
+    let with_caller = WITH_CALLER.load(deps.storage)?;
+    let owner = OWNER.load(deps.storage)?;
+
 
     for m in &msg.msgs {
-        let _sender = deps.api.addr_validate(&m.sender)?;
         GRANT_TEST.save(deps.storage, &m)?;
+
+        if with_caller && m.sender == owner {
+            continue;
+        }
+
     }
 
     Ok(Response::default())

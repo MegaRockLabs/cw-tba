@@ -8,7 +8,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version    = "0.2.0"
+version    = "0.3.0"
 edition    = "2021"
 repository = ""
 
@@ -31,7 +31,7 @@ cw-utils                = "1.0.3"
 cw1                     = "1.1.2"
 cw2                     = "1.1.2"
 
-saa                     = { git = "https://github.com/MegaRockLabs/smart-account-auth", package = "smart-account-auth", features = ["cosmwasm"], version = "0.9.1"}
+saa                     = { git = "https://github.com/MegaRockLabs/smart-account-auth", package = "smart-account-auth", features = ["cosmwasm"], version = "0.9.4"}
 cw81                    = { git = "https://github.com/megarocklabs/cw-extra", package = "cw81" }
 cw82                    = { git = "https://github.com/megarocklabs/cw-extra", package = "cw82" }
 cw83                    = { git = "https://github.com/megarocklabs/cw-extra", package = "cw83" }

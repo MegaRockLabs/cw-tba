@@ -4,7 +4,9 @@ use cosmwasm_std::{ensure, Addr, DepsMut, Env, MessageInfo};
 use cw_ownable::initialize_owner;
 use cw_storage_plus::{Item, Map};
 use cw_tba::TokenInfo;
-use saa::{cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, Binary, Credential, CredentialData, CredentialId, CredentialsWrapper, Verifiable};
+use saa::{cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, 
+    Binary, Credential, CredentialData, CredentialId, CredentialsWrapper, Verifiable
+};
 
 #[cw_serde]
 pub struct CredentialInfo {
@@ -19,6 +21,7 @@ pub static MINT_CACHE: Item<String> = Item::new("m");
 pub static STATUS: Item<Status> = Item::new("s");
 pub static SERIAL: Item<u128> = Item::new("l");
 
+pub static OWNER: Item<String> = Item::new("o");
 pub static VERIFYING_CRED_ID: Item<CredentialId> = Item::new("v");
 pub static WITH_CALLER: Item<bool> = Item::new("w");
 pub static SECS_TO_EXPIRE: Item<u64> = Item::new("e");
@@ -40,16 +43,13 @@ pub fn save_credentials(
 ) -> Result<(), ContractError> {
     let with_caller = data.with_caller.unwrap_or_default();
     WITH_CALLER.save(deps.storage, &with_caller)?;
-
-    let mut key_found = false;
+    OWNER.save(deps.storage, &owner)?;
     
-    let mut owner_found = if with_caller { 
-        owner == info.sender.to_string()
-    } else { 
-        false 
-    };
+    let mut key_found = false;
+    let mut owner_found = false;
 
     let info = if with_caller {
+        owner_found = true;
         MessageInfo {
             sender: Addr::unchecked(owner.clone()),
             ..info
@@ -57,6 +57,7 @@ pub fn save_credentials(
     } else {
         info.clone()
     };
+
 
     data.verified_cosmwasm(deps.api, &env, &Some(info))?;
     initialize_owner(deps.storage, deps.api, Some(owner.as_str()))?;

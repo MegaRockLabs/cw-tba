@@ -9,7 +9,7 @@ repository = { workspace = true }
 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-cosm-orc       = { git = "https://github.com/kromsten/cosm-orc" }
+cosm-orc       = { git = "https://github.com/kromsten/cosm-orc", version="4.1.0" }
 cosm-tome      = { git = "https://github.com/kromsten/cosm-tome" }
 cosmrs         = { version = "0.16.0", features = ["rpc", "cosmwasm", "grpc", "bip32"] }
 

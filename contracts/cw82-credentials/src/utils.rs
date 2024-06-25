@@ -1,13 +1,10 @@
 use cosmwasm_std::{
-    from_json, to_json_binary, to_json_string, Addr, Api, CosmosMsg, Deps, DepsMut, Empty, Env, QuerierWrapper, StdError, StdResult, Storage, WasmMsg
+    from_json, to_json_string, Addr, Api, CosmosMsg, Deps, DepsMut, Empty, Env, QuerierWrapper, StdError, StdResult, Storage, WasmMsg
 };
 use cw_ownable::is_owner;
 use cw_tba::ExecuteAccountMsg;
 use saa::{
-    cosmos_utils::{pubkey_to_account, pubkey_to_canonical},
-    ensure,
-    Binary, Caller, CosmosArbitrary, Credential, CredentialData, CredentialId, Ed25519,
-    EvmCredential, Secp256k1, Verifiable,
+    cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, ensure, Binary, Caller, CosmosArbitrary, Credential, CredentialData, CredentialId, Ed25519, EvmCredential, Secp256k1, Verifiable
 };
 use std::collections::HashSet;
 
@@ -221,7 +218,7 @@ pub fn get_credential_from_args(
         }
         "cosmos-arbitrary" => Credential::CosmosArbitrary(CosmosArbitrary {
             pubkey: Binary(id),
-            message: from_json(&message)?,
+            message: message.to_string(),
             signature,
             hrp: payload.clone().map(|p| p.hrp).unwrap_or(info.hrp),
         }),
@@ -323,7 +320,7 @@ fn get_cosmos_msg_credential(
     signature: Binary,
     payload: &Option<AuthPayload>,
 ) -> Result<Credential, ContractError> {
-    let data = to_json_binary(&to_json_string(&data)?)?;
+    let data = Binary(to_json_string(&data)?.as_bytes().to_vec());
     get_digest_credential(deps, data, signature, &payload)
 }
 
@@ -333,7 +330,7 @@ pub fn get_account_action_credential(
     signature: Binary,
     payload: &Option<AuthPayload>,
 ) -> Result<Credential, ContractError> {
-    let data = to_json_binary(&to_json_string(&data)?)?;
+    let data = Binary(to_json_string(&data)?.as_bytes().to_vec());
     get_digest_credential(deps, data, signature, &payload)
 }
 
@@ -453,10 +450,6 @@ pub fn assert_simple_msg(
         ContractError::Unauthorized {}
     );
 
-    if let CosmosMsg::Custom(_) = _msg {
-        return Err(ContractError::Unauthorized {});
-    }
-
     Ok(())
 }
 
@@ -523,10 +516,8 @@ pub fn checked_execute_msgs(
     for msg in msgs.iter() {
         let extracted = checked_execute_msg(deps.as_ref(), env, sender, msg)?;
 
-        if extracted.len() > 1 {
-            if let CosmosMsg::Custom(signed) = &msg {
-                NONCES.save(deps.storage, signed.data.nonce.u128(), &true)?;
-            }
+        if let CosmosMsg::Custom(signed) = &msg {
+            NONCES.save(deps.storage, signed.data.nonce.u128(), &true)?;
         }
 
         checked.extend(extracted);

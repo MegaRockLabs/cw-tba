@@ -1,5 +1,5 @@
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
-use cosmwasm_std::{to_json_binary, to_json_string, Empty, Uint128};
+use cosmwasm_std::{to_json_binary, Empty, Uint128};
 use cw_tba::ExecuteAccountMsg;
 use saa::cosmos_utils::preamble_msg_arb_036;
 use test_context::test_context;
@@ -72,7 +72,7 @@ fn test(chain: &mut Chain) {
     let signature = sk.sign(
         &preamble_msg_arb_036(
             &user.account.address, 
-            &to_json_string(&actions).unwrap()
+            &to_json_binary(&actions).unwrap().to_base64()
         ).as_bytes()
     ).unwrap();
 
@@ -85,7 +85,6 @@ fn test(chain: &mut Chain) {
     let msg = ExecuteMsg::Extension { 
         msg: signed.into(),
     };
-
 
 
     let res = chain
