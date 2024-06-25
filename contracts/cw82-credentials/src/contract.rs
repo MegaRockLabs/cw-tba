@@ -13,7 +13,7 @@ use cosmwasm_std::entry_point;
 use cw_tba::ExecuteAccountMsg;
 
 use crate::{
-    action::{self, MINT_REPLY_ID}, error::ContractError, execute,  msg::{ContractResult, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Status}, query::{assets, can_execute, full_info, known_tokens, valid_signature, valid_signatures}, state::{
+    action::{self, MINT_REPLY_ID}, error::ContractError, execute,  msg::{ContractResult, CredQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Status}, query::{assets, can_execute, credentials, full_info, known_tokens, valid_signature, valid_signatures}, state::{
         save_credentials, MINT_CACHE, NONCES, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO,
         WITH_CALLER,
     }, utils::assert_signed_actions
@@ -160,10 +160,16 @@ pub fn execute(mut deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) 
         ExecuteMsg::Extension { msg } => {
             assert_signed_actions(deps.as_ref(), &env, &msg)?;
             NONCES.save(deps.storage, msg.data.nonce.u128(), &true)?;
+
+            let mut res = Response::new();
             for action in msg.data.actions {
-                execute_action(deps.borrow_mut(), &env, &info, action)?;
+                let action_res = execute_action(deps.borrow_mut(), &env, &info, action)?;
+                res = res
+                    .add_submessages(action_res.messages)
+                    .add_events(action_res.events)
+                    .add_attributes(action_res.attributes);
             }
-            Ok(Response::default())
+            Ok(res)
         }
         _ => {
             if WITH_CALLER.load(deps.storage)? && is_owner(deps.storage, &info.sender)? {
@@ -205,11 +211,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Assets { skip, limit } => to_json_binary(&assets(deps, env, skip, limit)?),
         QueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),
         
-        #[cfg(not(feature = "archway"))]
-        QueryMsg::Extension { .. } => to_json_binary(&cosmwasm_std::Empty {}),
-
-        #[cfg(feature = "archway")]
-        QueryMsg::Extension { .. } => to_json_binary(&crate::grants::GRANT_TEST.load(deps.storage)?),
+        QueryMsg::Extension { msg } => {
+            match msg {
+                CredQueryMsg::Credentials {} => to_json_binary(&credentials(deps)?)
+            }
+        },
     }
 }
 

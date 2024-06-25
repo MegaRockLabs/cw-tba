@@ -8,6 +8,8 @@ use crate::{
     utils::{assert_owner_derivable, assert_registry, assert_status, checked_execute_msgs},
 };
 use cosmwasm_std::{ensure, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response};
+use cw2::CONTRACT;
+use cw22::SUPPORTED_INTERFACES;
 use cw_ownable::{get_ownership, is_owner};
 use cw_tba::verify_nft_ownership;
 use saa::CredentialData;
@@ -96,8 +98,14 @@ pub fn try_freezing(deps: DepsMut) -> ContractResult {
     Ok(Response::default().add_attribute("action", "freeze"))
 }
 
+
 pub fn try_purging(deps: DepsMut, sender: Addr) -> ContractResult {
     assert_registry(deps.storage, &sender)?;
+
+    cw_ownable::initialize_owner(deps.storage, deps.api, None)?;
+
+    SUPPORTED_INTERFACES.clear(deps.storage);
+    CONTRACT.remove(deps.storage);
 
     REGISTRY_ADDRESS.remove(deps.storage);
     TOKEN_INFO.remove(deps.storage);

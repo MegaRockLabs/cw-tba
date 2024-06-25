@@ -107,8 +107,7 @@ mod tests {
             hrp: Some("archway".to_string())
         };
         let res = cred.verified_cosmwasm(deps.as_ref().api, &env, &None);
-        println!("binary raw {:?}\n\n{:?}\n\n", message, res);
-
+        assert!(res.is_ok());
 
 
         let custom = SignedCosmosMsgs {
@@ -151,14 +150,16 @@ mod tests {
 
         let deps = deps.as_mut();
 
-        execute(
+        let res = execute(
             deps, 
             env.clone(), 
             info,
             execute_msg
-        ).unwrap();
+        );
 
         
-        assert!(false)
+        assert!(res.is_ok())
     }
+
+
 }

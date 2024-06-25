@@ -16,4 +16,4 @@ contract_deploy_info:
   cw721_base:
     code_id: 2
   cw82_credentials: 
-    code_id: 1
+    code_id: 5

@@ -48,6 +48,9 @@ pub enum ContractError {
     #[error("At least one of the provided credentials must be deriving into owner of the token")]
     NoOwnerCred {},
 
+    #[error("At least one of the provided credentials must be must be usable for cryptographic verifications")]
+    NoVerifyingCred {},
+
     #[error("{0}")]
     Generic(String),
 

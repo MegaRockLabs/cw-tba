@@ -97,6 +97,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anybuf"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb5f1dee23caf80904249463cc4493b6789c2250f88c8f8d9160de5c6099bfe7"
+
+[[package]]
 name = "anyhow"
 version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -767,7 +773,7 @@ dependencies = [
 
 [[package]]
 name = "cw-tba"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -959,7 +965,7 @@ dependencies = [
 
 [[package]]
 name = "cw82-base"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -979,8 +985,9 @@ dependencies = [
 
 [[package]]
 name = "cw82-credentials"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
+ "anybuf",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-ownable",
@@ -992,7 +999,6 @@ dependencies = [
  "cw721-base 0.18.0",
  "cw82",
  "cw83",
- "prost",
  "semver",
  "sha2 0.10.8",
  "smart-account-auth",
@@ -1026,7 +1032,7 @@ dependencies = [
 
 [[package]]
 name = "cw83-base"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1167,7 +1173,7 @@ checksum = "0d6ef0072f8a535281e4876be788938b528e9a1d43900b82c2569af7da799125"
 
 [[package]]
 name = "e2e"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "assert_matches",
  "async-trait",
@@ -2064,8 +2070,8 @@ checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
 
 [[package]]
 name = "macros-proto"
-version = "0.9.4"
-source = "git+https://github.com/MegaRockLabs/smart-account-auth#155e5a486ede77a6b4360a8c462d1f4ac8be3b4b"
+version = "0.9.5"
+source = "git+https://github.com/MegaRockLabs/smart-account-auth#7b9236304fff6060dfdcee2d45d7577d1297dd14"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2745,8 +2751,8 @@ checksum = "f3cb5ba0dc43242ce17de99c180e96db90b235b8a9fdc9543c96d2209116bd9f"
 
 [[package]]
 name = "saa-common"
-version = "0.9.4"
-source = "git+https://github.com/MegaRockLabs/smart-account-auth#155e5a486ede77a6b4360a8c462d1f4ac8be3b4b"
+version = "0.9.5"
+source = "git+https://github.com/MegaRockLabs/smart-account-auth#7b9236304fff6060dfdcee2d45d7577d1297dd14"
 dependencies = [
  "base64 0.22.1",
  "bech32 0.11.0",
@@ -2768,8 +2774,8 @@ dependencies = [
 
 [[package]]
 name = "saa-curves"
-version = "0.9.4"
-source = "git+https://github.com/MegaRockLabs/smart-account-auth#155e5a486ede77a6b4360a8c462d1f4ac8be3b4b"
+version = "0.9.5"
+source = "git+https://github.com/MegaRockLabs/smart-account-auth#7b9236304fff6060dfdcee2d45d7577d1297dd14"
 dependencies = [
  "bech32 0.11.0",
  "cosmwasm-std",
@@ -2784,8 +2790,8 @@ dependencies = [
 
 [[package]]
 name = "saa-custom"
-version = "0.9.4"
-source = "git+https://github.com/MegaRockLabs/smart-account-auth#155e5a486ede77a6b4360a8c462d1f4ac8be3b4b"
+version = "0.9.5"
+source = "git+https://github.com/MegaRockLabs/smart-account-auth#7b9236304fff6060dfdcee2d45d7577d1297dd14"
 dependencies = [
  "base64 0.22.1",
  "bech32 0.11.0",
@@ -2801,8 +2807,8 @@ dependencies = [
 
 [[package]]
 name = "saa-schema"
-version = "0.9.4"
-source = "git+https://github.com/MegaRockLabs/smart-account-auth#155e5a486ede77a6b4360a8c462d1f4ac8be3b4b"
+version = "0.9.5"
+source = "git+https://github.com/MegaRockLabs/smart-account-auth#7b9236304fff6060dfdcee2d45d7577d1297dd14"
 dependencies = [
  "macros-proto",
  "parity-scale-codec",
@@ -3186,8 +3192,8 @@ checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 
 [[package]]
 name = "smart-account-auth"
-version = "0.9.4"
-source = "git+https://github.com/MegaRockLabs/smart-account-auth#155e5a486ede77a6b4360a8c462d1f4ac8be3b4b"
+version = "0.9.5"
+source = "git+https://github.com/MegaRockLabs/smart-account-auth#7b9236304fff6060dfdcee2d45d7577d1297dd14"
 dependencies = [
  "parity-scale-codec",
  "saa-common",

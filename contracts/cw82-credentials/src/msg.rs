@@ -7,7 +7,7 @@ use cw_ownable::cw_ownable_query;
 use cw_tba::{ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo};
 use saa::{CredentialData, CredentialId};
 
-use crate::{error::ContractError, grants};
+use crate::error::ContractError;
 
 #[cw_serde]
 pub struct AuthPayload {
@@ -75,6 +75,29 @@ pub struct AssetsResponse {
     pub tokens: Vec<TokenInfo>,
 }
 
+
+
+#[cw_serde]
+pub struct CredentialFullInfo {
+    pub id: CredentialId,
+    pub name: String,
+    pub hrp: Option<String>,
+}
+
+#[cw_serde]
+pub struct AccountCredentials {
+    pub credentials: Vec<CredentialFullInfo>,
+    pub verifying_id: CredentialId,
+    pub native_caller: bool,
+}
+
+
+#[cw_serde]
+pub enum CredQueryMsg {
+    Credentials {},
+}
+
+
 #[cw_serde]
 pub struct FullInfoResponse {
     /// Current owner of the token account that is ideally a holder of an NFT
@@ -89,6 +112,8 @@ pub struct FullInfoResponse {
     pub tokens: Vec<TokenInfo>,
     /// Whether the account is frozen
     pub status: Status,
+    /// Full info about installed credentials
+    pub credentials: AccountCredentials
 }
 
 pub type KnownTokensResponse = Vec<TokenInfo>;
@@ -148,7 +173,4 @@ pub type ExecuteMsg = ExecuteAccountMsg<SignedCosmosMsgs, SignedAccountActions, 
 pub type MigrateMsg = MigrateAccountMsg;
 pub type ContractResult = Result<Response, ContractError>;
 
-#[cfg(not(feature = "archway"))]
-pub type QueryMsg = QueryMsgBase<SignedCosmosMsgs, Empty>;
-#[cfg(feature = "archway")]
-pub type QueryMsg = QueryMsgBase<SignedCosmosMsgs, grants::GrantQuertMsg>;
+pub type QueryMsg = QueryMsgBase<SignedCosmosMsgs, CredQueryMsg>;
