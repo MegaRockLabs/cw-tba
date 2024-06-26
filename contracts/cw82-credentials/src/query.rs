@@ -1,14 +1,13 @@
 use cosmwasm_std::{from_json, Binary, CosmosMsg, Deps, Env, Order, StdError, StdResult};
 use cw82::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
-use cw_tba::TokenInfo;
+use cw_tba::{AssetsResponse, TokenInfo};
 use saa::{ensure, Verifiable};
 
 use crate::{
-    msg::{AccountCredentials, AssetsResponse, CredentialFullInfo, FullInfoResponse, SignedCosmosMsgs, ValidSignaturesPayload},
+    msg::{AccountCredentials, CredentialFullInfo, FullInfoResponse, SignedActions, ValidSignaturesPayload},
     state::{CREDENTIALS, KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO, VERIFYING_CRED_ID, WITH_CALLER},
     utils::{
-        assert_signed_msg, assert_simple_msg, get_verifying_credential,
-        get_verifying_indexed_credential, status_ok, validate_multi_payload,
+        assert_caller, assert_signed_msg, get_verifying_credential, get_verifying_indexed_credential, status_ok, validate_multi_payload
     },
 };
 
@@ -18,15 +17,15 @@ pub fn can_execute(
     deps: Deps,
     env: Env,
     sender: String,
-    msg: CosmosMsg<SignedCosmosMsgs>,
+    msg: CosmosMsg<SignedActions>,
 ) -> StdResult<CanExecuteResponse> {
     if !status_ok(deps.storage) {
         return Ok(CanExecuteResponse { can_execute: false });
     };
 
     let can_execute = match msg {
-        CosmosMsg::Custom(signed) => assert_signed_msg(deps, &env, &sender, &signed).is_ok(),
-        _ => assert_simple_msg(deps, &env, &sender, &msg).is_ok(),
+        CosmosMsg::Custom(signed) => assert_signed_msg(deps, &env, &signed).is_ok(),
+        _ => assert_caller(deps,  &sender).is_ok(),
     };
 
     Ok(CanExecuteResponse { can_execute })

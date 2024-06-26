@@ -5,10 +5,10 @@ mod tests {
         testing::{mock_dependencies, mock_env, mock_info}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
     };
     use cw22::set_contract_supported_interface;
-    use cw_tba::TokenInfo;
+    use cw_tba::{ExecuteAccountMsg, TokenInfo};
     use saa::{Binary, CosmosArbitrary, Credential, CredentialData, Verifiable};
 
-    use crate::{contract::{execute, instantiate}, msg::{CosmosMsgDataToSign, ExecuteMsg, InstantiateMsg, SignedCosmosMsgs}};
+    use crate::{contract::{execute, instantiate}, msg::{ActionDataToSign, ExecuteMsg, InstantiateMsg, SignedActions}};
 
     const MESSAGE : &str = "SGVsbG8sIHdvcmxk";
     const SIGNATURE : &str = "x9jjSFv8/n1F8gOSRjddakYDbvroQm8ZoDWht/Imc1t5xUW49+Xaq7gwcsE+LCpqYoTBxnaXLg/xgJjYymCWvw==";
@@ -73,18 +73,22 @@ mod tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
 
-        let staking = StakingMsg::Delegate { 
+        let staking : CosmosMsg = StakingMsg::Delegate { 
             amount: Coin { 
                 amount: Uint128::from(1000000000000000000u128),
                 denom: "aconst".into()
             }, 
             validator: "archwayvaloper1qt0e4eyswes6qpply2pmk8v5qm88r2c962fnvk".into(), 
+        }.into();
+
+        let action = ExecuteAccountMsg::Execute { 
+            msgs: vec![staking] 
         };
 
-        let data = CosmosMsgDataToSign {
+        let data = ActionDataToSign {
             chain_id: "constantine-3".into(),
-            messages: vec![staking.into()],
-            nonce: Uint128::zero()
+            messages: vec![action],
+            nonce: Uint128::zero(),
         };
 
         let pubkey = Binary::from_base64(
@@ -110,13 +114,13 @@ mod tests {
         assert!(res.is_ok());
 
 
-        let custom = SignedCosmosMsgs {
+        let custom = SignedActions {
             data: data.clone(),
             signature: signature.clone().into(),
             payload: None
         };
 
-        let msg = CosmosMsg::<SignedCosmosMsgs>::Custom(custom);
+        let msg = CosmosMsg::<SignedActions>::Custom(custom);
 
         let execute_msg = ExecuteMsg::Execute { 
             msgs: vec![msg]

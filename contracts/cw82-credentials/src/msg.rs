@@ -1,10 +1,7 @@
-use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
-use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg, CustomMsg, Empty, Response, Uint128};
-pub use cw82::{
-    smart_account_query, CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse,
-};
-use cw_ownable::cw_ownable_query;
-use cw_tba::{ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo};
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Addr, Binary, Coin, CustomMsg, Empty, Response, Uint128};
+pub use cw82::{smart_account_query, CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse,};
+use cw_tba::{ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, QueryAccountMsg, Status, TokenInfo};
 use saa::{CredentialData, CredentialId};
 
 use crate::error::ContractError;
@@ -28,52 +25,23 @@ pub enum ValidSignaturesPayload {
     Multiple(Vec<Option<IndexedAuthPayload>>),
 }
 
-#[cw_serde]
-pub struct CosmosMsgDataToSign {
-    pub chain_id: String,
-    pub nonce: Uint128,
-    pub messages: Vec<CosmosMsg<Empty>>,
-}
-
-impl CustomMsg for CosmosMsgDataToSign {}
 
 #[cw_serde]
-pub struct AccountActionDataToSign {
-    pub actions: Vec<ExecuteAccountMsg>,
+pub struct ActionDataToSign {
     pub chain_id: String,
+    pub messages: Vec<ExecuteAccountMsg>,
     pub nonce: Uint128,
 }
 
+
 #[cw_serde]
-pub struct SignedCosmosMsgs {
-    pub data: CosmosMsgDataToSign,
+pub struct SignedActions {
+    pub data: ActionDataToSign,
     pub payload: Option<AuthPayload>,
     pub signature: Binary,
 }
 
-#[cw_serde]
-pub struct SignedAccountActions {
-    pub data: AccountActionDataToSign,
-    pub payload: Option<AuthPayload>,
-    pub signature: Binary,
-}
-
-impl CustomMsg for SignedCosmosMsgs {}
-impl CustomMsg for SignedAccountActions {}
-
-#[cw_serde]
-pub struct Status {
-    /// Whether the account is frozen
-    pub frozen: bool,
-}
-
-#[cw_serde]
-pub struct AssetsResponse {
-    /// Native fungible tokens held by an account
-    pub balances: Vec<Coin>,
-    /// NFT tokens the account is aware of
-    pub tokens: Vec<TokenInfo>,
-}
+impl CustomMsg for SignedActions {}
 
 
 
@@ -94,6 +62,10 @@ pub struct AccountCredentials {
 
 #[cw_serde]
 pub enum CredQueryMsg {
+    FullInfo {
+        skip: Option<u32>,
+        limit: Option<u32>,
+    },
     Credentials {},
 }
 
@@ -116,61 +88,15 @@ pub struct FullInfoResponse {
     pub credentials: AccountCredentials
 }
 
-pub type KnownTokensResponse = Vec<TokenInfo>;
 
-#[smart_account_query]
-#[cw_ownable_query]
-#[cw_serde]
-#[derive(QueryResponses)]
-pub enum QueryMsgBase<T = SignedCosmosMsgs, Q: JsonSchema = Empty> {
-    /// Status of the account telling whether it iz frozen
-    #[returns(Status)]
-    Status {},
-
-    /// NFT token the account is linked to
-    #[returns(TokenInfo)]
-    Token {},
-
-    /// Registry address
-    #[returns(String)]
-    Registry {},
-
-    /// List of the tokens the account is aware of
-    #[returns(KnownTokensResponse)]
-    KnownTokens {
-        skip: Option<u32>,
-        limit: Option<u32>,
-    },
-
-    /// List of the assets (balances + tokens) the account is aware of
-    #[returns(AssetsResponse)]
-    Assets {
-        skip: Option<u32>,
-        limit: Option<u32>,
-    },
-
-    /// Full info about the account
-    #[returns(FullInfoResponse)]
-    FullInfo {
-        skip: Option<u32>,
-        limit: Option<u32>,
-    },
-
-    /// Incremental number telling wether a direct interaction with the account has occured
-    #[returns(u128)]
-    Serial {},
-
-    #[returns(())]
-    Extension { msg: Q },
-}
 
 /// [TokenInfo] is used as a to query the account info
 /// so no need to return any additional data
 
 pub type InstantiateMsg = InstantiateAccountMsg<Binary>;
-pub type ExecuteMsg = ExecuteAccountMsg<SignedCosmosMsgs, SignedAccountActions, CredentialData>;
+pub type ExecuteMsg = ExecuteAccountMsg<SignedActions, Empty, CredentialData>;
 
 pub type MigrateMsg = MigrateAccountMsg;
 pub type ContractResult = Result<Response, ContractError>;
 
-pub type QueryMsg = QueryMsgBase<SignedCosmosMsgs, CredQueryMsg>;
+pub type QueryMsg = QueryAccountMsg<SignedActions, CredQueryMsg>;

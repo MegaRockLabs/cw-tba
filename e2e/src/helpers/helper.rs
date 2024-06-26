@@ -9,11 +9,11 @@ use cosm_tome::modules::bank::model::SendRequest;
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{from_json, to_json_binary, to_json_string, Binary, Coin, CosmosMsg, Empty, Timestamp, Uint128};
+use cw82_credentials::msg::ActionDataToSign;
 use saa::cosmos_utils::preamble_msg_arb_036;
 use std::str::FromStr;
 
 
-use cw82_credentials::msg::CosmosMsgDataToSign;
 use cw_tba::{MigrateAccountMsg, TokenInfo, CreateAccountMsg};
 use saa::{CosmosArbitrary, Credential, CredentialData, Verifiable};
 use serde::de::DeserializeOwned;
@@ -197,7 +197,7 @@ pub fn create_cred_token_account<C: CosmosClient>(
         
         let nonce = Uint128::from(latest_block_time(chain).seconds());
         
-        let data = CosmosMsgDataToSign {
+        let data = ActionDataToSign {
             nonce,
             chain_id: chain_id.clone(),
             messages: vec![],

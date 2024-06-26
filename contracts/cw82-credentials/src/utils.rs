@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    from_json, to_json_string, Addr, Api, CosmosMsg, Deps, DepsMut, Empty, Env, QuerierWrapper, StdError, StdResult, Storage, WasmMsg
+    from_json, to_json_string, Addr, Api, CosmosMsg, Deps, Env, QuerierWrapper, StdError, StdResult, Storage, WasmMsg
 };
 use cw_ownable::is_owner;
 use cw_tba::ExecuteAccountMsg;
@@ -11,8 +11,8 @@ use std::collections::HashSet;
 use crate::{
     error::ContractError,
     msg::{
-        AccountActionDataToSign, AuthPayload, CosmosMsgDataToSign, SignedAccountActions,
-        SignedCosmosMsgs, ValidSignaturesPayload,
+        ActionDataToSign, AuthPayload, SignedActions,
+        ValidSignaturesPayload,
     },
     state::{
         CredentialInfo, CREDENTIALS, NONCES, REGISTRY_ADDRESS, STATUS,
@@ -37,45 +37,7 @@ pub fn status_ok(store: &dyn Storage) -> bool {
     assert_status(store).is_ok()
 }
 
-pub fn assert_ok_wasm_msg(msg: &WasmMsg) -> StdResult<()> {
-    let bad_wasm_error = StdError::GenericErr {
-        msg: "Not Supported".into(),
-    };
-    match msg {
-        WasmMsg::Execute { .. } => Err(bad_wasm_error),
-        _ => Err(bad_wasm_error),
-    }
-}
 
-pub fn assert_ok_cosmos_custom_msg(msg: &CosmosMsg<SignedCosmosMsgs>) -> StdResult<()> {
-    let bad_msg_error = StdError::GenericErr {
-        msg: "Not Supported".into(),
-    };
-    match msg {
-        CosmosMsg::Wasm(msg) => assert_ok_wasm_msg(msg),
-        CosmosMsg::Stargate { .. } => Err(bad_msg_error),
-        _ => Ok(()),
-    }
-}
-
-pub fn is_ok_cosmos_custom_msg(msg: &CosmosMsg<SignedCosmosMsgs>) -> bool {
-    assert_ok_cosmos_custom_msg(msg).is_ok()
-}
-
-pub fn assert_ok_cosmos_msg(msg: &CosmosMsg<Empty>) -> StdResult<()> {
-    let bad_msg_error = StdError::GenericErr {
-        msg: "Not Supported".into(),
-    };
-    match msg {
-        CosmosMsg::Wasm(msg) => assert_ok_wasm_msg(msg),
-        CosmosMsg::Stargate { .. } => Err(bad_msg_error),
-        _ => Ok(()),
-    }
-}
-
-pub fn is_ok_cosmos_msg(msg: &CosmosMsg<Empty>) -> bool {
-    assert_ok_cosmos_msg(msg).is_ok()
-}
 
 pub fn query_if_registry(querier: &QuerierWrapper, addr: Addr) -> StdResult<bool> {
     cw83::Cw83RegistryBase(addr).supports_interface(querier)
@@ -91,7 +53,6 @@ pub fn assert_registry(store: &dyn Storage, addr: &Addr) -> Result<(), ContractE
 
 pub fn is_registry(store: &dyn Storage, addr: &Addr) -> bool {
     let res = REGISTRY_ADDRESS.load(store).map(|a| a == addr.to_string());
-
     res.is_ok() && res.unwrap()
 }
 
@@ -128,6 +89,7 @@ fn validate_payload(storage: &dyn Storage, payload: &AuthPayload) -> StdResult<(
 
     Ok(())
 }
+
 
 pub fn validate_multi_payload(
     storage: &dyn Storage,
@@ -188,6 +150,7 @@ pub fn get_verifying_credential_tuple(
     Ok((id, info))
 }
 
+
 pub fn get_credential_from_args(
     id: CredentialId,
     info: CredentialInfo,
@@ -242,6 +205,7 @@ pub fn get_credential_from_args(
     Ok(credential)
 }
 
+
 pub fn get_verifying_credential(
     deps: Deps,
     data: impl Into<Binary>,
@@ -261,6 +225,7 @@ pub fn get_verifying_credential(
 
     get_credential_from_args(id, info, data.into(), signature.into(), &payload)
 }
+
 
 pub fn get_verifying_indexed_credential(
     deps: Deps,
@@ -291,48 +256,7 @@ pub fn get_verifying_indexed_credential(
     get_credential_from_args(id, info, data, signature, &payload)
 }
 
-fn get_digest_credential(
-    deps: Deps,
-    message: impl Into<Binary>,
-    signature: impl Into<Binary>,
-    payload: &Option<AuthPayload>,
-) -> Result<Credential, ContractError> {
 
-    let (
-        id, 
-        info
-    ) = get_verifying_credential_tuple(deps.storage, &payload, true)?;
-
-    let cred = get_credential_from_args(
-        id, 
-        info, 
-        message.into(), 
-        signature.into(), 
-        &payload
-    )?;
-
-    Ok(cred)
-}
-
-fn get_cosmos_msg_credential(
-    deps: Deps,
-    data: &CosmosMsgDataToSign,
-    signature: Binary,
-    payload: &Option<AuthPayload>,
-) -> Result<Credential, ContractError> {
-    let data = Binary(to_json_string(&data)?.as_bytes().to_vec());
-    get_digest_credential(deps, data, signature, &payload)
-}
-
-pub fn get_account_action_credential(
-    deps: Deps,
-    data: &AccountActionDataToSign,
-    signature: Binary,
-    payload: &Option<AuthPayload>,
-) -> Result<Credential, ContractError> {
-    let data = Binary(to_json_string(&data)?.as_bytes().to_vec());
-    get_digest_credential(deps, data, signature, &payload)
-}
 
 fn derive_cosmos_address(
     api: &dyn Api,
@@ -347,6 +271,9 @@ fn derive_cosmos_address(
     };
     Ok(address)
 }
+
+
+
 
 pub fn assert_owner_derivable(deps: Deps, data: &CredentialData) -> Result<(), ContractError> {
     for cred in data.credentials.iter() {
@@ -375,11 +302,37 @@ pub fn assert_owner_derivable(deps: Deps, data: &CredentialData) -> Result<(), C
 }
 
 
+
+
+pub fn get_action_credential(
+    deps: Deps,
+    data: &ActionDataToSign,
+    signature: Binary,
+    payload: &Option<AuthPayload>,
+) -> Result<Credential, ContractError> {
+    let message = Binary(to_json_string(&data)?.as_bytes().to_vec());
+
+    let (
+        id, 
+        info
+    ) = get_verifying_credential_tuple(deps.storage, &payload, true)?;
+
+    let cred = get_credential_from_args(
+        id, 
+        info, 
+        message.into(), 
+        signature.into(), 
+        &payload
+    )?;
+
+    Ok(cred)
+}
+
+
+
+
 fn assert_valid_signed_action(action: &ExecuteAccountMsg) -> Result<(), ContractError> {
     match action {
-        ExecuteAccountMsg::Execute { .. } => Err(ContractError::BadSignedAction(String::from(
-            "'Execute' must be called directly",
-        ))),
         ExecuteAccountMsg::UpdateAccountData { .. } => Err(ContractError::BadSignedAction(
             String::from("'UpdateAccountData' must be called directly"),
         )),
@@ -393,14 +346,14 @@ fn assert_valid_signed_action(action: &ExecuteAccountMsg) -> Result<(), Contract
     }
 }
 
-pub fn assert_signed_actions(
+pub fn assert_signed_msg(
     deps: Deps,
     env: &Env,
-    signed: &SignedAccountActions,
+    signed: &SignedActions,
 ) -> Result<(), ContractError> {
     ensure!(!NONCES.has(deps.storage, signed.data.nonce.u128()), ContractError::NonceExists {});
 
-    let credential = get_account_action_credential(
+    let credential = get_action_credential(
         deps,
         &signed.data,
         signed.signature.clone().into(),
@@ -411,7 +364,7 @@ pub fn assert_signed_actions(
     
     signed
         .data
-        .actions
+        .messages
         .iter()
         .map(|action| assert_valid_signed_action(action))
         .collect::<Result<Vec<()>, ContractError>>()?;
@@ -419,109 +372,50 @@ pub fn assert_signed_actions(
     Ok(())
 }
 
-pub fn assert_signed_msg(
+
+
+pub fn assert_caller(
     deps: Deps,
-    env: &Env,
-    _sender: &str,
-    msg: &SignedCosmosMsgs,
-) -> Result<(), ContractError> {
-    let credential =
-        get_cosmos_msg_credential(deps, &msg.data, msg.signature.clone().into(), &msg.payload)?;
-
-    ensure!(!NONCES.has(deps.storage, msg.data.nonce.u128()), ContractError::NonceExists {});
-    credential.verified_cosmwasm(deps.api, env, &None)?;
-
-    Ok(())
-}
-
-pub fn assert_simple_msg(
-    deps: Deps,
-    _env: &Env,
     sender: &str,
-    _msg: &CosmosMsg<SignedCosmosMsgs>,
 ) -> Result<(), ContractError> {
     ensure!(
         WITH_CALLER.load(deps.storage)?,
         StdError::generic_err("Calling directly is not allowed. Message must be signed")
     );
-
     ensure!(
         is_owner(deps.storage, &deps.api.addr_validate(sender)?)?,
         ContractError::Unauthorized {}
     );
-
     Ok(())
 }
 
-pub fn assert_cosmos_msg(
-    deps: Deps,
-    env: &Env,
-    sender: &str,
-    msg: &CosmosMsg<SignedCosmosMsgs>,
-) -> Result<(), ContractError> {
+
+
+pub fn uncustomised_cosmos_msg(msg: CosmosMsg<SignedActions>) -> CosmosMsg {
     match msg {
-        CosmosMsg::Custom(signed) => assert_signed_msg(deps, env, sender, signed),
-        _ => assert_simple_msg(deps, env, sender, msg),
+        CosmosMsg::Bank(b) => b.into(),
+        CosmosMsg::Staking(s) => s.into(),
+        CosmosMsg::Distribution(d) => d.into(),
+        CosmosMsg::Gov(g) => g.into(),
+        CosmosMsg::Ibc(ibc) => ibc.into(),
+        CosmosMsg::Wasm(w) => w.into(),
+        CosmosMsg::Stargate { type_url, value } => CosmosMsg::Stargate { type_url: type_url.clone(), value: value.clone() },
+        _ => unreachable!(),
     }
 }
 
-pub fn checked_execute_msg(
-    deps: Deps,
-    env: &Env,
-    sender: &str,
-    msg: &CosmosMsg<SignedCosmosMsgs>,
-) -> Result<Vec<CosmosMsg>, ContractError> {
-    match msg.clone() {
-        CosmosMsg::Custom(signed) => {
-            assert_signed_msg(deps, env, sender, &signed)?;
 
-            signed
-                .data
-                .messages
-                .iter()
-                .map(|msg| assert_ok_cosmos_msg(msg))
-                .collect::<StdResult<Vec<()>>>()?;
-
-            Ok(signed.data.messages)
-        }
-
-        msg => {
-            assert_simple_msg(deps, env, sender, &msg)?;
-
-            let msg: CosmosMsg = match msg {
-                CosmosMsg::Bank(b) => b.into(),
-                CosmosMsg::Staking(s) => s.into(),
-                CosmosMsg::Distribution(d) => d.into(),
-                CosmosMsg::Gov(g) => g.into(),
-                CosmosMsg::Ibc(ibc) => ibc.into(),
-                CosmosMsg::Wasm(w) => w.into(),
-                CosmosMsg::Stargate { type_url, value } => CosmosMsg::Stargate { type_url, value },
-                CosmosMsg::Custom(_) => unreachable!(),
-                _ => return Err(ContractError::NotSupported {}),
-            };
-            assert_ok_cosmos_msg(&msg)?;
-            Ok(vec![msg])
-        }
+pub fn assert_ok_wasm_msg(msg: &WasmMsg) -> StdResult<()> {
+    match msg {
+        _ => Err(StdError::generic_err("Not Supported")),
     }
 }
 
-pub fn checked_execute_msgs(
-    deps: DepsMut,
-    env: &Env,
-    sender: &str,
-    msgs: &Vec<CosmosMsg<SignedCosmosMsgs>>,
-) -> Result<Vec<CosmosMsg>, ContractError> {
-    let mut checked: Vec<CosmosMsg> = Vec::with_capacity(msgs.len() + 2);
 
-    for msg in msgs.iter() {
-        let extracted = checked_execute_msg(deps.as_ref(), env, sender, msg)?;
-
-        if let CosmosMsg::Custom(signed) = &msg {
-            NONCES.save(deps.storage, signed.data.nonce.u128(), &true)?;
-        }
-
-        checked.extend(extracted);
+pub fn assert_ok_cosmos_msg(msg: &CosmosMsg) -> StdResult<()> {
+    match msg {
+        CosmosMsg::Wasm(msg) => assert_ok_wasm_msg(msg),
+        CosmosMsg::Stargate { .. } => Err(StdError::generic_err("Not Supported")),
+        _ => Ok(()),
     }
-
-    Ok(checked)
 }

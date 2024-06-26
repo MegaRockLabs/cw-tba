@@ -1,9 +1,9 @@
-use crate::{error::ContractError, msg::Status};
+use crate::error::ContractError;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{ensure, Addr, DepsMut, Env, MessageInfo};
 use cw_ownable::initialize_owner;
 use cw_storage_plus::{Item, Map};
-use cw_tba::TokenInfo;
+use cw_tba::{Status, TokenInfo};
 use saa::{cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, 
     Credential, CredentialData, CredentialId, CredentialsWrapper, Verifiable
 };

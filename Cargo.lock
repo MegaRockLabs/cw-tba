@@ -773,11 +773,13 @@ dependencies = [
 
 [[package]]
 name = "cw-tba"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-ownable",
  "cw721 0.18.0",
+ "cw82",
  "cw83",
  "schemars",
 ]
@@ -965,7 +967,7 @@ dependencies = [
 
 [[package]]
 name = "cw82-base"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -985,7 +987,7 @@ dependencies = [
 
 [[package]]
 name = "cw82-credentials"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anybuf",
  "cosmwasm-schema",
@@ -1032,7 +1034,7 @@ dependencies = [
 
 [[package]]
 name = "cw83-base"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1173,7 +1175,7 @@ checksum = "0d6ef0072f8a535281e4876be788938b528e9a1d43900b82c2569af7da799125"
 
 [[package]]
 name = "e2e"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "assert_matches",
  "async-trait",
