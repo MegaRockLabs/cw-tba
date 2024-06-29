@@ -1,9 +1,10 @@
 use std::borrow::BorrowMut;
 
 use cosmwasm_std::{
-    from_json, to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult
+    from_json, to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdError, StdResult
 };
-use cw_ownable::get_ownership;
+use cw_ownable::{assert_owner, get_ownership};
+use saa::ensure;
 
 #[cfg(feature = "archway")]
 use crate::grants;
@@ -13,12 +14,7 @@ use cosmwasm_std::entry_point;
 use cw_tba::Status;
 
 use crate::{
-    execute,  
-    error::ContractError, 
-    action::{self, MINT_REPLY_ID}, 
-    msg::{ContractResult, CredQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg}, 
-    query::{assets, can_execute, credentials, full_info, known_tokens, valid_signature, valid_signatures}, 
-    state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO}
+    action::{self, execute_action, MINT_REPLY_ID}, error::ContractError, execute, msg::{ContractResult, CredQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg}, query::{assets, can_execute, credentials, full_info, known_tokens, valid_signature, valid_signatures}, state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER}
 };
 
 #[cfg(target_arch = "wasm32")]
@@ -77,7 +73,7 @@ pub fn instantiate(
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> ContractResult {
+pub fn execute(mut deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> ContractResult {
     if REGISTRY_ADDRESS.load(deps.storage).is_err() {
         return Err(ContractError::Deleted {});
     }
@@ -107,7 +103,18 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
 
         ExecuteMsg::Extension { .. } => Ok(Response::default()),
 
-        _ => Err(ContractError::NotSupported {}),
+        msg => {
+            let with_caller = WITH_CALLER.load(deps.storage)?;
+            ensure!(with_caller, ContractError::Unauthorized {});
+            assert_owner(deps.storage, &info.sender)?;
+            
+            execute_action::<Option<Empty>, Binary>(
+                deps.borrow_mut(), 
+                &env, 
+                &info, 
+                from_json(&to_json_binary(&msg)?)?
+            )
+        }
     }
 }
 

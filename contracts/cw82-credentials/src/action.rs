@@ -100,20 +100,19 @@ pub fn try_minting_token(
 }
 
 
-
 pub fn try_freezing(deps: &mut DepsMut) -> ContractResult {
     STATUS.save(deps.storage, &Status { frozen: true })?;
     Ok(Response::default().add_attribute("action", "freeze"))
 }
 
+
 pub fn try_unfreezing(deps: &mut DepsMut) -> ContractResult {
     let owner = cw_ownable::get_ownership(deps.storage)?.owner.unwrap();
     let token = TOKEN_INFO.load(deps.storage)?;
-
     verify_nft_ownership(&deps.querier, owner.as_str(), token)?;
-
     Ok(Response::default().add_attribute("action", "unfreeze"))
 }
+
 
 pub fn try_forgeting_tokens(
     deps: &mut DepsMut,
