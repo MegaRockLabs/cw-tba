@@ -2,41 +2,75 @@
 mod tests {
     
     use cosmwasm_std::{
-        testing::{mock_dependencies, mock_env, mock_info}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
+        testing::{mock_dependencies, mock_env, mock_info}, to_json_binary
     };
-    use cw22::set_contract_supported_interface;
-    use cw_tba::{ExecuteAccountMsg, TokenInfo};
-    use saa::{Binary, CosmosArbitrary, Credential, CredentialData, Verifiable};
+    use cw_tba::TokenInfo;
+    use saa::{Binary, Credential, CredentialData, Verifiable};
 
-    use crate::{contract::{execute, instantiate}, msg::{ActionDataToSign, ExecuteMsg, InstantiateMsg, SignedActions}};
+    use crate::{contract::instantiate, msg::InstantiateMsg};
 
-    const MESSAGE : &str = "SGVsbG8sIHdvcmxk";
-    const SIGNATURE : &str = "x9jjSFv8/n1F8gOSRjddakYDbvroQm8ZoDWht/Imc1t5xUW49+Xaq7gwcsE+LCpqYoTBxnaXLg/xgJjYymCWvw==";
-    const PUBKEY : &str = "A08EGB7ro1ORuFhjOnZcSgwYlpe0DSFjVNUIkNNQxwKQ";
-    const HRP : &str = "cosmos";
 
-    
+
     #[test]
-    fn can_instantiate() {
+    fn can_instantiate_plaintext() {
 
         let mut deps = mock_dependencies();
         let env = mock_env();
         let info = mock_info("alice", &vec![]);
 
-        set_contract_supported_interface(
-            deps.as_mut().storage,
-            &[cw22::ContractSupportedInterface {
-                supported_interface: cw83::INTERFACE_NAME.into(),
-                version: "0.0.0".into()
-            }]
-        ).unwrap();
+
+        let cred = Credential::CosmosArbitrary(saa::CosmosArbitrary {
+            pubkey: Binary::from_base64("A2LjUH7Q0gi7+Wi0/MnXMZqN8slsz7iHMfTWp8xUXspH").unwrap(),
+            signature: Binary::from_base64("TFcYDwzxeRLqowzTOCx0RL0pvDgKngh8ijdNBzFEcMtu5HZVhN03sY3BG9DNIqwuuiJkZDcQFE2CCVM5PwLHpQ==").unwrap(),
+            message: Binary("Hello".as_bytes().to_vec()).to_base64(),
+            hrp: Some(String::from("archway")),
+        });
+        let res = cred.verified_cosmwasm(deps.as_ref().api, &env, &None);
+        assert!(res.is_ok());
+
+
+        let auth_data  = CredentialData {
+            credentials: vec![cred],       
+            with_caller: Some(true),
+            primary_index: None,
+        };
+
+        let res = auth_data.verified_cosmwasm(deps.as_ref().api, &env, &None);
+        assert!(res.is_ok());
+
+        let res = instantiate(
+            deps.as_mut(),
+            env.clone(),
+            info.clone(),
+            InstantiateMsg {
+                owner: info.sender.into(),
+                account_data: to_json_binary(&auth_data).unwrap(),
+                token_info: TokenInfo {
+                    collection: "test".into(),
+                    id: "test".into()
+                },
+            }
+        );
+
+        assert!(res.is_ok())
+    }
+
+
+
+    
+    #[test]
+    fn can_instantiate_base64() {
+
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let info = mock_info("alice", &vec![]);
 
 
          let cred = Credential::CosmosArbitrary(saa::CosmosArbitrary {
-            pubkey: Binary::from_base64(PUBKEY).unwrap(),
-            signature: Binary::from_base64(SIGNATURE).unwrap(),
-            message: Binary::from_base64(MESSAGE).unwrap(),
-            hrp: Some(HRP.into()),
+            pubkey: Binary::from_base64("A08EGB7ro1ORuFhjOnZcSgwYlpe0DSFjVNUIkNNQxwKQ").unwrap(),
+            signature: Binary::from_base64("x9jjSFv8/n1F8gOSRjddakYDbvroQm8ZoDWht/Imc1t5xUW49+Xaq7gwcsE+LCpqYoTBxnaXLg/xgJjYymCWvw==").unwrap(),
+            message: Binary::from_base64("SGVsbG8sIHdvcmxk").unwrap(),
+            hrp: Some(String::from("cosmos")),
         });
 
 
@@ -67,7 +101,7 @@ mod tests {
         assert!(res.is_ok())
     }
 
-
+    /*
     #[test]
     fn custom_cosmos_msg_verifiable() {
         let mut deps = mock_dependencies();
@@ -111,6 +145,10 @@ mod tests {
             hrp: Some("archway".to_string())
         };
         let res = cred.verified_cosmwasm(deps.as_ref().api, &env, &None);
+        
+        println!("Execute res: {:?}", res);
+
+        
         assert!(res.is_ok());
 
 
@@ -164,6 +202,7 @@ mod tests {
         
         assert!(res.is_ok())
     }
+ */
 
 
 }

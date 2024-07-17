@@ -6,7 +6,7 @@ use cw_tba::ExecuteAccountMsg;
 use saa::{
     cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, ensure, Binary, Caller, CosmosArbitrary, Credential, CredentialData, CredentialId, Ed25519, EvmCredential, Secp256k1, Verifiable
 };
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt::Display};
 
 use crate::{
     error::ContractError,
@@ -275,7 +275,7 @@ fn derive_cosmos_address(
 
 
 
-pub fn assert_owner_derivable(deps: Deps, data: &CredentialData) -> Result<(), ContractError> {
+pub fn assert_owner_derivable<M : Display + Clone>(deps: Deps, data: &CredentialData<M>) -> Result<(), ContractError> {
     for cred in data.credentials.iter() {
         match cred {
             Credential::CosmosArbitrary(ca) => {
