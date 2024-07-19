@@ -12,10 +12,6 @@ Our newly developed account contracts introduce customizable credentials, allowi
 - On-Chain Identity: Transform your NFT into a comprehensive on-chain identity capable of performing a wide range of on-chain actions.
 - Package delivery: When you sell your NFT, you will also transfer ownership of it's entire inventory to the new owner
 
-## Business Model
-
-The business model around TBA is centered on the creation of a TBA account. When users initialize the account creation function, they are required to pay a creation fee. This creation fee serves as the sole revenue stream for the platform. As adoption and the number of users grow, this model scales accordingly, generating more revenue with increased platform use. Given that the application supports multiple blockchain networks, the same revenue model can be applied on a per-chain basis, ensuring consistent income across different ecosystems.
-
 --
 
 Token Bound Accounts bring a new level of autonomy and customisation to your digital presence. Embrace the future of on-chain identity and asset management with TBAs
