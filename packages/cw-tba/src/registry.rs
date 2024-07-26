@@ -3,7 +3,7 @@ use cosmwasm_schema::{cw_serde, serde::Serialize};
 use cosmwasm_std::{Binary, Coin, Empty};
 
 #[cw_serde]
-pub struct RegistryParams<T = Empty> {
+pub struct RegistryParams<T = Option<Empty>> {
     pub allowed_code_ids: Vec<u64>,
     pub creation_fees: Vec<Coin>,
     pub managers: Vec<String>,

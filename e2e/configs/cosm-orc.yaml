@@ -9,11 +9,11 @@ chain_cfg:
   derivation_path: "m/44'/118'/0'/0/0"
 
 contract_deploy_info:
-  cw82_base:
-    code_id: 75
   cw83_base:
-    code_id: 88
+    code_id: 4
+  cw82_base:
+    code_id: 3
   cw721_base:
-    code_id: 74
+    code_id: 2
   cw82_credentials: 
-    code_id: 90
+    code_id: 1

@@ -1,5 +1,8 @@
-use cosmwasm_schema::{cw_serde, serde::Serialize};
-use cosmwasm_std::{Binary, CosmosMsg, Empty};
+use cosmwasm_schema::{cw_serde, serde::Serialize, QueryResponses};
+use cosmwasm_std::{Binary, Coin, CosmosMsg, Empty};
+use cw82::smart_account_query;
+use cw_ownable::cw_ownable_query;
+use schemars::JsonSchema;
 
 use crate::common::TokenInfo;
 use cw721::Cw721ReceiveMsg;
@@ -22,8 +25,16 @@ pub struct MigrateAccountMsg<T = Empty> {
     pub params: Box<Option<T>>,
 }
 
-#[cw_serde]
 
+#[cw_serde]
+pub struct Status {
+    /// Whether the account is frozen
+    pub frozen: bool,
+}
+
+
+
+#[cw_serde]
 pub enum ExecuteAccountMsg<T = Empty, E = Option<Empty>, A = Binary> {
     /// Proxy method for executing cosmos messages
     /// Wasm and Stargate messages aren't supported
@@ -102,4 +113,58 @@ pub enum ExecuteAccountMsg<T = Empty, E = Option<Empty>, A = Binary> {
 
     /// Extension
     Extension { msg: E },
+}
+
+
+pub type KnownTokensResponse = Vec<TokenInfo>;
+
+
+#[cw_serde]
+pub struct AssetsResponse {
+    /// Native fungible tokens held by an account
+    pub balances: Vec<Coin>,
+    /// NFT tokens the account is aware of
+    pub tokens: Vec<TokenInfo>,
+}
+
+
+
+
+#[smart_account_query]
+#[cw_ownable_query]
+#[cw_serde]
+#[derive(QueryResponses)]
+pub enum QueryAccountMsg<T = Empty, Q: JsonSchema = Empty> {
+    /// Status of the account telling whether it iz frozen
+    #[returns(Status)]
+    Status {},
+
+    /// NFT token the account is linked to
+    #[returns(TokenInfo)]
+    Token {},
+
+    /// Registry address
+    #[returns(String)]
+    Registry {},
+
+    /// List of the tokens the account is aware of
+    #[returns(KnownTokensResponse)]
+    KnownTokens {
+        skip: Option<u32>,
+        limit: Option<u32>,
+    },
+
+    /// List of the assets (balances + tokens) the account is aware of
+    #[returns(AssetsResponse)]
+    Assets {
+        skip: Option<u32>,
+        limit: Option<u32>,
+    },
+
+    /// Incremental number telling wether a direct interaction with the account has occured
+    #[returns(u128)]
+    Serial {},
+
+    #[returns(())]
+    Extension { msg: Q },
 }
