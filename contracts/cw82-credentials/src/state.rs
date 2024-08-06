@@ -1,6 +1,6 @@
 use crate::error::ContractError;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{ensure, Addr, Binary, DepsMut, Env, MessageInfo};
+use cosmwasm_std::{ensure, Addr, Api, Binary, Env, MessageInfo, Storage};
 use cw_ownable::initialize_owner;
 use cw_storage_plus::{Item, Map};
 use cw_tba::{Status, TokenInfo};
@@ -30,14 +30,15 @@ pub static NONCES: Map<u128, bool> = Map::new("n");
 
 
 pub fn save_credentials(
-    deps: DepsMut,
-    env: Env,
+    api: &dyn Api,
+    storage: &mut dyn Storage,
+    env: &Env,
     info: MessageInfo,
     data: CredentialData,
     owner: String,
 ) -> Result<(), ContractError> {
     let with_caller = data.with_caller.unwrap_or_default();
-    WITH_CALLER.save(deps.storage, &with_caller)?;
+    WITH_CALLER.save(storage, &with_caller)?;
     
     let mut verifying_found = false;
     let mut owner_found = false;
@@ -52,13 +53,13 @@ pub fn save_credentials(
         info.clone()
     };
 
-    let data = data.verified_cosmwasm(deps.api, &env, &Some(info))?;
-    initialize_owner(deps.storage, deps.api, Some(owner.as_str()))?;
+    let data = data.verified_cosmwasm(api, env, &Some(info))?;
+    initialize_owner(storage, api, Some(owner.as_str()))?;
     
 
     if data.primary_index.is_some() {
         if let Credential::Caller(_) = data.primary() {} else {
-            VERIFYING_CRED_ID.save(deps.storage, &data.primary_id())?;
+            VERIFYING_CRED_ID.save(storage, &data.primary_id())?;
             verifying_found = true;
         }
     }
@@ -86,13 +87,13 @@ pub fn save_credentials(
         if !owner_found  {
             let addr = match hrp.as_ref() {
                 Some(hrp) => pubkey_to_account(&id, hrp)?,
-                None => deps.api.addr_humanize(&pubkey_to_canonical(&id))?.to_string()
+                None => api.addr_humanize(&pubkey_to_canonical(&id))?.to_string()
             };
             if owner == addr {
                 owner_found = true;
                 // if primary not specified explicitly, override one derived into the owner to be primary
                 if data.primary_index.is_none() {
-                    VERIFYING_CRED_ID.save(deps.storage, &id)?;
+                    VERIFYING_CRED_ID.save(storage, &id)?;
                     verifying_found = true;
                 }
             }
@@ -101,13 +102,13 @@ pub fn save_credentials(
         // first non-caller credential is the verifying one
         if !verifying_found {
             if let Credential::Caller(_) = data.primary() {} else {
-                VERIFYING_CRED_ID.save(deps.storage, &data.primary_id())?;
+                VERIFYING_CRED_ID.save(storage, &data.primary_id())?;
                 verifying_found = true;
             }
         };
 
         CREDENTIALS.save(
-            deps.storage,
+            storage,
             id,
             &CredentialInfo {
                 name: cred.name().to_string(),

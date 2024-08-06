@@ -96,7 +96,7 @@ pub struct FullInfoResponse {
 
 
 
-pub type InstantiateMsg = InstantiateAccountMsg<Binary>;
+pub type InstantiateMsg = InstantiateAccountMsg<Binary, SignedActions>;
 pub type ExecuteMsg = ExecuteAccountMsg<SignedActions, Empty, CredentialData>;
 
 pub type MigrateMsg = MigrateAccountMsg;

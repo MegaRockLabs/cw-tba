@@ -62,15 +62,21 @@ pub fn instantiate(
     STATUS.save(deps.storage, &Status { frozen: false })?;
     SERIAL.save(deps.storage, &0u128)?;
 
-    save_credentials(deps, env.clone(), info, from_json(&msg.account_data)?, msg.owner)?;
+    save_credentials(deps.api, deps.storage, &env, info.clone(), from_json(&msg.account_data)?, msg.owner)?;
 
-    let mut msgs: Vec<CosmosMsg> = Vec::with_capacity(1);
+    let actions = msg.actions.unwrap_or_default();
+    let mut msgs: Vec<CosmosMsg> = Vec::with_capacity(actions.len() + 1);
 
     #[cfg(feature = "archway")]
     msgs.push(crate::grants::register_granter_msg(&env)?);
     
+    let res = if actions.len() > 0 {
+         execute::try_executing(deps, env.clone(), info, actions)?
+    } else {
+        Response::default()
+    };
 
-    Ok(Response::default().add_messages(msgs))
+    Ok(res.add_messages(msgs))
 }
 
 

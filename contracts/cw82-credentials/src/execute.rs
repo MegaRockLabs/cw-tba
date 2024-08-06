@@ -63,7 +63,7 @@ pub fn try_updating_account_data(
         get_ownership(deps.storage)?.owner.unwrap()
     };
 
-    save_credentials(deps, env, info, data, owner.to_string())?;
+    save_credentials(deps.api, deps.storage, &env, info, data, owner.to_string())?;
 
     Ok(Response::new().add_attributes(vec![("action", "update_account_data")]))
 }
@@ -80,7 +80,7 @@ pub fn try_updating_ownership(
     if new_account_data.is_some() {
         let data = new_account_data.clone().unwrap();
         STATUS.save(deps.storage, &Status { frozen: false })?;
-        save_credentials(deps, env, info, data, new_owner.clone())?;
+        save_credentials(deps.api, deps.storage, &env, info, data, new_owner.clone())?;
     } else {
         STATUS.save(deps.storage, &Status { frozen: true })?;
     }

@@ -15,7 +15,7 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["stargaze"]
+default = ["archway"]
 archway = ["dep:anybuf"]
 stargaze = []
 library = []
