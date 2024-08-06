@@ -4,8 +4,7 @@ use cosmwasm_std::{ensure, Addr, Binary, DepsMut, Env, MessageInfo};
 use cw_ownable::initialize_owner;
 use cw_storage_plus::{Item, Map};
 use cw_tba::{Status, TokenInfo};
-use saa::{cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, 
-    Credential, CredentialData, CredentialId, CredentialsWrapper, Verifiable
+use saa::{cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, Credential, CredentialData, CredentialId, CredentialsWrapper, PasskeyCredential, Verifiable
 };
 
 #[cw_serde]
@@ -72,6 +71,17 @@ pub fn save_credentials(
             Credential::Secp256k1(c) => c.hrp.clone(),
             _ => None
         };
+
+        let extension : Option<Binary> = match cred {
+            Credential::Passkey(PasskeyCredential {
+                public_key,
+                ..
+            }) => {
+                ensure!(public_key.is_some(), ContractError::Generic("Public key is required for passkeys".to_string()));
+                Some(public_key.clone().unwrap().into())
+            }
+            _ => None
+        };
      
         if !owner_found  {
             let addr = match hrp.as_ref() {
@@ -102,6 +112,7 @@ pub fn save_credentials(
             &CredentialInfo {
                 name: cred.name().to_string(),
                 hrp,
+                extension,
             },
         )?;
     }

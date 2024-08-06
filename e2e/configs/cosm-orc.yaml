@@ -15,3 +15,5 @@ contract_deploy_info:
     code_id: 2
   cw83_base:
     code_id: 3
+  cw82_credentials:
+    code_id: 4

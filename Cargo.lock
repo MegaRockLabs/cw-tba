@@ -2085,8 +2085,8 @@ checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
 name = "macros-proto"
-version = "0.9.13"
-source = "git+https://github.com/MegaRockLabs/smart-account-auth#5f99e073522eaa9c6b8b27d68b59216b856eaf56"
+version = "0.9.14"
+source = "git+https://github.com/MegaRockLabs/smart-account-auth#c2ffc04c780a7b52d81eddd32b7fd83fb99120df"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2790,8 +2790,8 @@ checksum = "f3cb5ba0dc43242ce17de99c180e96db90b235b8a9fdc9543c96d2209116bd9f"
 
 [[package]]
 name = "saa-common"
-version = "0.9.13"
-source = "git+https://github.com/MegaRockLabs/smart-account-auth#5f99e073522eaa9c6b8b27d68b59216b856eaf56"
+version = "0.9.14"
+source = "git+https://github.com/MegaRockLabs/smart-account-auth#c2ffc04c780a7b52d81eddd32b7fd83fb99120df"
 dependencies = [
  "base64 0.22.1",
  "bech32 0.11.0",
@@ -2814,8 +2814,8 @@ dependencies = [
 
 [[package]]
 name = "saa-curves"
-version = "0.9.13"
-source = "git+https://github.com/MegaRockLabs/smart-account-auth#5f99e073522eaa9c6b8b27d68b59216b856eaf56"
+version = "0.9.14"
+source = "git+https://github.com/MegaRockLabs/smart-account-auth#c2ffc04c780a7b52d81eddd32b7fd83fb99120df"
 dependencies = [
  "bech32 0.11.0",
  "cosmwasm-std",
@@ -2831,8 +2831,8 @@ dependencies = [
 
 [[package]]
 name = "saa-custom"
-version = "0.9.13"
-source = "git+https://github.com/MegaRockLabs/smart-account-auth#5f99e073522eaa9c6b8b27d68b59216b856eaf56"
+version = "0.9.14"
+source = "git+https://github.com/MegaRockLabs/smart-account-auth#c2ffc04c780a7b52d81eddd32b7fd83fb99120df"
 dependencies = [
  "base64 0.22.1",
  "bech32 0.11.0",
@@ -2850,8 +2850,8 @@ dependencies = [
 
 [[package]]
 name = "saa-schema"
-version = "0.9.13"
-source = "git+https://github.com/MegaRockLabs/smart-account-auth#5f99e073522eaa9c6b8b27d68b59216b856eaf56"
+version = "0.9.14"
+source = "git+https://github.com/MegaRockLabs/smart-account-auth#c2ffc04c780a7b52d81eddd32b7fd83fb99120df"
 dependencies = [
  "macros-proto",
  "parity-scale-codec",
@@ -3255,8 +3255,8 @@ checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 
 [[package]]
 name = "smart-account-auth"
-version = "0.9.13"
-source = "git+https://github.com/MegaRockLabs/smart-account-auth#5f99e073522eaa9c6b8b27d68b59216b856eaf56"
+version = "0.9.14"
+source = "git+https://github.com/MegaRockLabs/smart-account-auth#c2ffc04c780a7b52d81eddd32b7fd83fb99120df"
 dependencies = [
  "parity-scale-codec",
  "saa-common",

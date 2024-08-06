@@ -16,8 +16,7 @@ use crate::{
         ValidSignaturesPayload,
     },
     state::{
-        CredentialInfo, CREDENTIALS, NONCES, REGISTRY_ADDRESS, STATUS,
-        VERIFYING_CRED_ID, WITH_CALLER,
+        CredentialInfo, CREDENTIALS, NONCES, REGISTRY_ADDRESS, STATUS, VERIFYING_CRED_ID, WITH_CALLER
     },
 };
 
@@ -26,7 +25,6 @@ const ONLY_ONE_ERR: &str = "Only one of the 'address' or 'hrp' can be provided";
 
 #[cw_serde]
 struct PasskeyExtension {
-    id: String,
     client_data: ClientData,
     user_handle: Option<String>,
 }
@@ -218,15 +216,18 @@ pub fn get_credential_from_args(
                 payload.extension.is_some(),
                 StdError::generic_err("Extension must be provided for 'passkey'")
             );
-
+            ensure!(
+                info.extension.is_some(),
+                StdError::generic_err("No store public key for givem 'passkey' id")
+            );
             let ext : PasskeyExtension = from_json(payload.extension.as_ref().unwrap())?;
 
             Credential::Passkey(PasskeyCredential {
-                public_key: Some(id.into()),
+                public_key: Some(info.extension.unwrap().into()),
                 authenticator_data: message,
                 client_data: ext.client_data,
                 user_handle: ext.user_handle,
-                id: ext.id,
+                id: id.into(),
                 signature,
             })
         },
