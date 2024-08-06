@@ -201,7 +201,7 @@ pub fn sudo(
     return match msg {
         #[cfg(feature = "archway")]
         SudoMsg::CwGrant(grant) => {
-            crate::grants::sudo_grant(deps, env, grant)
+            crate::grants::cwfee_grant(deps, env, grant)
         }
     }
 }

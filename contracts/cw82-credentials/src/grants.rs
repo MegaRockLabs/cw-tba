@@ -23,7 +23,7 @@ pub struct CwGrantMessage {
 
 
 
-pub fn sudo_grant(deps: DepsMut, env: Env, msg: CwGrant) -> Result<Response, ContractError> {
+pub fn cwfee_grant(deps: DepsMut, env: Env, msg: CwGrant) -> Result<Response, ContractError> {
     let with_caller = WITH_CALLER.load(deps.storage)?;
     let owner = get_ownership(deps.storage)?.owner.unwrap().to_string();
 
