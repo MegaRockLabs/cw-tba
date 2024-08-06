@@ -13,6 +13,7 @@ use crate::{
 
 const DEFAULT_BATCH_SIZE: u32 = 100;
 
+
 pub fn can_execute(
     deps: Deps,
     env: Env,
@@ -146,6 +147,7 @@ pub fn credentials(
         .map(|item| {
             let (id, info) = item?;
             Ok(CredentialFullInfo {
+                human_id: Binary(id.clone()).to_base64(),
                 id,
                 name: info.name,
                 hrp: info.hrp,
@@ -153,10 +155,13 @@ pub fn credentials(
         })
         .collect::<StdResult<Vec<CredentialFullInfo>>>()?;
 
+    let verifying_id = VERIFYING_CRED_ID.load(deps.storage)?;
+
     Ok(AccountCredentials {
         credentials,
         native_caller: WITH_CALLER.load(deps.storage)?,
-        verifying_id: VERIFYING_CRED_ID.load(deps.storage)?,
+        verifying_human_id: Binary(verifying_id.clone()).to_base64(),
+        verifying_id: verifying_id,
     })
 
 }

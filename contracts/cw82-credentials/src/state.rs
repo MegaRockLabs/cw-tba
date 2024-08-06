@@ -74,11 +74,11 @@ pub fn save_credentials(
 
         let extension : Option<Binary> = match cred {
             Credential::Passkey(PasskeyCredential {
-                public_key,
+                pubkey,
                 ..
             }) => {
-                ensure!(public_key.is_some(), ContractError::Generic("Public key is required for passkeys".to_string()));
-                Some(public_key.clone().unwrap().into())
+                ensure!(pubkey.is_some(), ContractError::Generic("Public key is required for passkeys".to_string()));
+                Some(pubkey.clone().unwrap().into())
             }
             _ => None
         };

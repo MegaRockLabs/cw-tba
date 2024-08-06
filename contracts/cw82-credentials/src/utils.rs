@@ -25,6 +25,7 @@ const ONLY_ONE_ERR: &str = "Only one of the 'address' or 'hrp' can be provided";
 
 #[cw_serde]
 struct PasskeyExtension {
+    authenticator_data: Binary,
     client_data: ClientData,
     user_handle: Option<String>,
 }
@@ -46,7 +47,6 @@ pub fn status_ok(store: &dyn Storage) -> bool {
 }
 
 
-
 pub fn query_if_registry(querier: &QuerierWrapper, addr: Addr) -> StdResult<bool> {
     cw83::Cw83RegistryBase(addr).supports_interface(querier)
 }
@@ -63,6 +63,7 @@ pub fn is_registry(store: &dyn Storage, addr: &Addr) -> bool {
     let res = REGISTRY_ADDRESS.load(store).map(|a| a == addr.to_string());
     res.is_ok() && res.unwrap()
 }
+
 
 fn validate_payload(storage: &dyn Storage, payload: &AuthPayload) -> StdResult<()> {
     if payload.hrp.is_some() {
@@ -223,11 +224,11 @@ pub fn get_credential_from_args(
             let ext : PasskeyExtension = from_json(payload.extension.as_ref().unwrap())?;
 
             Credential::Passkey(PasskeyCredential {
-                public_key: Some(info.extension.unwrap().into()),
-                authenticator_data: message,
+                pubkey: Some(info.extension.unwrap().into()),
+                authenticator_data: ext.authenticator_data,
                 client_data: ext.client_data,
                 user_handle: ext.user_handle,
-                id: id.into(),
+                id: String::from_utf8(id)?,
                 signature,
             })
         },

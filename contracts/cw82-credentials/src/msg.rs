@@ -51,6 +51,7 @@ impl CustomMsg for SignedActions {}
 #[cw_serde]
 pub struct CredentialFullInfo {
     pub id: CredentialId,
+    pub human_id: String,
     pub name: String,
     pub hrp: Option<String>,
 }
@@ -59,6 +60,7 @@ pub struct CredentialFullInfo {
 pub struct AccountCredentials {
     pub credentials: Vec<CredentialFullInfo>,
     pub verifying_id: CredentialId,
+    pub verifying_human_id: String,
     pub native_caller: bool,
 }
 

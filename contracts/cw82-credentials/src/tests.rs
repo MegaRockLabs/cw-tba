@@ -244,8 +244,8 @@ mod tests {
         let signature = Binary::from_base64("6dMQf0mPwkFBPuAElErBTi3SbqhWKRVxZVix/YwcbxxPLEGifo+KITlWmY4CX/ZoVJllFmW03DYKWwNo+7lIOw==").unwrap();
 
         let credential = Credential::<String>::Passkey(PasskeyCredential { 
-            id: Binary::default(),
-            public_key: Some(public_key), 
+            id: String::default(),
+            pubkey: Some(public_key), 
             signature, 
             authenticator_data: auth_data, 
             client_data: saa::ClientData {
