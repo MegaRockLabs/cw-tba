@@ -15,10 +15,9 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["archway"]
-archway = [
-  "dep:anybuf",
-]
+default = ["stargaze"]
+archway = ["dep:anybuf"]
+stargaze = []
 library = []
 
 [dependencies]
@@ -38,5 +37,13 @@ cw721-base      = { workspace = true }
 cw-tba          = { workspace = true }
 saa             = { workspace = true }
 
+serde           = { workspace = true }
 
-anybuf = { version = "0.5.0", optional = true }
+anybuf          = { version = "0.5.0", optional = true }
+serde_cbor = "0.11.2"
+
+digest = { version = "0.10.7" }
+
+[dev-dependencies]
+p256   = { version = "0.13.2" }
+base64 = { version = "0.22.1" }

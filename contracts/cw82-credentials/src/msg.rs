@@ -6,11 +6,13 @@ use saa::{CredentialData, CredentialId};
 
 use crate::error::ContractError;
 
+
 #[cw_serde]
-pub struct AuthPayload {
+pub struct AuthPayload<E = Option<Binary>> {
     pub hrp: Option<String>,
     pub address: Option<String>,
     pub credential_id: Option<CredentialId>,
+    pub extension: E
 }
 
 #[cw_serde]
@@ -29,6 +31,7 @@ pub enum ValidSignaturesPayload {
 #[cw_serde]
 pub struct ActionDataToSign {
     pub chain_id: String,
+    pub contract_address: Addr,
     pub messages: Vec<ExecuteAccountMsg>,
     pub nonce: Uint128,
 }
@@ -90,8 +93,6 @@ pub struct FullInfoResponse {
 
 
 
-/// [TokenInfo] is used as a to query the account info
-/// so no need to return any additional data
 
 pub type InstantiateMsg = InstantiateAccountMsg<Binary>;
 pub type ExecuteMsg = ExecuteAccountMsg<SignedActions, Empty, CredentialData>;
@@ -100,3 +101,10 @@ pub type MigrateMsg = MigrateAccountMsg;
 pub type ContractResult = Result<Response, ContractError>;
 
 pub type QueryMsg = QueryAccountMsg<SignedActions, CredQueryMsg>;
+
+
+#[cw_serde]
+pub enum SudoMsg {
+    #[cfg(feature = "archway")]
+    CwGrant(crate::grants::CwGrant)
+}

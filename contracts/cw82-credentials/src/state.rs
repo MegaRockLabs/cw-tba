@@ -1,6 +1,6 @@
 use crate::error::ContractError;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{ensure, Addr, DepsMut, Env, MessageInfo};
+use cosmwasm_std::{ensure, Addr, Binary, DepsMut, Env, MessageInfo};
 use cw_ownable::initialize_owner;
 use cw_storage_plus::{Item, Map};
 use cw_tba::{Status, TokenInfo};
@@ -9,9 +9,10 @@ use saa::{cosmos_utils::{pubkey_to_account, pubkey_to_canonical},
 };
 
 #[cw_serde]
-pub struct CredentialInfo {
+pub struct CredentialInfo<E = Binary> {
     pub name: String,
     pub hrp: Option<String>,
+    pub extension: Option<E>,
 }
 
 

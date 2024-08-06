@@ -25,22 +25,24 @@ impl Cw83TokenRegistryContract {
         Cw83RegistryBase(self.addr())
     }
 
-    fn init_binary<T: Serialize>(
+    fn init_binary<T: Serialize, E: Serialize>(
         &self,
         owner: String,
         token_info: TokenInfo,
         account_data: T,
+        actions: Option<Vec<CosmosMsg<E>>>,
     ) -> StdResult<Binary> {
         let msg = InstantiateAccountMsg {
             owner,
             token_info,
             account_data,
+            actions,
         };
 
         to_json_binary(&msg)
     }
 
-    pub fn create_account_init_msg<T: Serialize>(
+    pub fn create_account_init_msg<T: Serialize, E: Serialize>(
         &self,
         code_id: u64,
         owner: String,
@@ -48,16 +50,17 @@ impl Cw83TokenRegistryContract {
         account_data: T,
         funds: Vec<Coin>,
         serial: Option<u64>,
+        actions: Option<Vec<CosmosMsg<E>>>,
     ) -> StdResult<CosmosMsg> {
         self.cw83_wrap().create_account_init_msg(
             code_id,
-            self.init_binary(owner, token_info.clone(), account_data)?,
+            self.init_binary(owner, token_info.clone(), account_data, actions)?,
             funds,
             construct_label(&token_info, serial),
         )
     }
 
-    pub fn create_account_sub_msg<T: Serialize>(
+    pub fn create_account_sub_msg<T: Serialize, E: Serialize>(
         &self,
         code_id: u64,
         owner: String,
@@ -65,6 +68,7 @@ impl Cw83TokenRegistryContract {
         account_data: T,
         funds: Vec<Coin>,
         serial: Option<u64>,
+        actions: Option<Vec<CosmosMsg<E>>>,
     ) -> StdResult<SubMsg> {
         Ok(SubMsg {
             id: CREATE_ACCOUNT_REPLY_ID,
@@ -75,6 +79,7 @@ impl Cw83TokenRegistryContract {
                 account_data,
                 funds,
                 serial,
+                actions,
             )?,
             reply_on: ReplyOn::Success,
             gas_limit: None,

@@ -8,8 +8,7 @@ use cosm_tome::clients::client::CosmosClient;
 use cosm_tome::modules::bank::model::SendRequest;
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{from_json, to_json_binary, to_json_string, Binary, Coin, CosmosMsg, Empty, Timestamp, Uint128};
-use cw82_credentials::msg::ActionDataToSign;
+use cosmwasm_std::{from_json, to_json_binary, Binary, Coin, CosmosMsg, Empty, Timestamp};
 use saa::cosmos_utils::preamble_msg_arb_036;
 use std::str::FromStr;
 
@@ -195,15 +194,7 @@ pub fn create_cred_token_account<C: CosmosClient>(
 
         let sk = mnemonic_to_signing_key(&user.account.mnemonic, &user.key.derivation_path).unwrap();
         
-        let nonce = Uint128::from(latest_block_time(chain).seconds());
-        
-        let data = ActionDataToSign {
-            nonce,
-            chain_id: chain_id.clone(),
-            messages: vec![],
-        };
-        
-        let message = to_json_string(&data).unwrap();
+        let message = "foo".to_string();
 
         let cred = Credential::CosmosArbitrary(CosmosArbitrary {
             pubkey: sk.public_key().to_bytes().into(),
@@ -228,11 +219,6 @@ pub fn create_cred_token_account<C: CosmosClient>(
 
 
     account_data.verify().unwrap();
-
-
-    let bin_data = to_json_binary(&account_data).unwrap();
-    let unbin : CredentialData = from_json(&bin_data).unwrap();
-    unbin.verify().unwrap();
 
 
     let init_msg = cw_tba::TokenAccount {

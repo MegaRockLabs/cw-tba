@@ -1,10 +1,11 @@
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     from_json, to_json_string, Addr, Api, CosmosMsg, Deps, Env, QuerierWrapper, StdError, StdResult, Storage, WasmMsg
 };
 use cw_ownable::is_owner;
 use cw_tba::ExecuteAccountMsg;
 use saa::{
-    cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, ensure, Binary, Caller, CosmosArbitrary, Credential, CredentialData, CredentialId, Ed25519, EvmCredential, Secp256k1, Verifiable
+    cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, ensure, Binary, Caller, ClientData, CosmosArbitrary, Credential, CredentialData, CredentialId, Ed25519, EvmCredential, PasskeyCredential, Secp256k1, Verifiable
 };
 use std::{collections::HashSet, fmt::Display};
 
@@ -21,6 +22,15 @@ use crate::{
 };
 
 const ONLY_ONE_ERR: &str = "Only one of the 'address' or 'hrp' can be provided";
+
+
+#[cw_serde]
+struct PasskeyExtension {
+    id: String,
+    client_data: ClientData,
+    user_handle: Option<String>,
+}
+
 
 pub fn assert_status(store: &dyn Storage) -> StdResult<bool> {
     let status = STATUS.load(store)?;
@@ -197,9 +207,32 @@ pub fn get_credential_from_args(
             hrp: payload.clone().map(|p| p.hrp).unwrap_or(info.hrp),
         }),
         "caller" => Credential::Caller(Caller { id }),
+
+        "passkey" => {
+            ensure!(
+                payload.is_some(),
+                StdError::generic_err("Payload must be provided for 'passkey'")
+            );
+            let payload = payload.as_ref().unwrap();
+            ensure!(
+                payload.extension.is_some(),
+                StdError::generic_err("Extension must be provided for 'passkey'")
+            );
+
+            let ext : PasskeyExtension = from_json(payload.extension.as_ref().unwrap())?;
+
+            Credential::Passkey(PasskeyCredential {
+                public_key: Some(id.into()),
+                authenticator_data: message,
+                client_data: ext.client_data,
+                user_handle: ext.user_handle,
+                id: ext.id,
+                signature,
+            })
+        },
         _ => {
             return Err(StdError::generic_err("Unsupported credential type"));
-        }
+        },
     };
 
     Ok(credential)
@@ -334,7 +367,7 @@ pub fn get_action_credential(
 fn assert_valid_signed_action(action: &ExecuteAccountMsg) -> Result<(), ContractError> {
     match action {
         ExecuteAccountMsg::UpdateAccountData { .. } => Err(ContractError::BadSignedAction(
-            String::from("'UpdateAccountData' must be called directly"),
+            String::from("'UpdateAccountData' must be called directly by the registry"),
         )),
         ExecuteAccountMsg::Extension { .. } => Err(ContractError::BadSignedAction(String::from(
             "Nested 'Extension' is not supported",

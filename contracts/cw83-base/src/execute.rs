@@ -64,6 +64,7 @@ pub fn create_account<T: Serialize>(
         owner: info.sender.to_string(),
         token_info: token_info.clone(),
         account_data,
+        actions: None,
     };
     
 

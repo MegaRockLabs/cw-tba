@@ -59,6 +59,7 @@ fn amino_check_contract() {
                 collection: "test".into(),
                 id: "test".into(),
             },
+            actions: None,
         },
     )
     .unwrap();

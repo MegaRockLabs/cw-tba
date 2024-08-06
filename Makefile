@@ -9,19 +9,18 @@ build:
 
 
 deploy-local:
-	sudo docker kill archway || true
-	sudo docker volume rm -f archway_data
-	sudo docker build docker_builds -t archway-local
-	sudo docker run --rm -d --name archway \
-		-e DENOM=aarch \
+	sudo docker kill stargaze || true
+	sudo docker volume rm -f stargaze_data
+	sudo docker run --rm -d --name stargaze \
+		-e DENOM=ustars \
 		-e CHAINID=testing \
 		-e GAS_LIMIT=$(GAS_LIMIT) \
 		-p 1317:1317 \
 		-p 26656:26656 \
 		-p 26657:26657 \
 		-p 9090:9090 \
-		--mount type=volume,source=archway_data,target=/root \
-		archway-local $(TEST_ADDRS)
+		--mount type=volume,source=stargaze_data,target=/root \
+		publicawesome/stargaze:14.0.0 /data/entry-point.sh $(TEST_ADDRS)
 
 e2etest:
 	RUST_LOG=info CONFIG=configs/cosm-orc.yaml cargo integration-test $(TEST_NAME)

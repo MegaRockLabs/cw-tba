@@ -8,17 +8,20 @@ use crate::common::TokenInfo;
 use cw721::Cw721ReceiveMsg;
 
 #[cw_serde]
-pub struct InstantiateAccountMsg<T = Binary>
+pub struct InstantiateAccountMsg<T = Binary, E = Empty>
 where
     T: Serialize,
 {
-    /// Token owner that had been verified by the registry
-    pub owner: String,
-    /// Token info
-    pub token_info: TokenInfo,
     /// Customiable payload specififc for account implementation
     pub account_data: T,
+    /// Actions to execute immediately on the account creation
+    pub actions: Option<Vec<CosmosMsg<E>>>,
+    /// Token info
+    pub token_info: TokenInfo,
+    /// Token owner that had been verified by the registry
+    pub owner: String,
 }
+
 
 #[cw_serde]
 pub struct MigrateAccountMsg<T = Empty> {

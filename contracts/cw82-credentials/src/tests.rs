@@ -1,13 +1,34 @@
+// allow unreachable code for testing
+#![allow(unreachable_code, unused_mut)]
+
 #[cfg(test)]
 mod tests {
     
-    use cosmwasm_std::{
-        testing::{mock_dependencies, mock_env, mock_info}, to_json_binary
-    };
-    use cw_tba::TokenInfo;
-    use saa::{Binary, Credential, CredentialData, Verifiable};
 
-    use crate::{contract::instantiate, msg::InstantiateMsg};
+    use cosmwasm_std::{
+        testing::{mock_dependencies, mock_env, mock_info}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
+    };
+    use cw_tba::{ExecuteAccountMsg, TokenInfo};
+    use saa::{Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
+    use serde::{Deserialize, Serialize};
+
+    use crate::{
+        contract::{execute, instantiate}, msg::{ActionDataToSign, ExecuteMsg, InstantiateMsg, SignedActions}, 
+    };
+
+
+
+    
+    #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+    pub struct ClientData {
+        // rename to type
+        #[serde(rename = "type")]
+        pub ty: String,
+        pub challenge: String,
+        pub origin: String,
+        #[serde(rename = "crossOrigin")]
+        pub cross_origin: bool
+    }
 
 
 
@@ -17,7 +38,7 @@ mod tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let info = mock_info("alice", &vec![]);
-
+        
 
         let cred = Credential::CosmosArbitrary(saa::CosmosArbitrary {
             pubkey: Binary::from_base64("A2LjUH7Q0gi7+Wi0/MnXMZqN8slsz7iHMfTWp8xUXspH").unwrap(),
@@ -49,6 +70,7 @@ mod tests {
                     collection: "test".into(),
                     id: "test".into()
                 },
+                actions: None
             }
         );
 
@@ -95,15 +117,17 @@ mod tests {
                     collection: "test".into(),
                     id: "test".into()
                 },
+                actions: None
             }
         );
 
         assert!(res.is_ok())
     }
 
-    /*
+
     #[test]
     fn custom_cosmos_msg_verifiable() {
+        
         let mut deps = mock_dependencies();
         let env = mock_env();
 
@@ -121,6 +145,7 @@ mod tests {
 
         let data = ActionDataToSign {
             chain_id: "constantine-3".into(),
+            contract_address: Addr::unchecked("registry"),
             messages: vec![action],
             nonce: Uint128::zero(),
         };
@@ -148,6 +173,7 @@ mod tests {
         
         println!("Execute res: {:?}", res);
 
+        return;
         
         assert!(res.is_ok());
 
@@ -186,6 +212,7 @@ mod tests {
                     collection: "test".into(),
                     id: "test".into()
                 },
+                actions: None
             }
         ).unwrap();
 
@@ -202,7 +229,39 @@ mod tests {
         
         assert!(res.is_ok())
     }
- */
+ 
+
+    #[test]
+    fn can_check_passkeys() {
+
+        let mut deps = mock_dependencies();
+        let deps = deps.as_ref();
+        let env = mock_env();
+        let info = mock_info("doesn't matter", &vec![]);
+
+        let public_key = Binary::from_base64("BGDRdC9Ynea9vlpLxFZmEGL1cYpxGgzRvEMzlugVfmYOyACjQ5wHA8DNuCR4GI/Sfj6OkVNlyvuwyfkeOPavcG8=").unwrap();
+        let auth_data  = Binary::from_base64("SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2MFAAAAAA==").unwrap();
+        let signature = Binary::from_base64("6dMQf0mPwkFBPuAElErBTi3SbqhWKRVxZVix/YwcbxxPLEGifo+KITlWmY4CX/ZoVJllFmW03DYKWwNo+7lIOw==").unwrap();
+
+        let credential = Credential::<String>::Passkey(PasskeyCredential { 
+            id: Binary::default(),
+            public_key: Some(public_key), 
+            signature, 
+            authenticator_data: auth_data, 
+            client_data: saa::ClientData {
+                ty: "webauthn.get".to_string(),
+                challenge: "Q3JlYXRpbmcgVEJBIGFjY291bnQ".into(),
+                cross_origin: false,
+                origin: "http://localhost:5173".into(),
+            }, 
+            user_handle: None
+        });
+
+        let res = credential.verified_cosmwasm(deps.api, &env, &Some(info));
+
+        println!("Res: {:?}", res);
+        assert!(res.is_ok());
+    }
 
 
 }

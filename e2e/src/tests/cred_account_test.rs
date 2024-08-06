@@ -1,5 +1,5 @@
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
-use cosmwasm_std::{to_json_binary, CosmosMsg, Empty, Uint128};
+use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, Empty, Uint128};
 use cw_tba::ExecuteAccountMsg;
 use saa::cosmos_utils::preamble_msg_arb_036;
 use test_context::test_context;
@@ -59,6 +59,7 @@ fn test(chain: &mut Chain) {
 
     let actions = ActionDataToSign { 
         chain_id: chain.cfg.orc_cfg.chain_cfg.chain_id.clone(),
+        contract_address: Addr::unchecked(data.token_account),
         nonce: Uint128::from(1u64),
         messages: vec![execute_msg]
     };

@@ -1,20 +1,21 @@
-use std::borrow::BorrowMut;
-
-use cosmwasm_std::{
-    from_json, to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdError, StdResult
-};
-use cw_ownable::{assert_owner, get_ownership};
-use saa::ensure;
-
-#[cfg(feature = "archway")]
-use crate::grants;
-
+#![allow(unreachable_code, unused_variables, unused_mut)]
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+
+use std::borrow::BorrowMut;
+use cw_ownable::{assert_owner, get_ownership};
+use cosmwasm_std::{
+    from_json, to_json_binary, Binary, CosmosMsg, 
+    Deps, DepsMut, Empty, Env, MessageInfo, Reply, 
+    Response, StdError, StdResult,
+    ensure
+};
+
+
 use cw_tba::Status;
 
 use crate::{
-    action::{self, execute_action, MINT_REPLY_ID}, error::ContractError, execute, msg::{ContractResult, CredQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg}, query::{assets, can_execute, credentials, full_info, known_tokens, valid_signature, valid_signatures}, state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER}
+    action::{self, execute_action, MINT_REPLY_ID}, error::ContractError, execute, msg::{ContractResult, CredQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg}, query::{assets, can_execute, credentials, full_info, known_tokens, valid_signature, valid_signatures}, state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER}
 };
 
 #[cfg(target_arch = "wasm32")]
@@ -22,6 +23,7 @@ use crate::utils::query_if_registry;
 
 pub const CONTRACT_NAME: &str = "crates:cw82-credential-token-account";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -63,8 +65,9 @@ pub fn instantiate(
     save_credentials(deps, env.clone(), info, from_json(&msg.account_data)?, msg.owner)?;
 
     let mut msgs: Vec<CosmosMsg> = Vec::with_capacity(1);
+
     #[cfg(feature = "archway")]
-    msgs.push(grants::register_granter_msg(&env)?);
+    msgs.push(crate::grants::register_granter_msg(&env)?);
     
 
     Ok(Response::default().add_messages(msgs))
@@ -183,16 +186,15 @@ pub fn reply(mut deps: DepsMut, env: Env, msg: Reply) -> ContractResult {
     }
 }
 
-
-
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn sudo(
     deps: DepsMut,
     env: Env,
-    msg: crate::grants::SudoMsg,
+    msg: SudoMsg,
 ) -> Result<Response, ContractError> {
     return match msg {
-        crate::grants::SudoMsg::CwGrant(grant) => {
+        #[cfg(feature = "archway")]
+        SudoMsg::CwGrant(grant) => {
             crate::grants::sudo_grant(deps, env, grant)
         }
     }

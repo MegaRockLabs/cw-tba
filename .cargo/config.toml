@@ -7,4 +7,3 @@ integration-test = "test --package e2e -- --ignored --test-threads 1"
 [env]
 RUST_LOG="info"
 CONFIG="configs/cosm-orc.yaml"
-SKIP_CONTRACT_STORE="true"
