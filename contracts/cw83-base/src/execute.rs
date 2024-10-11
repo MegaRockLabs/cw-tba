@@ -23,6 +23,7 @@ pub fn create_account<T: Serialize>(
     token_info: TokenInfo,
     account_data: T,
     create_for: Option<String>,
+    actions: Option<Vec<CosmosMsg>>,
     reset: bool,
 ) -> Result<Response, ContractError> {
     ensure_eq!(env.block.chain_id, chain_id, ContractError::InvalidChainId {});
@@ -64,7 +65,7 @@ pub fn create_account<T: Serialize>(
         owner: info.sender.to_string(),
         token_info: token_info.clone(),
         account_data,
-        actions: None,
+        actions,
     };
     
 

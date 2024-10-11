@@ -1,6 +1,5 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Binary, Coin, CustomMsg, Empty, Response, Uint128};
-pub use cw82::{smart_account_query, CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse,};
 use cw_tba::{ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, QueryAccountMsg, Status, TokenInfo};
 use saa::{CredentialData, CredentialId};
 
@@ -8,11 +7,11 @@ use crate::error::ContractError;
 
 
 #[cw_serde]
-pub struct AuthPayload<E = Option<Binary>> {
+pub struct AuthPayload {
     pub hrp: Option<String>,
     pub address: Option<String>,
     pub credential_id: Option<CredentialId>,
-    pub extension: E
+    pub extension: Option<Binary>
 }
 
 #[cw_serde]
@@ -20,6 +19,7 @@ pub struct IndexedAuthPayload {
     pub payload: AuthPayload,
     pub index: u8,
 }
+
 
 #[cw_serde]
 pub enum ValidSignaturesPayload {
@@ -95,9 +95,8 @@ pub struct FullInfoResponse {
 
 
 
-
 pub type InstantiateMsg = InstantiateAccountMsg<Binary, SignedActions>;
-pub type ExecuteMsg = ExecuteAccountMsg<SignedActions, Empty, CredentialData>;
+pub type ExecuteMsg = ExecuteAccountMsg<SignedActions, Option<Empty>, CredentialData>;
 
 pub type MigrateMsg = MigrateAccountMsg;
 pub type ContractResult = Result<Response, ContractError>;

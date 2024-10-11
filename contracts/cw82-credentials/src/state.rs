@@ -4,7 +4,10 @@ use cosmwasm_std::{ensure, Addr, Api, Binary, Env, MessageInfo, Storage};
 use cw_ownable::initialize_owner;
 use cw_storage_plus::{Item, Map};
 use cw_tba::{Status, TokenInfo};
-use saa::{cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, Credential, CredentialData, CredentialId, CredentialsWrapper, PasskeyCredential, Verifiable
+use saa::{
+    cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, 
+    Credential, CredentialData, CredentialId, CredentialsWrapper, 
+    PasskeyCredential, Verifiable
 };
 
 #[cw_serde]
@@ -23,10 +26,10 @@ pub static SERIAL: Item<u128> = Item::new("l");
 
 pub static VERIFYING_CRED_ID: Item<CredentialId> = Item::new("v");
 pub static WITH_CALLER: Item<bool> = Item::new("w");
-
 pub static CREDENTIALS: Map<CredentialId, CredentialInfo> = Map::new("c");
-pub static KNOWN_TOKENS: Map<(&str, &str), bool> = Map::new("k");
 pub static NONCES: Map<u128, bool> = Map::new("n");
+
+pub static KNOWN_TOKENS: Map<(&str, &str), bool> = Map::new("k");
 
 
 pub fn save_credentials(
@@ -63,6 +66,8 @@ pub fn save_credentials(
             verifying_found = true;
         }
     }
+
+    CREDENTIALS.clear(storage);
 
     for cred in data.credentials.iter() {
         let id: Vec<u8> = cred.value().id();

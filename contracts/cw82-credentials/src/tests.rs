@@ -10,26 +10,10 @@ mod tests {
     };
     use cw_tba::{ExecuteAccountMsg, TokenInfo};
     use saa::{Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
-    use serde::{Deserialize, Serialize};
 
     use crate::{
         contract::{execute, instantiate}, msg::{ActionDataToSign, ExecuteMsg, InstantiateMsg, SignedActions}, 
     };
-
-
-
-    
-    #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-    pub struct ClientData {
-        // rename to type
-        #[serde(rename = "type")]
-        pub ty: String,
-        pub challenge: String,
-        pub origin: String,
-        #[serde(rename = "crossOrigin")]
-        pub cross_origin: bool
-    }
-
 
 
     #[test]
@@ -43,7 +27,7 @@ mod tests {
         let cred = Credential::CosmosArbitrary(saa::CosmosArbitrary {
             pubkey: Binary::from_base64("A2LjUH7Q0gi7+Wi0/MnXMZqN8slsz7iHMfTWp8xUXspH").unwrap(),
             signature: Binary::from_base64("TFcYDwzxeRLqowzTOCx0RL0pvDgKngh8ijdNBzFEcMtu5HZVhN03sY3BG9DNIqwuuiJkZDcQFE2CCVM5PwLHpQ==").unwrap(),
-            message: Binary("Hello".as_bytes().to_vec()).to_base64(),
+            message: Binary("Hello".as_bytes().to_vec()),
             hrp: Some(String::from("archway")),
         });
         let res = cred.verified_cosmwasm(deps.as_ref().api, &env, &None);
@@ -145,7 +129,7 @@ mod tests {
 
         let data = ActionDataToSign {
             chain_id: "constantine-3".into(),
-            contract_address: Addr::unchecked("registry"),
+            contract_address: Addr::unchecked("archway1hf0quw8lgxn4p9vlmk3jdlgg460asp87c75s9xfm33axkczu2j3s7mwfke"),
             messages: vec![action],
             nonce: Uint128::zero(),
         };
@@ -155,7 +139,7 @@ mod tests {
         ).unwrap();
 
         let signature = Binary::from_base64(
-            "QmL2kedji/xGtcHHAf6eMz0xk0yF6wGIpVyIE18gEld96skk4tkplmirmd/2+oh+hMvVtenNlBycmuTxb22XBw=="
+            "EfGD3KMZUMppuA5+3AQ2xQPblr4FQpVWyZi/9+Vry0MVGWhJqeECPuwIkhEgaeTL6tFrOIEkYAY1I7L7uz9+Fg=="
         ).unwrap();
 
         let data_str = to_json_string(&data).unwrap();
@@ -171,10 +155,7 @@ mod tests {
         };
         let res = cred.verified_cosmwasm(deps.as_ref().api, &env, &None);
         
-        println!("Execute res: {:?}", res);
 
-        return;
-        
         assert!(res.is_ok());
 
 
@@ -243,7 +224,7 @@ mod tests {
         let auth_data  = Binary::from_base64("SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2MFAAAAAA==").unwrap();
         let signature = Binary::from_base64("6dMQf0mPwkFBPuAElErBTi3SbqhWKRVxZVix/YwcbxxPLEGifo+KITlWmY4CX/ZoVJllFmW03DYKWwNo+7lIOw==").unwrap();
 
-        let credential = Credential::<String>::Passkey(PasskeyCredential { 
+        let credential = Credential::Passkey(PasskeyCredential { 
             id: String::default(),
             pubkey: Some(public_key), 
             signature, 

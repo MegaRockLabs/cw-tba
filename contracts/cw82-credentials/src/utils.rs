@@ -1,13 +1,18 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    from_json, to_json_string, Addr, Api, CosmosMsg, Deps, Env, QuerierWrapper, StdError, StdResult, Storage, WasmMsg
+    from_json, to_json_string, Addr, Api, CosmosMsg, Deps, Env, StdError, StdResult, Storage, WasmMsg,
+    ensure
 };
 use cw_ownable::is_owner;
 use cw_tba::ExecuteAccountMsg;
 use saa::{
-    cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, ensure, Binary, Caller, ClientData, CosmosArbitrary, Credential, CredentialData, CredentialId, Ed25519, EvmCredential, PasskeyCredential, Secp256k1, Verifiable
+    cosmos_utils::{pubkey_to_account, pubkey_to_canonical}, 
+    Binary, Caller, ClientData, CosmosArbitrary, 
+    Credential, CredentialData, CredentialId, 
+    Ed25519, EvmCredential, PasskeyCredential, Secp256k1, Verifiable
 };
-use std::{collections::HashSet, fmt::Display};
+use std::collections::HashSet;
+
 
 use crate::{
     error::ContractError,
@@ -46,10 +51,20 @@ pub fn status_ok(store: &dyn Storage) -> bool {
     assert_status(store).is_ok()
 }
 
-
-pub fn query_if_registry(querier: &QuerierWrapper, addr: Addr) -> StdResult<bool> {
-    cw83::Cw83RegistryBase(addr).supports_interface(querier)
+#[cfg(target_arch = "wasm32")]
+pub fn query_if_registry(querier: &cosmwasm_std::QuerierWrapper, addr: Addr) -> StdResult<bool> {
+    let key = cosmwasm_std::storage_keys::namespace_with_key(
+        &[cw22::SUPPORTED_INTERFACES.namespace()], 
+        "crates:cw83".as_bytes()
+    );
+    let raw_query = cosmwasm_std::WasmQuery::Raw { 
+        contract_addr: addr.to_string(),
+        key: key.into()
+    };
+    let version : Option<String> = querier.query(&cosmwasm_std::QueryRequest::Wasm(raw_query))?;
+    Ok(version.is_some())
 }
+
 
 pub fn assert_registry(store: &dyn Storage, addr: &Addr) -> Result<(), ContractError> {
     if is_registry(store, addr) {
@@ -190,7 +205,7 @@ pub fn get_credential_from_args(
         }
         "cosmos-arbitrary" => Credential::CosmosArbitrary(CosmosArbitrary {
             pubkey: Binary(id),
-            message: message.to_string(),
+            message,
             signature,
             hrp: payload.clone().map(|p| p.hrp).unwrap_or(info.hrp),
         }),
@@ -310,7 +325,7 @@ fn derive_cosmos_address(
 
 
 
-pub fn assert_owner_derivable<M : Display + Clone>(deps: Deps, data: &CredentialData<M>) -> Result<(), ContractError> {
+pub fn assert_owner_derivable(deps: Deps, data: &CredentialData) -> Result<(), ContractError> {
     for cred in data.credentials.iter() {
         match cred {
             Credential::CosmosArbitrary(ca) => {
@@ -425,19 +440,6 @@ pub fn assert_caller(
 }
 
 
-
-pub fn uncustomised_cosmos_msg(msg: CosmosMsg<SignedActions>) -> CosmosMsg {
-    match msg {
-        CosmosMsg::Bank(b) => b.into(),
-        CosmosMsg::Staking(s) => s.into(),
-        CosmosMsg::Distribution(d) => d.into(),
-        CosmosMsg::Gov(g) => g.into(),
-        CosmosMsg::Ibc(ibc) => ibc.into(),
-        CosmosMsg::Wasm(w) => w.into(),
-        CosmosMsg::Stargate { type_url, value } => CosmosMsg::Stargate { type_url: type_url.clone(), value: value.clone() },
-        _ => unreachable!(),
-    }
-}
 
 
 pub fn assert_ok_wasm_msg(msg: &WasmMsg) -> StdResult<()> {

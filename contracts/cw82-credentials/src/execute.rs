@@ -1,21 +1,18 @@
-use std::borrow::BorrowMut;
-
 use crate::{
     action::execute_action, error::ContractError, msg::{ContractResult, SignedActions}, state::{
         save_credentials, CREDENTIALS, KNOWN_TOKENS, MINT_CACHE, NONCES, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, VERIFYING_CRED_ID, WITH_CALLER
-    }, utils::{assert_ok_cosmos_msg, assert_owner_derivable, assert_registry, assert_signed_msg, assert_status, uncustomised_cosmos_msg}
+    }, utils::{assert_ok_cosmos_msg, assert_owner_derivable, assert_registry, assert_signed_msg, assert_status}
 };
-use cosmwasm_std::{ensure, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{ensure, from_json, to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response};
 use cw2::CONTRACT;
 use cw22::SUPPORTED_INTERFACES;
 use cw_ownable::{get_ownership, is_owner};
 use cw_tba::{verify_nft_ownership, Status};
 use saa::CredentialData;
 
-pub const MINT_REPLY_ID: u64 = 1;
 
 pub fn try_executing(
-    mut deps: DepsMut,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msgs: Vec<CosmosMsg<SignedActions>>,
@@ -33,7 +30,7 @@ pub fn try_executing(
             NONCES.save(deps.storage, signed.data.nonce.u128(), &true)?;
 
             for action in signed.data.messages {
-                let action_res = execute_action(deps.borrow_mut(), &env, &info, action)?;
+                let action_res = execute_action(&deps.querier, deps.storage, &env, &info, action)?;
                 res = res
                     .add_submessages(action_res.messages)
                     .add_events(action_res.events)
@@ -41,7 +38,7 @@ pub fn try_executing(
             }
         } else {
             ensure!(with_caller && is_owner, ContractError::Unauthorized {});
-            let msg = uncustomised_cosmos_msg(msg);
+            let msg = from_json(to_json_binary(&msg)?)?;
             assert_ok_cosmos_msg(&msg)?;
             messages.push(msg);
         }
@@ -64,9 +61,9 @@ pub fn try_updating_account_data(
     };
 
     save_credentials(deps.api, deps.storage, &env, info, data, owner.to_string())?;
-
     Ok(Response::new().add_attributes(vec![("action", "update_account_data")]))
 }
+
 
 pub fn try_updating_ownership(
     deps: DepsMut,
@@ -82,7 +79,12 @@ pub fn try_updating_ownership(
         STATUS.save(deps.storage, &Status { frozen: false })?;
         save_credentials(deps.api, deps.storage, &env, info, data, new_owner.clone())?;
     } else {
-        STATUS.save(deps.storage, &Status { frozen: true })?;
+        let owner = get_ownership(deps.storage)?.owner.unwrap().to_string();
+        if new_owner == owner {
+            CREDENTIALS.clear(deps.storage);
+        } else {
+            STATUS.save(deps.storage, &Status { frozen: true })?;
+        }
     }
 
     Ok(Response::default()

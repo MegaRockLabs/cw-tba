@@ -56,6 +56,7 @@ pub fn execute(
             create.msg.token_info,
             create.msg.account_data,
             create.msg.create_for,
+            create.msg.actions,
             false,
         ),
 
@@ -68,6 +69,7 @@ pub fn execute(
             create.msg.token_info,
             create.msg.account_data,
             create.msg.create_for,
+            create.msg.actions,
             true,
         ),
 

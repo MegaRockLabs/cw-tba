@@ -1,6 +1,6 @@
 use crate::common::TokenInfo;
 use cosmwasm_schema::{cw_serde, serde::Serialize};
-use cosmwasm_std::{Binary, Coin, Empty};
+use cosmwasm_std::{Binary, Coin, CosmosMsg, Empty};
 
 #[cw_serde]
 pub struct RegistryParams<T = Option<Empty>> {
@@ -12,7 +12,7 @@ pub struct RegistryParams<T = Option<Empty>> {
 
 /// An extenstion for [cw83::CreateAccountMsg]
 #[cw_serde]
-pub struct TokenAccount<D = Binary>
+pub struct TokenAccount<D = Binary, E = Empty>
 where
     D: Serialize,
 {
@@ -21,6 +21,9 @@ where
 
     /// Account data used for (cw81 signature verification)
     pub account_data: D,
+
+    /// Actions to execute immediately on the account creation
+    pub actions: Option<Vec<CosmosMsg<E>>>,
 
     /// Optional parameter to create an account on behalf of another user that holds the token
     pub create_for: Option<String>,

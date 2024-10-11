@@ -1,7 +1,7 @@
-use cosmwasm_std::{from_json, Binary, CosmosMsg, Deps, Env, Order, StdError, StdResult};
+use cosmwasm_std::{ensure, from_json, Binary, CosmosMsg, Deps, Env, Order, StdError, StdResult};
 use cw82::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
 use cw_tba::{AssetsResponse, TokenInfo};
-use saa::{ensure, Verifiable};
+use saa::Verifiable;
 
 use crate::{
     msg::{AccountCredentials, CredentialFullInfo, FullInfoResponse, SignedActions, ValidSignaturesPayload},

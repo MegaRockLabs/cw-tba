@@ -1,4 +1,4 @@
-pub mod action;
+mod action;
 pub mod contract;
 pub mod error;
 pub mod execute;

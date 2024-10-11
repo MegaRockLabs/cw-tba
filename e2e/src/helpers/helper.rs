@@ -157,6 +157,7 @@ pub fn create_simple_token_account<C: CosmosClient>(
             collection: token_contract,
             id: token_id,
         },
+        actions: None,
         create_for: None,
         account_data: pubkey,
     };
@@ -204,7 +205,7 @@ pub fn create_cred_token_account<C: CosmosClient>(
                     &message
                 ).as_bytes()
             ).unwrap().to_vec().into(),
-            message,
+            message: to_json_binary(&message).unwrap().into(),
             hrp: Some(hrp.into()),
         });
 
@@ -226,6 +227,7 @@ pub fn create_cred_token_account<C: CosmosClient>(
             collection: token_contract,
             id: token_id,
         },
+        actions: None,
         create_for: None,
         account_data: to_json_binary(&account_data).unwrap(),
     };
@@ -262,6 +264,7 @@ pub fn reset_simple_token_account<C: CosmosClient>(
             collection: token_contract,
             id: token_id,
         },
+        actions: None,
         account_data: pubkey,
         create_for: None,
     };

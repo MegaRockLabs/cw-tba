@@ -26,7 +26,6 @@ tokio          = "1.37.0"
 
 hex            = "0.4.3"
 
-k256                 = { workspace = true }
 cosmwasm-schema      = { workspace = true }
 cosmwasm-std         = { workspace = true }
 cw-ownable           = { workspace = true }

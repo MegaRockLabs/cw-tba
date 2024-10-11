@@ -1,25 +1,25 @@
-#![allow(unreachable_code, unused_variables, unused_mut)]
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+#[cfg(target_arch = "wasm32")]
+use crate::utils::query_if_registry;
 
-use std::borrow::BorrowMut;
 use cw_ownable::{assert_owner, get_ownership};
 use cosmwasm_std::{
-    from_json, to_json_binary, Binary, CosmosMsg, 
-    Deps, DepsMut, Empty, Env, MessageInfo, Reply, 
-    Response, StdError, StdResult,
-    ensure
+    ensure, from_json, to_json_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult
 };
 
 
 use cw_tba::Status;
 
 use crate::{
-    action::{self, execute_action, MINT_REPLY_ID}, error::ContractError, execute, msg::{ContractResult, CredQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg}, query::{assets, can_execute, credentials, full_info, known_tokens, valid_signature, valid_signatures}, state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER}
+    action::{self, execute_action, MINT_REPLY_ID}, 
+    error::ContractError, execute, 
+    msg::{ContractResult, CredQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg}, 
+    query::{assets, can_execute, credentials, full_info, known_tokens, valid_signature, valid_signatures}, 
+    state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER}
 };
 
-#[cfg(target_arch = "wasm32")]
-use crate::utils::query_if_registry;
+
 
 pub const CONTRACT_NAME: &str = "crates:cw82-credential-token-account";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -62,7 +62,7 @@ pub fn instantiate(
     STATUS.save(deps.storage, &Status { frozen: false })?;
     SERIAL.save(deps.storage, &0u128)?;
 
-    save_credentials(deps.api, deps.storage, &env, info.clone(), from_json(&msg.account_data)?, msg.owner)?;
+    save_credentials(deps.api, deps.storage, &env, info.clone(), from_json(&msg.account_data)?, msg.owner.clone())?;
 
     let actions = msg.actions.unwrap_or_default();
     let mut msgs: Vec<CosmosMsg> = Vec::with_capacity(actions.len() + 1);
@@ -71,7 +71,8 @@ pub fn instantiate(
     msgs.push(crate::grants::register_granter_msg(&env)?);
     
     let res = if actions.len() > 0 {
-         execute::try_executing(deps, env.clone(), info, actions)?
+         execute::try_executing(deps, env.clone(), 
+         MessageInfo { sender: Addr::unchecked(msg.owner), ..info }, actions)?
     } else {
         Response::default()
     };
@@ -82,7 +83,7 @@ pub fn instantiate(
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(mut deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> ContractResult {
+pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> ContractResult {
     if REGISTRY_ADDRESS.load(deps.storage).is_err() {
         return Err(ContractError::Deleted {});
     }
@@ -117,8 +118,9 @@ pub fn execute(mut deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) 
             ensure!(with_caller, ContractError::Unauthorized {});
             assert_owner(deps.storage, &info.sender)?;
             
-            execute_action::<Option<Empty>, Binary>(
-                deps.borrow_mut(), 
+            execute_action(
+                &deps.querier,
+                deps.storage, 
                 &env, 
                 &info, 
                 from_json(&to_json_binary(&msg)?)?
@@ -174,14 +176,15 @@ pub fn migrate(deps: DepsMut, _: Env, _: MigrateMsg) -> ContractResult {
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(mut deps: DepsMut, env: Env, msg: Reply) -> ContractResult {
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult {
     match msg.id {
         MINT_REPLY_ID => {
             let collection = MINT_CACHE.load(deps.storage)?;
             MINT_CACHE.remove(deps.storage);
             // query all the held tokens for the collection stored in CACHE
             action::try_updating_known_tokens(
-                deps.borrow_mut(),
+                &deps.querier,
+                deps.storage,
                 &env,
                 collection.to_string(),
                 None,
@@ -197,7 +200,7 @@ pub fn sudo(
     deps: DepsMut,
     env: Env,
     msg: SudoMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult {
     return match msg {
         #[cfg(feature = "archway")]
         SudoMsg::CwGrant(grant) => {
