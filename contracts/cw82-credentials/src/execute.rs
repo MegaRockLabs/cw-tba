@@ -1,29 +1,51 @@
 use crate::{
-    error::ContractError,
-    msg::{ContractResult, SignedCosmosMsgs, Status},
-    state::{
-        save_credentials, CREDENTIALS, KNOWN_TOKENS, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS,
-        TOKEN_INFO, VERIFYING_CRED_ID, WITH_CALLER,
-    },
-    utils::{assert_owner_derivable, assert_registry, assert_status, checked_execute_msgs},
+    action::execute_action, error::ContractError, msg::{ContractResult, SignedActions}, state::{
+        save_credentials, CREDENTIALS, KNOWN_TOKENS, MINT_CACHE, NONCES, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, VERIFYING_CRED_ID, WITH_CALLER
+    }, utils::{assert_ok_cosmos_msg, assert_owner_derivable, assert_registry, assert_signed_msg, assert_status}
 };
-use cosmwasm_std::{ensure, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{ensure, from_json, to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response};
+use cw2::CONTRACT;
+use cw22::SUPPORTED_INTERFACES;
 use cw_ownable::{get_ownership, is_owner};
-use cw_tba::verify_nft_ownership;
+use cw_tba::{verify_nft_ownership, Status};
 use saa::CredentialData;
 
-pub const MINT_REPLY_ID: u64 = 1;
 
 pub fn try_executing(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msgs: Vec<CosmosMsg<SignedCosmosMsgs>>,
+    msgs: Vec<CosmosMsg<SignedActions>>,
 ) -> ContractResult {
     assert_status(deps.storage)?;
-    let msgs = checked_execute_msgs(deps, &env, info.sender.as_str(), &msgs)?;
-    Ok(Response::new().add_messages(msgs))
+    let mut res = Response::new();
+    let mut messages : Vec<CosmosMsg> = Vec::with_capacity(msgs.len() + 2);
+
+    let with_caller = WITH_CALLER.load(deps.storage)?;
+    let is_owner = is_owner(deps.storage, &info.sender)?;
+
+    for msg in msgs {
+        if let CosmosMsg::Custom(signed) = msg.clone() {
+            assert_signed_msg(deps.as_ref(), &env, &signed)?;
+            NONCES.save(deps.storage, signed.data.nonce.u128(), &true)?;
+
+            for action in signed.data.messages {
+                let action_res = execute_action(&deps.querier, deps.storage, &env, &info, action)?;
+                res = res
+                    .add_submessages(action_res.messages)
+                    .add_events(action_res.events)
+                    .add_attributes(action_res.attributes);
+            }
+        } else {
+            ensure!(with_caller && is_owner, ContractError::Unauthorized {});
+            let msg = from_json(to_json_binary(&msg)?)?;
+            assert_ok_cosmos_msg(&msg)?;
+            messages.push(msg);
+        }
+    }
+    Ok(res.add_messages(messages))
 }
+
 
 pub fn try_updating_account_data(
     deps: DepsMut,
@@ -38,10 +60,10 @@ pub fn try_updating_account_data(
         get_ownership(deps.storage)?.owner.unwrap()
     };
 
-    save_credentials(deps, env, info, data, owner.to_string())?;
-
+    save_credentials(deps.api, deps.storage, &env, info, data, owner.to_string())?;
     Ok(Response::new().add_attributes(vec![("action", "update_account_data")]))
 }
+
 
 pub fn try_updating_ownership(
     deps: DepsMut,
@@ -55,9 +77,14 @@ pub fn try_updating_ownership(
     if new_account_data.is_some() {
         let data = new_account_data.clone().unwrap();
         STATUS.save(deps.storage, &Status { frozen: false })?;
-        save_credentials(deps, env, info, data, new_owner.clone())?;
+        save_credentials(deps.api, deps.storage, &env, info, data, new_owner.clone())?;
     } else {
-        STATUS.save(deps.storage, &Status { frozen: true })?;
+        let owner = get_ownership(deps.storage)?.owner.unwrap().to_string();
+        if new_owner == owner {
+            CREDENTIALS.clear(deps.storage);
+        } else {
+            STATUS.save(deps.storage, &Status { frozen: true })?;
+        }
     }
 
     Ok(Response::default()
@@ -96,8 +123,14 @@ pub fn try_freezing(deps: DepsMut) -> ContractResult {
     Ok(Response::default().add_attribute("action", "freeze"))
 }
 
+
 pub fn try_purging(deps: DepsMut, sender: Addr) -> ContractResult {
     assert_registry(deps.storage, &sender)?;
+
+    cw_ownable::initialize_owner(deps.storage, deps.api, None)?;
+
+    SUPPORTED_INTERFACES.clear(deps.storage);
+    CONTRACT.remove(deps.storage);
 
     REGISTRY_ADDRESS.remove(deps.storage);
     TOKEN_INFO.remove(deps.storage);

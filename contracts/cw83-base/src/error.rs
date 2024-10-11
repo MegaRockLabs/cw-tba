@@ -10,6 +10,7 @@ pub enum ContractError {
     #[error("{0}")]
     Payment(#[from] PaymentError),
 
+
     #[error("Insufficient fee: expected {0}, got {1}")]
     InsufficientFee(u128, u128),
 

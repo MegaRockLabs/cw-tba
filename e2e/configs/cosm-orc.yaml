@@ -1,19 +1,19 @@
 chain_cfg: 
-  denom: "aarch"
-  prefix: "archway"
+  denom: "ustars"
+  prefix: "stars"
   chain_id: "testing"
   rpc_endpoint: "http://localhost:26657"
   grpc_endpoint: "http://localhost:9090"
-  gas_price: 900000000000
-  gas_adjustment: 1.8
+  gas_price: 0.1
+  gas_adjustment: 1.5
   derivation_path: "m/44'/118'/0'/0/0"
 
 contract_deploy_info:
-  cw82_base:
-    code_id: 75
-  cw83_base:
-    code_id: 88
   cw721_base:
-    code_id: 74
-  cw82_credentials: 
-    code_id: 90
+    code_id: 1
+  cw82_base:
+    code_id: 2
+  cw83_base:
+    code_id: 3
+  cw82_credentials:
+    code_id: 4

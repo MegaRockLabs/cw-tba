@@ -1,6 +1,5 @@
 use cosmwasm_std::StdError;
 use cw_ownable::OwnershipError;
-use cw_utils::ParseReplyError;
 use saa::AuthError;
 use thiserror::Error;
 
@@ -13,13 +12,8 @@ pub enum ContractError {
     Ownership(#[from] OwnershipError),
 
     #[error("{0}")]
-    Parse(#[from] ParseReplyError),
-
-    #[error("{0}")]
     Auth(#[from] AuthError),
 
-    #[error("Invalid Payload: {0}")]
-    Payload(String),
 
     #[error("Unauthorized")]
     Unauthorized {},
@@ -39,14 +33,15 @@ pub enum ContractError {
     #[error("Deleted")]
     Deleted {},
 
-    #[error("Provided credential is expired")]
-    Expired {},
 
     #[error("Provided nonce has already been used")]
     NonceExists {},
 
     #[error("At least one of the provided credentials must be deriving into owner of the token")]
     NoOwnerCred {},
+
+    #[error("At least one of the provided credentials must be must be usable for cryptographic verifications")]
+    NoVerifyingCred {},
 
     #[error("{0}")]
     Generic(String),

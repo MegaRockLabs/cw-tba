@@ -1,32 +1,32 @@
-use cosmwasm_std::{from_json, Binary, CosmosMsg, Deps, Env, Order, StdError, StdResult};
+use cosmwasm_std::{ensure, from_json, Binary, CosmosMsg, Deps, Env, Order, StdError, StdResult};
 use cw82::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
-use cw_tba::TokenInfo;
-use saa::{ensure, Verifiable};
+use cw_tba::{AssetsResponse, TokenInfo};
+use saa::Verifiable;
 
 use crate::{
-    msg::{AssetsResponse, FullInfoResponse, SignedCosmosMsgs, ValidSignaturesPayload},
-    state::{KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO},
+    msg::{AccountCredentials, CredentialFullInfo, FullInfoResponse, SignedActions, ValidSignaturesPayload},
+    state::{CREDENTIALS, KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO, VERIFYING_CRED_ID, WITH_CALLER},
     utils::{
-        assert_signed_msg, assert_simple_msg, get_verifying_credential,
-        get_verifying_indexed_credential, status_ok, validate_multi_payload,
+        assert_caller, assert_signed_msg, get_verifying_credential, get_verifying_indexed_credential, status_ok, validate_multi_payload
     },
 };
 
 const DEFAULT_BATCH_SIZE: u32 = 100;
 
+
 pub fn can_execute(
     deps: Deps,
     env: Env,
     sender: String,
-    msg: CosmosMsg<SignedCosmosMsgs>,
+    msg: CosmosMsg<SignedActions>,
 ) -> StdResult<CanExecuteResponse> {
     if !status_ok(deps.storage) {
         return Ok(CanExecuteResponse { can_execute: false });
     };
 
     let can_execute = match msg {
-        CosmosMsg::Custom(signed) => assert_signed_msg(deps, &env, &sender, &signed).is_ok(),
-        _ => assert_simple_msg(deps, &env, &sender, &msg).is_ok(),
+        CosmosMsg::Custom(signed) => assert_signed_msg(deps, &env, &signed).is_ok(),
+        _ => assert_caller(deps,  &sender).is_ok(),
     };
 
     Ok(CanExecuteResponse { can_execute })
@@ -138,6 +138,35 @@ pub fn known_tokens(
     tokens
 }
 
+pub fn credentials(
+    deps: Deps,
+) -> StdResult<AccountCredentials> {
+
+    let credentials = CREDENTIALS
+        .range(deps.storage, None, None, Order::Ascending)
+        .map(|item| {
+            let (id, info) = item?;
+            Ok(CredentialFullInfo {
+                human_id: Binary(id.clone()).to_base64(),
+                id,
+                name: info.name,
+                hrp: info.hrp,
+            })
+        })
+        .collect::<StdResult<Vec<CredentialFullInfo>>>()?;
+
+    let verifying_id = VERIFYING_CRED_ID.load(deps.storage)?;
+
+    Ok(AccountCredentials {
+        credentials,
+        native_caller: WITH_CALLER.load(deps.storage)?,
+        verifying_human_id: Binary(verifying_id.clone()).to_base64(),
+        verifying_id: verifying_id,
+    })
+
+}
+
+
 pub fn full_info(
     deps: Deps,
     env: Env,
@@ -147,11 +176,13 @@ pub fn full_info(
     let tokens = known_tokens(deps, skip, limit)?;
     let balances = deps.querier.query_all_balances(env.contract.address)?;
     let ownership = cw_ownable::get_ownership(deps.storage)?;
+    let credentials = credentials(deps)?;
 
     Ok(FullInfoResponse {
         balances,
         tokens,
         ownership,
+        credentials,
         registry: REGISTRY_ADDRESS.load(deps.storage)?,
         token_info: TOKEN_INFO.load(deps.storage)?,
         status: STATUS.load(deps.storage)?,

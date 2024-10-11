@@ -1,4 +1,4 @@
-pub mod action;
+mod action;
 pub mod contract;
 pub mod error;
 pub mod execute;
@@ -7,3 +7,7 @@ pub mod query;
 pub mod state;
 mod tests;
 pub mod utils;
+
+
+#[cfg(feature = "archway")]
+pub mod grants;

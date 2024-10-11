@@ -1,7 +1,6 @@
 use cosmwasm_schema::serde::Serialize;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, Coin, CosmosMsg, DepsMut, Empty, Env, MessageInfo, ReplyOn,
-    Response, SubMsg, WasmMsg,
+    ensure, ensure_eq, to_json_binary, Addr, Binary, Coin, CosmosMsg, DepsMut, Empty, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg
 };
 
 use cw83::CREATE_ACCOUNT_REPLY_ID;
@@ -12,9 +11,7 @@ use cw_tba::{
 type AccountMsg = ExecuteAccountMsg<Binary>;
 
 use crate::{
-    error::ContractError,
-    registry::construct_label,
-    state::{LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES},
+    error::ContractError, funds::checked_funds, registry::construct_label, state::{LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES}
 };
 
 pub fn create_account<T: Serialize>(
@@ -26,81 +23,75 @@ pub fn create_account<T: Serialize>(
     token_info: TokenInfo,
     account_data: T,
     create_for: Option<String>,
+    actions: Option<Vec<CosmosMsg>>,
     reset: bool,
 ) -> Result<Response, ContractError> {
-    if env.block.chain_id != chain_id {
-        return Err(ContractError::InvalidChainId {});
-    }
-    if !REGISTRY_PARAMS
-        .load(deps.storage)?
-        .allowed_code_ids
-        .contains(&code_id)
-    {
-        return Err(ContractError::InvalidCodeId {});
-    }
-    let is_manager = REGISTRY_PARAMS
-        .load(deps.storage)?
-        .managers
-        .contains(&info.sender.to_string());
-    let owner = create_for.unwrap_or(info.sender.to_string());
+    ensure_eq!(env.block.chain_id, chain_id, ContractError::InvalidChainId {});
+    
+    let params = REGISTRY_PARAMS.load(deps.storage)?;
+    ensure!(params.allowed_code_ids.contains(&code_id), ContractError::InvalidCodeId {});
 
-    if owner != info.sender && !is_manager {
-        return Err(ContractError::Unauthorized {});
-    }
+    let sender = info.sender.to_string();
+    let is_manager = params.managers.contains(&sender);
+    let owner = create_for.unwrap_or(sender);
+
+    ensure!(owner == info.sender || is_manager, ContractError::Unauthorized {});
     verify_nft_ownership(&deps.querier, owner.as_str(), token_info.clone())?;
-    let mut res = Response::default().add_attributes(vec![
-        (
-            "action",
-            if reset {
-                "reset_account"
-            } else {
-                "create_account"
-            },
-        ),
-        ("token_contract", token_info.collection.as_str()),
-        ("token_id", token_info.id.as_str()),
-        ("code_id", code_id.to_string().as_str()),
-        ("chain_id", chain_id.as_str()),
-        ("owner", info.sender.as_str()),
-    ]);
+
+    LAST_ATTEMPTING.save(deps.storage, &token_info)?;
+
+    let mut msgs : Vec<CosmosMsg> = Vec::with_capacity(1);
+    let funds = checked_funds(deps.storage, &info)?;
+
     let token_address = TOKEN_ADDRESSES.may_load(
         deps.storage,
         (token_info.collection.as_str(), token_info.id.as_str()),
     )?;
-    let label: String;
-    if token_address.is_some() {
-        if !reset {
-            return Err(ContractError::AccountExists {});
-        }
-        res = res.add_message(WasmMsg::Execute {
+
+    let label = if token_address.is_some() {
+        ensure!(reset, ContractError::AccountExists {});
+        msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: token_address.unwrap(),
             msg: to_json_binary(&AccountMsg::Purge {})?,
             funds: vec![],
-        });
-        label = construct_label(&token_info, Some(env.block.height));
+        }));
+        construct_label(&token_info, Some(env.block.height))
     } else {
-        label = construct_label(&token_info, None);
-    }
-    LAST_ATTEMPTING.save(deps.storage, &token_info)?;
+        construct_label(&token_info, None)
+    };
+
 
     let init_msg = InstantiateAccountMsg::<T> {
         owner: info.sender.to_string(),
         token_info: token_info.clone(),
         account_data,
+        actions,
     };
+    
 
-    Ok(res.add_submessage(SubMsg {
-        id: CREATE_ACCOUNT_REPLY_ID,
-        msg: cosmwasm_std::CosmosMsg::Wasm(WasmMsg::Instantiate {
-            admin: Some(env.contract.address.to_string()),
-            code_id,
-            msg: to_json_binary(&init_msg)?,
-            label,
-            funds: vec![],
-        }),
-        reply_on: ReplyOn::Success,
-        gas_limit: None,
-    }))
+    Ok(Response::default()
+        .add_messages(msgs)
+        .add_submessage(SubMsg {
+            id: CREATE_ACCOUNT_REPLY_ID,
+            msg: cosmwasm_std::CosmosMsg::Wasm(WasmMsg::Instantiate {
+                admin: Some(env.contract.address.to_string()),
+                msg: to_json_binary(&init_msg)?,
+                code_id,
+                label,
+                funds,
+            }),
+            reply_on: ReplyOn::Success,
+            gas_limit: None,
+        })
+        .add_attributes(vec![
+            ("action", if reset { "reset_account"} else { "create_account" }),
+            ("token_contract", token_info.collection.as_str()),
+            ("token_id", token_info.id.as_str()),
+            ("code_id", code_id.to_string().as_str()),
+            ("chain_id", chain_id.as_str()),
+            ("owner", info.sender.as_str()),
+        ])
+    )
 }
 
 
