@@ -1,5 +1,6 @@
+use anybuf::Anybuf;
 use cosmwasm_schema::{cw_serde, serde::Serialize, QueryResponses};
-use cosmwasm_std::{Binary, Coin, CosmosMsg, Empty};
+use cosmwasm_std::{Binary, Coin, CosmosMsg, Empty, StdResult, Timestamp};
 use cw82::smart_account_query;
 use cw_ownable::cw_ownable_query;
 use schemars::JsonSchema;
@@ -8,14 +9,14 @@ use crate::common::TokenInfo;
 use cw721::Cw721ReceiveMsg;
 
 #[cw_serde]
-pub struct InstantiateAccountMsg<T = Binary, E = Empty>
+pub struct InstantiateAccountMsg<T = Binary, A = ExecuteAccountMsg>
 where
     T: Serialize,
 {
     /// Customiable payload specififc for account implementation
     pub account_data: T,
     /// Actions to execute immediately on the account creation
-    pub actions: Option<Vec<CosmosMsg<E>>>,
+    pub actions: Option<Vec<A>>,
     /// Token info
     pub token_info: TokenInfo,
     /// Token owner that had been verified by the registry
@@ -35,6 +36,12 @@ pub struct Status {
     pub frozen: bool,
 }
 
+
+#[cw_serde]
+pub struct BasicAllowance {
+    pub expiration  : Option<Timestamp>,
+    pub spend_limit : Vec<Coin>,
+}
 
 
 #[cw_serde]
@@ -105,6 +112,12 @@ pub enum ExecuteAccountMsg<T = Empty, E = Option<Empty>, A = Binary> {
     /// Registering a token as known on receiving
     ReceiveNft(Cw721ReceiveMsg),
 
+    FeeGrant {
+        grantee     :   String,
+        allowance   :   Option<BasicAllowance>
+
+    },
+
     /// Registry only method to call when a token is moved to escrow
     Freeze {},
 
@@ -171,3 +184,146 @@ pub enum QueryAccountMsg<T = Empty, Q: JsonSchema = Empty> {
     #[returns(())]
     Extension { msg: Q },
 }
+
+
+
+
+
+pub fn encode_feegrant_msg(
+    granter       : &str, 
+    grantee       : &str,
+    allowance     : Option<BasicAllowance>,
+) -> StdResult<CosmosMsg> {
+
+    let (spend_limit, expiration) = match allowance {
+        Some(allowance) => {
+            let coins  = allowance.spend_limit
+                .iter()
+                .map(|coin| Anybuf::new() 
+                    .append_string(1, &coin.denom)
+                    .append_string(2, &coin.amount.to_string())
+                )
+                .collect();
+
+            let expiration = allowance.expiration
+                .map(|ts| Anybuf::new()
+                    .append_int64(1, ts.seconds() as i64)
+                    .append_int32(2, 0i32)
+                );
+            
+            (coins, expiration)
+
+        },
+        None => (vec![], None),
+    };
+
+    let mut basic_msg = Anybuf::new()
+        .append_repeated_message(1, &spend_limit);
+    
+    if expiration.is_some() {
+        basic_msg = basic_msg.append_message(2, &expiration.unwrap());
+    }
+
+    let basic  = Anybuf::new()
+        .append_string(1, "/cosmos.feegrant.v1beta1.BasicAllowance")
+        .append_message(2, &basic_msg);
+
+
+    let allowed_msg = Anybuf::new()
+        .append_string(1, "/cosmos.feegrant.v1beta1.AllowedMsgAllowance")
+        .append_message(2,&Anybuf::new()
+            .append_message(1, &basic)
+            .append_repeated_string(2, &["/cosmwasm.wasm.v1.MsgExecuteContract"])
+        );
+
+
+    let msg : CosmosMsg = CosmosMsg::Stargate {
+        type_url: "/cosmos.feegrant.v1beta1.MsgGrantAllowance".to_string(),
+        value: anybuf::Anybuf::new()
+                .append_string(1, granter)
+                .append_string(2, grantee)
+                .append_message(3, &allowed_msg)
+                .into_vec()
+                .into()
+    };
+
+    println!("Final: {:?}", Binary(anybuf::Anybuf::new()
+    .append_string(1, granter)
+    .append_string(2, grantee)
+    .append_message(3, &allowed_msg)
+    .into_vec()).to_base64());
+    
+
+    Ok(msg)
+}
+
+
+
+
+
+
+/* 
+
+pub fn encode_feegrant_msg(
+    granter       : &str, 
+    grantee       : &str,
+    allowance     : Option<BasicAllowance>,
+) -> StdResult<CosmosMsg> {
+
+    let (spend_limit, expiration) = match allowance {
+        Some(allowance) => {
+            let coins  = allowance.spend_limit
+                .iter()
+                .map(|coin| Anybuf::new() 
+                    .append_string(1, &coin.denom)
+                    .append_string(2, &coin.amount.to_string())
+                )
+                .collect();
+
+            let expiration = allowance.expiration
+                .map(|ts| Anybuf::new()
+                    .append_int64(1, ts.seconds() as i64)
+                    .append_int32(2, 0i32)
+                );
+            
+            (coins, expiration)
+
+        },
+        None => (vec![], None),
+    };
+
+
+    let basic = match expiration {
+        Some(exp) => Anybuf::new().append_message(1, &exp),
+        None => Anybuf::new().append_message(1, &Anybuf::new())
+    }.append_repeated_message(2, &spend_limit); 
+
+
+
+    let allowance : CosmosMsg = CosmosMsg::Stargate {
+        type_url: "/cosmos.feegrant.v1beta1.BasicAllowance".to_string(),
+        value: basic.into_vec().into()
+    };
+
+    let allowed_msg : CosmosMsg = CosmosMsg::Stargate { 
+        type_url: String::from("/cosmos.feegrant.v1beta1.AllowedMsgAllowance"), 
+            value: Anybuf::new()
+            .append_bytes(1, &to_json_binary(&allowance)?)
+            .append_repeated_string(2, &["/cosmwasm.wasm.v1.MsgExecuteContract"])
+            .into_vec()
+            .into()
+    };
+
+    let msg : CosmosMsg = CosmosMsg::Stargate {
+        type_url: "/cosmos.feegrant.v1beta1.Grant".to_string(),
+        value: anybuf::Anybuf::new()
+                .append_bytes(1, &to_json_binary(&allowed_msg)?)
+                .append_string(2, grantee)
+                .append_string(3, granter)
+                .into_vec()
+                .into()
+    };
+
+    Ok(msg)
+}
+ */

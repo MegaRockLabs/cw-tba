@@ -774,6 +774,7 @@ dependencies = [
 name = "cw-tba"
 version = "0.6.0"
 dependencies = [
+ "anybuf",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-ownable",
@@ -1000,12 +1001,10 @@ dependencies = [
  "cw-ownable",
  "cw-storage-plus 0.16.0",
  "cw-tba",
- "cw-utils 1.0.3",
  "cw2 1.1.2",
  "cw22",
  "cw721-base 0.18.0",
  "cw82",
- "cw83",
  "p256",
  "semver",
  "smart-account-auth",

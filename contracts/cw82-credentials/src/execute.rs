@@ -19,13 +19,14 @@ pub fn try_executing(
 ) -> ContractResult {
     assert_status(deps.storage)?;
     let mut res = Response::new();
-    let mut messages : Vec<CosmosMsg> = Vec::with_capacity(msgs.len() + 2);
 
     let with_caller = WITH_CALLER.load(deps.storage)?;
     let is_owner = is_owner(deps.storage, &info.sender)?;
 
     for msg in msgs {
+
         if let CosmosMsg::Custom(signed) = msg.clone() {
+            
             assert_signed_msg(deps.as_ref(), &env, &signed)?;
             NONCES.save(deps.storage, signed.data.nonce.u128(), &true)?;
 
@@ -35,15 +36,18 @@ pub fn try_executing(
                     .add_submessages(action_res.messages)
                     .add_events(action_res.events)
                     .add_attributes(action_res.attributes);
+                if action_res.data.is_some() {
+                    res = res.set_data(action_res.data.unwrap());
+                }
             }
         } else {
             ensure!(with_caller && is_owner, ContractError::Unauthorized {});
             let msg = from_json(to_json_binary(&msg)?)?;
             assert_ok_cosmos_msg(&msg)?;
-            messages.push(msg);
+            res = res.add_message(msg);
         }
     }
-    Ok(res.add_messages(messages))
+    Ok(res)
 }
 
 

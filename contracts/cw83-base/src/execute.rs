@@ -14,7 +14,7 @@ use crate::{
     error::ContractError, funds::checked_funds, registry::construct_label, state::{LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES}
 };
 
-pub fn create_account<T: Serialize>(
+pub fn create_account<T: Serialize, A: Serialize>(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -23,7 +23,7 @@ pub fn create_account<T: Serialize>(
     token_info: TokenInfo,
     account_data: T,
     create_for: Option<String>,
-    actions: Option<Vec<CosmosMsg>>,
+    actions: Option<Vec<A>>,
     reset: bool,
 ) -> Result<Response, ContractError> {
     ensure_eq!(env.block.chain_id, chain_id, ContractError::InvalidChainId {});
@@ -61,7 +61,7 @@ pub fn create_account<T: Serialize>(
     };
 
 
-    let init_msg = InstantiateAccountMsg::<T> {
+    let init_msg = InstantiateAccountMsg::<T, A> {
         owner: info.sender.to_string(),
         token_info: token_info.clone(),
         account_data,

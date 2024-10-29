@@ -9,7 +9,7 @@ use cosmwasm_std::{
     StdResult, SubMsg, WasmMsg,
 };
 use cw_ownable::{assert_owner, initialize_owner, is_owner};
-use cw_tba::{query_tokens, verify_nft_ownership};
+use cw_tba::{encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance};
 
 pub const MINT_REPLY_ID: u64 = 1;
 
@@ -233,4 +233,18 @@ pub fn try_purging(deps: DepsMut, sender: Addr) -> Result<Response, ContractErro
     PUBKEY.remove(deps.storage);
     STATUS.remove(deps.storage);
     Ok(Response::default().add_attribute("action", "purge"))
+}
+
+
+pub fn try_fee_granting(deps: DepsMut, contract: Addr, sender: Addr, grantee: String, allowance: Option<BasicAllowance>) -> Result<Response, ContractError> {
+    assert_owner(deps.storage, &sender)?;
+    assert_status(deps.storage)?;
+
+    let msg = encode_feegrant_msg(
+        contract.as_str(),
+        &grantee,
+        allowance,
+    )?;
+
+    Ok(Response::new().add_message(msg))
 }

@@ -16,3 +16,4 @@ cw83            = { workspace = true }
 cw82            = { workspace = true }
 cw-ownable      = { workspace = true }
 saa             = { workspace = true }
+anybuf          = { workspace = true }

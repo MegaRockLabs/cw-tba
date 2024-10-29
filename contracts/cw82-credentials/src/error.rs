@@ -33,7 +33,6 @@ pub enum ContractError {
     #[error("Deleted")]
     Deleted {},
 
-
     #[error("Provided nonce has already been used")]
     NonceExists {},
 

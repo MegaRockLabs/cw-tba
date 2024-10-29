@@ -1,14 +1,14 @@
 // allow unreachable code for testing
-#![allow(unreachable_code, unused_mut)]
+#![allow(unreachable_code, unused_mut, unused_imports)]
 
 #[cfg(test)]
 mod tests {
     
 
     use cosmwasm_std::{
-        testing::{mock_dependencies, mock_env, mock_info}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
+        coins, testing::{mock_dependencies, mock_env, mock_info}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
     };
-    use cw_tba::{ExecuteAccountMsg, TokenInfo};
+    use cw_tba::{encode_feegrant_msg, BasicAllowance, ExecuteAccountMsg, TokenInfo};
     use saa::{Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
 
     use crate::{
@@ -242,6 +242,34 @@ mod tests {
 
         println!("Res: {:?}", res);
         assert!(res.is_ok());
+    }
+
+    #[test]
+    fn fee_grant_msg() {
+
+        let allowance = Some(BasicAllowance {
+            spend_limit: coins(1000000, "ustars"),
+            expiration: None,
+        });
+
+        let msg = encode_feegrant_msg(
+            "stars1shqqdheghk6reu525whq0cav0d43t3auemx7ayanwmtm742egxes9h2kc2", 
+            "stars1v85m4sxnndwmswtd8jrz3cd2m8u8eegqdxyluz", 
+            allowance
+        ).unwrap();
+
+        match msg {
+            CosmosMsg::Stargate { type_url, value } => {
+                assert!(type_url == "/cosmos.feegrant.v1beta1.MsgGrantAllowance");
+                assert_eq!(
+                    value.to_base64().as_str(),
+                    "CkBzdGFyczFzaHFxZGhlZ2hrNnJldTUyNXdocTBjYXYwZDQzdDNhdWVteDdheWFud210bTc0MmVneGVzOWgya2MyEixzdGFyczF2ODVtNHN4bm5kd21zd3RkOGpyejNjZDJtOHU4ZWVncWR4eWx1ehqWAQosL2Nvc21vcy5mZWVncmFudC52MWJldGExLkFsbG93ZWRNc2dBbGxvd2FuY2USZgo+CicvY29zbW9zLmZlZWdyYW50LnYxYmV0YTEuQmFzaWNBbGxvd2FuY2USEwoRCgZ1c3RhcnMSBzEwMDAwMDASJC9jb3Ntd2FzbS53YXNtLnYxLk1zZ0V4ZWN1dGVDb250cmFjdA=="
+                )
+            },
+            _ => {
+                unreachable!()
+            }
+        }
     }
 
 

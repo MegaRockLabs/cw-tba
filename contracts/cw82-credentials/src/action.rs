@@ -4,7 +4,7 @@ use crate::{
 use cosmwasm_std::{
     to_json_binary, Binary, Coin, CosmosMsg, Empty, Env, MessageInfo, QuerierWrapper, ReplyOn, Response, StdResult, Storage, SubMsg, WasmMsg
 };
-use cw_tba::{query_tokens, verify_nft_ownership, ExecuteAccountMsg, Status};
+use cw_tba::{encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance, ExecuteAccountMsg, Status};
 
 pub const MINT_REPLY_ID: u64 = 1;
 
@@ -63,6 +63,11 @@ pub fn execute_action(
         ExecuteAccountMsg::Freeze {} => try_freezing(storage),
 
         ExecuteAccountMsg::Unfreeze {} => try_unfreezing(querier, storage),
+
+        ExecuteAccountMsg::FeeGrant { 
+            grantee, 
+            allowance 
+        } => try_fee_granting(env.contract.address.as_str(), grantee.as_str(), allowance),
 
         _ => Err(ContractError::NotSupported {}),
     }
@@ -209,4 +214,23 @@ pub fn try_sending_token(
     Ok(Response::default()
         .add_message(msg)
         .add_attribute("action", "send_token"))
+}
+
+
+
+pub fn try_fee_granting(
+    contract: &str, 
+    grantee: &str, 
+    allowance: Option<BasicAllowance>
+) -> Result<Response, ContractError> {
+
+    let msg = encode_feegrant_msg(
+        contract,
+        grantee,
+        allowance,
+    )?;
+
+    Ok(Response::new()
+        .add_message(msg)
+        .add_attribute("action", "fee_grant"))
 }

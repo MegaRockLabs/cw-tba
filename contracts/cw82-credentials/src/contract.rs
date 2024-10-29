@@ -3,9 +3,12 @@ use cosmwasm_std::entry_point;
 #[cfg(target_arch = "wasm32")]
 use crate::utils::query_if_registry;
 
+//  #[allow(unreachable_code, unused_mut, unused_variables)] but working
+
+
 use cw_ownable::{assert_owner, get_ownership};
 use cosmwasm_std::{
-    ensure, from_json, to_json_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult
+    ensure, from_json, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg
 };
 
 
@@ -18,7 +21,6 @@ use crate::{
     query::{assets, can_execute, credentials, full_info, known_tokens, valid_signature, valid_signatures}, 
     state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER}
 };
-
 
 
 pub const CONTRACT_NAME: &str = "crates:cw82-credential-token-account";
@@ -65,19 +67,29 @@ pub fn instantiate(
     save_credentials(deps.api, deps.storage, &env, info.clone(), from_json(&msg.account_data)?, msg.owner.clone())?;
 
     let actions = msg.actions.unwrap_or_default();
-    let mut msgs: Vec<CosmosMsg> = Vec::with_capacity(actions.len() + 1);
+    let mut msgs: Vec<SubMsg> = Vec::with_capacity(actions.len() + 1);
 
     #[cfg(feature = "archway")]
-    msgs.push(crate::grants::register_granter_msg(&env)?);
+    msgs.push(SubMsg::new(crate::grants::register_granter_msg(&env)?));
     
     let res = if actions.len() > 0 {
-         execute::try_executing(deps, env.clone(), 
-         MessageInfo { sender: Addr::unchecked(msg.owner), ..info }, actions)?
+         let mut res = Response::new();
+         for action in actions {
+             let action_res = execute_action(&deps.querier, deps.storage, &env, &info, action)?;
+             msgs.extend(action_res.messages);
+
+             res = res.add_events(action_res.events)
+                    .add_attributes(action_res.attributes);
+
+            if res.data.is_none() && action_res.data.is_some() {
+                res = res.set_data(action_res.data.unwrap());
+            }
+         }
+        res
     } else {
         Response::default()
     };
-
-    Ok(res.add_messages(msgs))
+    Ok(res.add_submessages(msgs))
 }
 
 
@@ -157,7 +169,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         } => to_json_binary(&valid_signatures(deps, env, data, signatures, payload)?),
         QueryMsg::KnownTokens { skip, limit } => to_json_binary(&known_tokens(deps, skip, limit)?),
         QueryMsg::Assets { skip, limit } => to_json_binary(&assets(deps, env, skip, limit)?),
-        
         QueryMsg::Extension { msg } => {
             match msg {
                 CredQueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),

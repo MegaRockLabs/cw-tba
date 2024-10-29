@@ -381,7 +381,7 @@ pub fn get_action_credential(
 
 
 
-fn assert_valid_signed_action(action: &ExecuteAccountMsg) -> Result<(), ContractError> {
+pub fn assert_valid_signed_action(action: &ExecuteAccountMsg) -> Result<(), ContractError> {
     match action {
         ExecuteAccountMsg::UpdateAccountData { .. } => Err(ContractError::BadSignedAction(
             String::from("'UpdateAccountData' must be called directly by the registry"),

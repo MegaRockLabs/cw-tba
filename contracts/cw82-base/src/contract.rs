@@ -9,10 +9,7 @@ use cosmwasm_std::entry_point;
 use crate::{
     error::ContractError,
     execute::{
-        try_changing_pubkey, try_executing, try_forgeting_tokens, try_freezing, try_minting_token,
-        try_purging, try_sending_token, try_transfering_token, try_unfreezing,
-        try_updating_known_on_receive, try_updating_known_tokens, try_updating_ownership,
-        MINT_REPLY_ID,
+        try_changing_pubkey, try_executing, try_fee_granting, try_forgeting_tokens, try_freezing, try_minting_token, try_purging, try_sending_token, try_transfering_token, try_unfreezing, try_updating_known_on_receive, try_updating_known_tokens, try_updating_ownership, MINT_REPLY_ID
     },
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Status},
     query::{assets, can_execute, full_info, known_tokens, valid_signature, valid_signatures},
@@ -116,6 +113,10 @@ pub fn execute(
         }
         ExecuteMsg::Purge {} => try_purging(deps, info.sender),
         ExecuteMsg::Extension { .. } => Err(ContractError::NotSupported {}),
+        ExecuteMsg::FeeGrant { 
+            grantee, 
+            allowance 
+        } => try_fee_granting(deps, env.contract.address, info.sender, grantee, allowance),
     }
 }
 

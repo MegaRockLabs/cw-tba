@@ -141,14 +141,17 @@ pub fn known_tokens(
 pub fn credentials(
     deps: Deps,
 ) -> StdResult<AccountCredentials> {
-
     let credentials = CREDENTIALS
         .range(deps.storage, None, None, Order::Ascending)
         .map(|item| {
             let (id, info) = item?;
+            let human_id = match info.name == "passkey" {
+                false => String::from_utf8(id.clone()).unwrap(),
+                true => Binary(id.clone()).to_base64(),
+            };
             Ok(CredentialFullInfo {
-                human_id: Binary(id.clone()).to_base64(),
                 id,
+                human_id,
                 name: info.name,
                 hrp: info.hrp,
             })
