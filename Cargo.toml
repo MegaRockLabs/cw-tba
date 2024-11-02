@@ -16,16 +16,15 @@ repository = ""
 
 [workspace.dependencies]
 cosmwasm-std         = { version = "1.5.8",  features = ["staking", "ibc3", "iterator", "cosmwasm_1_4" ] }
-cosmwasm-schema      = "1.5.5"
+cosmwasm-schema      = "1.5.8"
 cw-storage-plus      = "0.16.0"
 
-serde                = { version = "1.0.204", features = ["derive"] }
-sha2                 = { version = "0.10.8", default-features = false }
+serde                = { version = "1.0.214", features = ["derive"] }
 anybuf               = { version = "0.5.0" }
 
 semver                  = "1.0.23"
 schemars                = "0.8.21"
-thiserror               = "1.0.61"
+thiserror               = "1.0.66"
 
 cw-ownable              = "0.5.1"
 cw-utils                = "1.0.3"
@@ -38,12 +37,12 @@ cw22                    = "0.2.0"
 cw721                   = "0.18.0"
 cw721-base              = { version = "0.18.0",  features = ["library"] }
 
-cw82-base               = { path = "contracts/cw82-base", features = ["library"] }
-cw82-credentials        = { path = "contracts/cw82-credentials", features = ["library"] }
-cw83-base               = { path = "contracts/cw83-base", features = ["library"] }
+cw82-tba-base           = { path = "contracts/cw82-tba-base", features = ["library"] }
+cw82-tba-credentials    = { path = "contracts/cw82-tba-credentials", features = ["library"] }
+cw83-tba-registry       = { path = "contracts/cw83-tba-registry", features = ["library"] }
 cw-tba                  = { path = "packages/cw-tba"     }
 
-saa                     = { package = "smart-account-auth", features = ["cosmwasm"], version = "0.11.3" }
+saa                     = { package = "smart-account-auth", features = ["cosmwasm", "replay"], version = "0.14.7" }
 
 
 [profile.release]

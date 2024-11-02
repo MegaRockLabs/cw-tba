@@ -1,10 +1,11 @@
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
-use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, Empty, Uint128};
+use cosmwasm_std::{to_json_binary, CosmosMsg, Empty};
 use cw_tba::ExecuteAccountMsg;
 use saa::cosmos_utils::preamble_msg_arb_036;
+use saa::messages::{MsgDataToSign, SignedData};
 use test_context::test_context;
 
-use cw82_credentials::msg::{ActionDataToSign, ExecuteMsg, SignedActions};
+use cw82_credentials::msg::ExecuteMsg;
 use crate::helpers::helper::{
     get_init_address, instantiate_collection, CRED_ACOUNT_NAME
 };
@@ -57,10 +58,10 @@ fn test(chain: &mut Chain) {
 
 
 
-    let actions = ActionDataToSign { 
+    let actions = MsgDataToSign::<ExecuteAccountMsg> { 
         chain_id: chain.cfg.orc_cfg.chain_cfg.chain_id.clone(),
-        contract_address: Addr::unchecked(data.token_account),
-        nonce: Uint128::from(1u64),
+        contract_address: data.token_account,
+        nonce: String::from("1"),
         messages: vec![execute_msg]
     };
 
@@ -77,7 +78,7 @@ fn test(chain: &mut Chain) {
         ).as_bytes()
     ).unwrap();
 
-    let signed = SignedActions { 
+    let signed = SignedData { 
         data: actions, 
         signature: signature.to_vec().into(),
         payload: None, 

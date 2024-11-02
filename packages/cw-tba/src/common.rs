@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
+use cosmwasm_std::{QuerierWrapper, StdError, StdResult, Uint128};
 
 #[cw_serde]
 pub struct TokenInfo {
@@ -8,6 +8,22 @@ pub struct TokenInfo {
     /// Token id
     pub id: String,
 }
+
+
+#[cw_serde]
+pub struct InitSignedMessage {
+    /// chain id of the chain where the account contract is located
+    pub chain_id: String,
+    /// text to prompt the user to sign
+    pub message: String,
+    /// a unique number never used before. Can use 0 for first time
+    pub nonce: Uint128,
+    /// registy contract address
+    pub registry: String
+}
+
+
+
 
 impl TokenInfo {
     pub fn key_tuple(&self) -> (&str, &str) {

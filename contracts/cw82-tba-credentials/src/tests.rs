@@ -9,10 +9,10 @@ mod tests {
         coins, testing::{mock_dependencies, mock_env, mock_info}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
     };
     use cw_tba::{encode_feegrant_msg, BasicAllowance, ExecuteAccountMsg, TokenInfo};
-    use saa::{Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
+    use saa::{messages::{MsgDataToSign, SignedData}, Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
 
     use crate::{
-        contract::{execute, instantiate}, msg::{ActionDataToSign, ExecuteMsg, InstantiateMsg, SignedActions}, 
+        contract::{execute, instantiate}, msg::{ExecuteMsg, InstantiateMsg}, 
     };
 
 
@@ -30,7 +30,7 @@ mod tests {
             message: Binary("Hello".as_bytes().to_vec()),
             hrp: Some(String::from("archway")),
         });
-        let res = cred.verified_cosmwasm(deps.as_ref().api, &env, &None);
+        let res = cred.verify_cosmwasm(deps.as_ref().api, &env);
         assert!(res.is_ok());
 
 
@@ -40,7 +40,7 @@ mod tests {
             primary_index: None,
         };
 
-        let res = auth_data.verified_cosmwasm(deps.as_ref().api, &env, &None);
+        let res = auth_data.verify_cosmwasm(deps.as_ref().api, &env);
         assert!(res.is_ok());
 
         let res = instantiate(
@@ -87,7 +87,7 @@ mod tests {
         };
 
 
-        let res = auth_data.verified_cosmwasm(deps.as_ref().api, &env, &None);
+        let res = auth_data.verify_cosmwasm(deps.as_ref().api, &env);
         assert!(res.is_ok());
 
         let res = instantiate(
@@ -127,11 +127,11 @@ mod tests {
             msgs: vec![staking] 
         };
 
-        let data = ActionDataToSign {
+        let data = MsgDataToSign {
             chain_id: "constantine-3".into(),
-            contract_address: Addr::unchecked("archway1hf0quw8lgxn4p9vlmk3jdlgg460asp87c75s9xfm33axkczu2j3s7mwfke"),
+            contract_address: "archway1hf0quw8lgxn4p9vlmk3jdlgg460asp87c75s9xfm33axkczu2j3s7mwfke".into(),
             messages: vec![action],
-            nonce: Uint128::zero(),
+            nonce: String::from("0"),
         };
 
         let pubkey = Binary::from_base64(
@@ -142,30 +142,33 @@ mod tests {
             "EfGD3KMZUMppuA5+3AQ2xQPblr4FQpVWyZi/9+Vry0MVGWhJqeECPuwIkhEgaeTL6tFrOIEkYAY1I7L7uz9+Fg=="
         ).unwrap();
 
-        let data_str = to_json_string(&data).unwrap();
 
-
-        let message = Binary(data_str.as_bytes().to_vec());
+        let message = SignedData::<ExecuteAccountMsg> {
+            data: data.clone(),
+            signature: signature.clone(),
+            payload: None
+        };
 
         let cred  =  CosmosArbitrary  {
-            message: message.clone(),
-            signature: signature.clone(),
-            pubkey: pubkey.clone(),
+            message: to_json_binary(&message).unwrap().into(),
+            signature: signature.clone().into(),
+            pubkey: pubkey.clone().into(),
             hrp: Some("archway".to_string())
         };
-        let res = cred.verified_cosmwasm(deps.as_ref().api, &env, &None);
+        let res = cred.verify_cosmwasm(deps.as_ref().api, &env);
         
 
         assert!(res.is_ok());
 
 
-        let custom = SignedActions {
+        let custom = SignedData::<ExecuteAccountMsg> {
             data: data.clone(),
             signature: signature.clone().into(),
             payload: None
         };
 
-        let msg = CosmosMsg::<SignedActions>::Custom(custom);
+        let msg = CosmosMsg::
+                <SignedData::<ExecuteAccountMsg>>::Custom(custom);
 
         let execute_msg = ExecuteMsg::Execute { 
             msgs: vec![msg]
@@ -218,7 +221,6 @@ mod tests {
         let mut deps = mock_dependencies();
         let deps = deps.as_ref();
         let env = mock_env();
-        let info = mock_info("doesn't matter", &vec![]);
 
         let public_key = Binary::from_base64("BGDRdC9Ynea9vlpLxFZmEGL1cYpxGgzRvEMzlugVfmYOyACjQ5wHA8DNuCR4GI/Sfj6OkVNlyvuwyfkeOPavcG8=").unwrap();
         let auth_data  = Binary::from_base64("SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2MFAAAAAA==").unwrap();
@@ -231,14 +233,14 @@ mod tests {
             authenticator_data: auth_data, 
             client_data: saa::ClientData {
                 ty: "webauthn.get".to_string(),
-                challenge: "Q3JlYXRpbmcgVEJBIGFjY291bnQ".into(),
+                challenge: Binary::from_base64("Q3JlYXRpbmcgVEJBIGFjY291bnQ").unwrap(),
                 cross_origin: false,
                 origin: "http://localhost:5173".into(),
             }, 
             user_handle: None
         });
 
-        let res = credential.verified_cosmwasm(deps.api, &env, &Some(info));
+        let res = credential.verify_cosmwasm(deps.api, &env);
 
         println!("Res: {:?}", res);
         assert!(res.is_ok());

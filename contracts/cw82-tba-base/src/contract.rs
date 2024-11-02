@@ -2,6 +2,7 @@ use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
 };
 use cw_ownable::{get_ownership, initialize_owner};
+use cw_tba::UpdateOperation;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -108,8 +109,14 @@ pub fn execute(
             new_owner,
             new_account_data,
         } => try_updating_ownership(deps, info.sender, new_owner, new_account_data),
-        ExecuteMsg::UpdateAccountData { new_account_data } => {
-            try_changing_pubkey(deps, info.sender, new_account_data)
+        ExecuteMsg::UpdateAccountData { 
+            operation,
+            ..
+        } => {
+            match operation {
+                UpdateOperation::Add(pubkey) => try_changing_pubkey(deps, info.sender, pubkey),
+                _ => Err(ContractError::NotSupported {}),
+            }
         }
         ExecuteMsg::Purge {} => try_purging(deps, info.sender),
         ExecuteMsg::Extension { .. } => Err(ContractError::NotSupported {}),

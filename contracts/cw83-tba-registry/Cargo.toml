@@ -1,5 +1,5 @@
 [package]
-name        = "cw83-base"
+name        = "cw83-tba-base"
 version     = { workspace = true }
 edition     = { workspace = true }
 repository  = { workspace = true }

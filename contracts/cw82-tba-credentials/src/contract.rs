@@ -58,13 +58,21 @@ pub fn instantiate(
         return Err(ContractError::Unauthorized {});
     };
 
+    
     TOKEN_INFO.save(deps.storage, &msg.token_info)?;
     REGISTRY_ADDRESS.save(deps.storage, &info.sender.to_string())?;
 
     STATUS.save(deps.storage, &Status { frozen: false })?;
     SERIAL.save(deps.storage, &0u128)?;
 
-    save_credentials(deps.api, deps.storage, &env, info.clone(), from_json(&msg.account_data)?, msg.owner.clone())?;
+    save_credentials(
+        deps.api, 
+        deps.storage, 
+        &env, 
+        info.clone(), 
+        from_json(&msg.account_data)?, 
+        msg.owner.clone(),
+    )?;
 
     let actions = msg.actions.unwrap_or_default();
     let mut msgs: Vec<SubMsg> = Vec::with_capacity(actions.len() + 1);
@@ -111,8 +119,11 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
             new_account_data,
         } => execute::try_updating_ownership(deps, env, info, new_owner, new_account_data),
 
-        ExecuteMsg::UpdateAccountData { new_account_data } => {
-            execute::try_updating_account_data(deps, env, info, new_account_data)
+        ExecuteMsg::UpdateAccountData { 
+            account_data,
+            operation
+        } => {
+            execute::try_updating_account_data(deps, env, info, account_data, operation)
         }
 
         ExecuteMsg::ReceiveNft(msg) => {
