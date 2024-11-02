@@ -6,7 +6,7 @@ use cw_ownable::Ownership;
 use cw_tba::TokenInfo;
 use test_context::test_context;
 
-use cw82_base::msg::{
+use cw82_tba_base::msg::{
     AssetsResponse, ExecuteMsg as TAExecuteMsg, KnownTokensResponse, QueryMsg, Status,
 };
 

@@ -20,15 +20,15 @@ use serde::Serialize;
 
 
 use cw1::CanExecuteResponse;
-use cw82_base::msg::QueryMsg;
+use cw82_tba_base::msg::QueryMsg;
 
 
 // contract names used by cosm-orc to register stored code ids / instantiated addresses:
-pub const BASE_REGISTRY_NAME: &str = "cw83_base";
+pub const BASE_REGISTRY_NAME: &str = "cw83_tba_registry";
 pub const COLLECTION_NAME: &str = "cw721_base";
 
-pub const SIMPLE_ACCOUNT_NAME: &str = "cw82_base";
-pub const CRED_ACOUNT_NAME: &str = "cw82_credentials";
+pub const SIMPLE_ACCOUNT_NAME: &str = "cw82_tba_base";
+pub const CRED_ACOUNT_NAME: &str = "cw82_tba_credentials";
 
 pub const MAX_TOKENS: u32 = 10_000;
 pub const CREATION_FB_FEE: u128 = 100_000_000;
@@ -61,7 +61,7 @@ pub fn instantiate_registry<C: CosmosClient>(
     chain.orc.instantiate(
         BASE_REGISTRY_NAME,
         "registry_instantiate",
-        &cw83_base::msg::InstantiateMsg {
+        &cw83_tba_registry::msg::InstantiateMsg {
             params: cw_tba::RegistryParams {
                 allowed_code_ids: vec![
                     map.code_id(SIMPLE_ACCOUNT_NAME)?,
@@ -167,7 +167,7 @@ pub fn create_simple_token_account<C: CosmosClient>(
     chain.orc.execute(
         BASE_REGISTRY_NAME,
         "registry_create_account",
-        &cw83_base::msg::ExecuteMsg::CreateAccount(CreateAccountMsg {
+        &cw83_tba_registry::msg::ExecuteMsg::CreateAccount(CreateAccountMsg {
             code_id,
             chain_id,
             msg: init_msg,
@@ -237,7 +237,7 @@ pub fn create_cred_token_account<C: CosmosClient>(
     chain.orc.execute(
         BASE_REGISTRY_NAME,
         "registry_create_cred_account",
-        &cw83_base::msg::ExecuteMsg::CreateAccount(
+        &cw83_tba_registry::msg::ExecuteMsg::CreateAccount(
             CreateAccountMsg {
                 code_id,
                 chain_id,
@@ -274,7 +274,7 @@ pub fn reset_simple_token_account<C: CosmosClient>(
     chain.orc.execute(
         BASE_REGISTRY_NAME,
         "registry_reset_account",
-        &cw83_base::msg::ExecuteMsg::ResetAccount(CreateAccountMsg {
+        &cw83_tba_registry::msg::ExecuteMsg::ResetAccount(CreateAccountMsg {
             code_id,
             chain_id,
             msg: init_msg,
@@ -294,7 +294,7 @@ pub fn migrate_simple_token_account<C: CosmosClient>(
 ) -> Result<ExecResponse, ProcessError> {
     let code_id = chain.orc.contract_map.code_id(SIMPLE_ACCOUNT_NAME)?;
 
-    let migrate_msg = cw83_base::msg::ExecuteMsg::<Binary>::MigrateAccount {
+    let migrate_msg = cw83_tba_registry::msg::ExecuteMsg::<Binary>::MigrateAccount {
         token_info: TokenInfo {
             collection: token_contract,
             id: token_id,

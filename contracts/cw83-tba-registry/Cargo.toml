@@ -1,5 +1,5 @@
 [package]
-name        = "cw83-tba-base"
+name        = "cw83-tba-registry"
 version     = { workspace = true }
 edition     = { workspace = true }
 repository  = { workspace = true }

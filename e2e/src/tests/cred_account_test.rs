@@ -5,7 +5,7 @@ use saa::cosmos_utils::preamble_msg_arb_036;
 use saa::messages::{MsgDataToSign, SignedData};
 use test_context::test_context;
 
-use cw82_credentials::msg::ExecuteMsg;
+use cw82_tba_credentials::msg::ExecuteMsg;
 use crate::helpers::helper::{
     get_init_address, instantiate_collection, CRED_ACOUNT_NAME
 };

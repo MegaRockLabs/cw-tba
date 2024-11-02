@@ -1,5 +1,5 @@
 use cosmwasm_std::from_json;
-use cw83_base::msg::{self as RegistryMsg};
+use cw83_tba_registry::msg::{self as RegistryMsg};
 use cw_tba::TokenInfo;
 use test_context::test_context;
 use RegistryMsg::QueryMsg as RegistryQuery;

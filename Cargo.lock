@@ -971,7 +971,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw82-base"
+name = "cw82-derive"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f05a1f971ca67db9747c869153339d24aea6fc982bce9f06568899ee499f32f2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "cw82-tba-base"
 version = "0.6.0"
 dependencies = [
  "cosmwasm-schema",
@@ -991,7 +1002,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw82-credentials"
+name = "cw82-tba-credentials"
 version = "0.6.0"
 dependencies = [
  "anybuf",
@@ -1012,17 +1023,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw82-derive"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f05a1f971ca67db9747c869153339d24aea6fc982bce9f06568899ee499f32f2"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "cw83"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1039,7 +1039,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw83-base"
+name = "cw83-derive"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e782b5d9c7ab24b50c9d4337386a9c777f89db0e0e9aecbf8f03f707287ea198"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "cw83-tba-registry"
 version = "0.6.0"
 dependencies = [
  "cosmwasm-schema",
@@ -1055,17 +1066,6 @@ dependencies = [
  "semver",
  "smart-account-auth",
  "thiserror",
-]
-
-[[package]]
-name = "cw83-derive"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e782b5d9c7ab24b50c9d4337386a9c777f89db0e0e9aecbf8f03f707287ea198"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
 ]
 
 [[package]]
@@ -1201,10 +1201,10 @@ dependencies = [
  "cw721-base 0.18.0",
  "cw81",
  "cw82",
- "cw82-base",
- "cw82-credentials",
+ "cw82-tba-base",
+ "cw82-tba-credentials",
  "cw83",
- "cw83-base",
+ "cw83-tba-registry",
  "env_logger",
  "hex",
  "once_cell",
