@@ -1,49 +1,49 @@
 use crate::{
     action::execute_action, error::ContractError, msg::ContractResult, state::{
-        save_credentials, CREDENTIALS, KNOWN_TOKENS, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER
-    }, utils::{assert_ok_cosmos_msg, assert_owner_derivable, assert_registry, assert_status}
+        save_credentials, KNOWN_TOKENS, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER
+    }, utils::{assert_caller, assert_ok_cosmos_msg, assert_owner_derivable, assert_registry, assert_status, assert_valid_signed_action}
 };
-use cosmwasm_std::{ensure, from_json, to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{ensure, from_json, CosmosMsg, DepsMut, Env, MessageInfo, Response};
 use cw2::CONTRACT;
 use cw22::SUPPORTED_INTERFACES;
 use cw_ownable::{get_ownership, is_owner};
 use cw_tba::{verify_nft_ownership, ExecuteAccountMsg, Status};
 use saa::{ 
-    load_credential, 
-    messages::SignedData, 
-    storage::{CALLER, CREDENTIAL_INFOS, VERIFYING_CRED_ID}, 
-    CredentialData, UpdateOperation, Verifiable
+    messages::{MsgDataToSign, SignedDataMsg}, storage::{CALLER, CREDENTIAL_INFOS, VERIFYING_CRED_ID}, to_json_binary, CredentialData, UpdateOperation
 };
+
 
 
 pub fn try_executing(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msgs: Vec<CosmosMsg<SignedData<ExecuteAccountMsg>>>,
+    msgs: Vec<CosmosMsg<SignedDataMsg>>,
 ) -> ContractResult {
     assert_status(deps.storage)?;
     let mut res = Response::new();
 
-    let with_caller = WITH_CALLER.load(deps.storage)?;
-    let is_owner = is_owner(deps.storage, &info.sender)?;
-
+    println!("Before msgs loop");
     for msg in msgs {
+        println!("Executing cosmos msg: {:?}", msg);
 
         if let CosmosMsg::Custom(signed) = msg.clone() {
+
+            println!("Is custom with signed data");
             
-            let cred = load_credential(
+            saa::verify_signed_actions(
+                deps.api,
                 deps.storage, 
-                to_json_binary(&signed.data.messages)?.into(), 
-                signed.signature, 
-                signed.payload
+                &env,
+                signed.clone()
             )?;
 
-            cred.assert_execute_cosmwasm::<ExecuteAccountMsg>(
-                deps.api, deps.storage, &env, &Some(info.clone())
-            )?;
+            println!("Verified signed actions");
 
-            for action in signed.data.messages {
+            let data : MsgDataToSign::<ExecuteAccountMsg> = from_json(&signed.data)?;
+
+            for action in data.messages {
+                assert_valid_signed_action(&action)?;
                 let action_res = execute_action(&deps.querier, deps.storage, &env, &info, action)?;
                 res = res
                     .add_submessages(action_res.messages)
@@ -54,12 +54,15 @@ pub fn try_executing(
                 }
             }
         } else {
-            ensure!(with_caller && is_owner, ContractError::Unauthorized {});
+            println!("Is not custom");
+
+            assert_caller(deps.as_ref(), info.sender.as_str())?;
             let msg = from_json(to_json_binary(&msg)?)?;
             assert_ok_cosmos_msg(&msg)?;
             res = res.add_message(msg);
         }
     }
+    
     Ok(res)
 }
 
@@ -71,17 +74,16 @@ pub fn try_updating_account_data(
     data: Option<CredentialData>,
     op: UpdateOperation
 ) -> ContractResult {
-    ensure!(data.is_some(), ContractError::Unauthorized {});
+    ensure!(data.is_some(), ContractError::Generic(String::from("No proving data provided")));
     let data = data.unwrap();
 
     let owner = if is_owner(deps.storage, &info.sender)? {
         info.sender.clone()
     } else {
-        data.update::<ExecuteAccountMsg>(op, deps.api, deps.storage, &env, &Some(info.clone()))?;
-        assert_owner_derivable(deps.api, deps.storage, &data)?;
+        data.update(op, deps.api, deps.storage, &env, &info)?;
+        assert_owner_derivable(deps.api, deps.storage, &data, None)?;
         get_ownership(deps.storage)?.owner.unwrap()
     };
-
     save_credentials(deps.api, deps.storage, &env, info, data, owner.to_string())?;
     Ok(Response::new().add_attributes(vec![("action", "update_account_data")]))
 }
@@ -94,7 +96,7 @@ pub fn try_updating_ownership(
     new_owner: String,
     new_account_data: Option<CredentialData>,
 ) -> ContractResult {
-    assert_registry(deps.storage, &info.sender)?;
+    assert_registry(deps.storage, info.sender.as_str())?;
 
     let owner = get_ownership(deps.storage)?.owner.unwrap().to_string();
     if new_owner != owner {
@@ -141,7 +143,9 @@ pub fn try_freezing(deps: DepsMut) -> ContractResult {
     // only allow freezing if the token owner is differnt from the stored owner
     ensure!(
         verify_nft_ownership(&deps.querier, owner.as_str(), token).is_err(),
-        ContractError::Unauthorized {}
+        ContractError::Unauthorized(
+            "Can only freeze if the owner has changed or called by the owner".into()
+        )
     );
 
     STATUS.save(deps.storage, &Status { frozen: true })?;
@@ -151,14 +155,11 @@ pub fn try_freezing(deps: DepsMut) -> ContractResult {
 
 
 
-pub fn try_purging(deps: DepsMut, sender: Addr) -> ContractResult {
-    assert_registry(deps.storage, &sender)?;
-
+pub fn try_purging(deps: DepsMut, sender: &str) -> ContractResult {
+    assert_registry(deps.storage, sender)?;
     cw_ownable::initialize_owner(deps.storage, deps.api, None)?;
-
     SUPPORTED_INTERFACES.clear(deps.storage);
     CONTRACT.remove(deps.storage);
-
     REGISTRY_ADDRESS.remove(deps.storage);
     TOKEN_INFO.remove(deps.storage);
     MINT_CACHE.remove(deps.storage);
@@ -166,8 +167,7 @@ pub fn try_purging(deps: DepsMut, sender: Addr) -> ContractResult {
     SERIAL.remove(deps.storage);
     VERIFYING_CRED_ID.remove(deps.storage);
     WITH_CALLER.remove(deps.storage);
-    CREDENTIALS.clear(deps.storage);
+    CREDENTIAL_INFOS.clear(deps.storage);
     KNOWN_TOKENS.clear(deps.storage);
-
     Ok(Response::default().add_attribute("action", "purge"))
 }

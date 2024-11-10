@@ -87,6 +87,7 @@ pub fn valid_signatures(
     Ok(ValidSignaturesResponse { are_valid })
 }
 
+
 pub fn verify_arbitrary(
     deps: Deps,
     account_addr: &str,
@@ -102,6 +103,7 @@ pub fn verify_arbitrary(
     deps.api.secp256k1_verify(&digest, &signature, pubkey)?;
     Ok(true)
 }
+
 
 pub fn assets(
     deps: Deps,

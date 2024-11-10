@@ -8,7 +8,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version    = "0.6.0"
+version    = "0.7.0"
 edition    = "2021"
 repository = ""
 
@@ -42,7 +42,7 @@ cw82-tba-credentials    = { path = "contracts/cw82-tba-credentials", features = 
 cw83-tba-registry       = { path = "contracts/cw83-tba-registry", features = ["library"] }
 cw-tba                  = { path = "packages/cw-tba"     }
 
-saa                     = { package = "smart-account-auth", features = ["cosmwasm", "replay"], version = "0.14.7" }
+saa                     = { version = "0.14.16", package = "smart-account-auth", features = ["cosmwasm", "replay"] }
 
 
 [profile.release]

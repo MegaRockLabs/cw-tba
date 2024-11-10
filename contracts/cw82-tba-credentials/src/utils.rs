@@ -1,11 +1,9 @@
 use cosmwasm_std::{
-    ensure, Addr, Api, CosmosMsg, Deps, StdError, StdResult, Storage, WasmMsg
+    ensure, Api, CosmosMsg, Deps, StdError, StdResult, Storage, WasmMsg
 };
 use cw_ownable::is_owner;
 use cw_tba::ExecuteAccountMsg;
-use saa::{
-    CredentialData, Verifiable
-};
+use saa::CredentialData;
 
 
 use crate::{
@@ -34,7 +32,7 @@ pub fn status_ok(store: &dyn Storage) -> bool {
 
 
 #[cfg(target_arch = "wasm32")]
-pub fn query_if_registry(querier: &cosmwasm_std::QuerierWrapper, addr: Addr) -> StdResult<bool> {
+pub fn query_if_registry(querier: &cosmwasm_std::QuerierWrapper, addr: cosmwasm_std::Addr) -> StdResult<bool> {
     let key = cosmwasm_std::storage_keys::namespace_with_key(
         &[cw22::SUPPORTED_INTERFACES.namespace()], 
         "crates:cw83".as_bytes()
@@ -48,28 +46,26 @@ pub fn query_if_registry(querier: &cosmwasm_std::QuerierWrapper, addr: Addr) -> 
 }
 
 
-pub fn assert_registry(store: &dyn Storage, addr: &Addr) -> Result<(), ContractError> {
-    if is_registry(store, addr) {
+pub fn assert_registry(store: &dyn Storage, addr: &str) -> Result<(), ContractError> {
+    let res = REGISTRY_ADDRESS.load(store).map(|a| a == addr);
+    if res.is_ok() && res.unwrap() {
         Ok(())
     } else {
-        Err(ContractError::Unauthorized {})
+        Err(ContractError::NotRegistry{})
     }
 }
-
-pub fn is_registry(store: &dyn Storage, addr: &Addr) -> bool {
-    let res = REGISTRY_ADDRESS.load(store).map(|a| a == addr.to_string());
-    res.is_ok() && res.unwrap()
-}
-
 
 
 
 pub fn assert_owner_derivable(
     api: &dyn Api,
     storage: &mut dyn Storage,
-    data: &CredentialData, 
+    data: &CredentialData,
+    owner: Option<String>
 ) -> Result<(), ContractError> {
-    let owner = cw_ownable::get_ownership(storage)?.owner.unwrap().to_string();
+    let owner = owner.unwrap_or(
+        cw_ownable::get_ownership(storage)?.owner.unwrap().to_string()
+    );
 
     ensure!(data
         .credentials
@@ -87,7 +83,7 @@ pub fn assert_owner_derivable(
         ContractError::NoOwnerCred {}
     );
 
-    Err(ContractError::NotDerivable {})
+    Ok(())
 }
 
 
@@ -97,15 +93,15 @@ pub fn assert_owner_derivable(
 
 pub fn assert_valid_signed_action(action: &ExecuteAccountMsg) -> Result<(), ContractError> {
     match action {
-        ExecuteAccountMsg::UpdateAccountData { .. } => Err(ContractError::BadSignedAction(
-            String::from("'UpdateAccountData' must be called directly by the registry"),
-        )),
         ExecuteAccountMsg::Extension { .. } => Err(ContractError::BadSignedAction(String::from(
             "Nested 'Extension' is not supported",
         ))),
-        ExecuteAccountMsg::UpdateOwnership { .. } => Err(ContractError::Unauthorized {}),
-        ExecuteAccountMsg::ReceiveNft { .. } => Err(ContractError::Unauthorized {}),
-        ExecuteAccountMsg::Purge {} => Err(ContractError::Unauthorized {}),
+        ExecuteAccountMsg::ReceiveNft { .. } => Err(ContractError::BadSignedAction(
+            String::from("ReceiveNft can only be called by another NFT contract"),
+        )),
+        ExecuteAccountMsg::UpdateAccountData { .. } => Err(ContractError::NotRegistry {}),
+        ExecuteAccountMsg::UpdateOwnership { .. } => Err(ContractError::NotRegistry {}),
+        ExecuteAccountMsg::Purge {} => Err(ContractError::NotRegistry {}),
         _ => Ok(()),
     }
 }
@@ -120,11 +116,11 @@ pub fn assert_caller(
 ) -> Result<(), ContractError> {
     ensure!(
         WITH_CALLER.load(deps.storage)?,
-        StdError::generic_err("Calling directly is not allowed. Message must be signed")
+        ContractError::NoDirectCall {}
     );
     ensure!(
         is_owner(deps.storage, &deps.api.addr_validate(sender)?)?,
-        ContractError::Unauthorized {}
+        ContractError::Unauthorized("Only the owner can call this method directly".to_string())
     );
     Ok(())
 }

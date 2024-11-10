@@ -121,7 +121,7 @@ fn global_setup<C: CosmosClient>(mut orc: CosmOrc<C>, mut orc_cfg: Config) -> Cf
         // persist stored code_ids in CONFIG, so we can reuse for all tests
         orc_cfg.contract_deploy_info = orc.contract_map.deploy_info().clone();
 
-        println!("Contract deploy info: {:?}", orc_cfg.contract_deploy_info);
+        // println!("Contract deploy info: {:?}", orc_cfg.contract_deploy_info);
     }
 
     Cfg {

@@ -41,4 +41,4 @@ cw82-tba-base        = { workspace = true }
 cw82-tba-credentials = { workspace = true }
 cw83-tba-registry    = { workspace = true }
 cw-tba               = { workspace = true }
-saa                  = { workspace = true, features = ["native"] }
+saa                  = { workspace = true, features = ["native", "storage"] }

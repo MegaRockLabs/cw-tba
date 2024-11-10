@@ -10,10 +10,10 @@ chain_cfg:
 
 contract_deploy_info:
   cw721_base:
-    code_id: 1
-  cw82_tba_base:
-    code_id: 2
-  cw83_tba_registry:
-    code_id: 3
-  cw82_tba_credentials:
     code_id: 4
+  cw82_tba_base:
+    code_id: 3
+  cw83_tba_registry:
+    code_id: 2
+  cw82_tba_credentials:
+    code_id: 1

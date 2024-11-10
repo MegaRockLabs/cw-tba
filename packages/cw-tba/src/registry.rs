@@ -14,7 +14,7 @@ pub struct RegistryParams<T = Option<Empty>> {
 #[cw_serde]
 pub struct TokenAccount<D = Binary, A = ExecuteAccountMsg>
 where
-    D: Serialize, A: Serialize
+    A: Serialize
 {
     /// Non-Fungible Token Info that the created account will be linked to
     pub token_info: TokenInfo,

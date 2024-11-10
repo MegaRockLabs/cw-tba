@@ -772,7 +772,7 @@ dependencies = [
 
 [[package]]
 name = "cw-tba"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anybuf",
  "cosmwasm-schema",
@@ -983,7 +983,7 @@ dependencies = [
 
 [[package]]
 name = "cw82-tba-base"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1003,7 +1003,7 @@ dependencies = [
 
 [[package]]
 name = "cw82-tba-credentials"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anybuf",
  "base64 0.22.1",
@@ -1051,7 +1051,7 @@ dependencies = [
 
 [[package]]
 name = "cw83-tba-registry"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1183,7 +1183,7 @@ checksum = "0d6ef0072f8a535281e4876be788938b528e9a1d43900b82c2569af7da799125"
 
 [[package]]
 name = "e2e"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "assert_matches",
  "async-trait",
@@ -2775,9 +2775,9 @@ checksum = "f3cb5ba0dc43242ce17de99c180e96db90b235b8a9fdc9543c96d2209116bd9f"
 
 [[package]]
 name = "saa-common"
-version = "0.14.7"
+version = "0.14.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ebcca8950f705e58fb13cde6e526671b949cbdd785ebd84aa27e61fb989ba7e"
+checksum = "328c8287c142ac04e5e91c31dd21eb25e45abf8c4ad9c6543971a3d3814f6964"
 dependencies = [
  "base64 0.22.1",
  "bech32 0.11.0",
@@ -2801,9 +2801,9 @@ dependencies = [
 
 [[package]]
 name = "saa-curves"
-version = "0.14.7"
+version = "0.14.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca41018b7fc19c3d7604132d7c1693b941677f766a42e864dbc22533e02b93d8"
+checksum = "85cc0478075c315b24894615f93d0fec33927a6bbe9cdcbe049e6f240550754b"
 dependencies = [
  "bech32 0.11.0",
  "cosmwasm-std",
@@ -2819,13 +2819,12 @@ dependencies = [
 
 [[package]]
 name = "saa-custom"
-version = "0.14.7"
+version = "0.14.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "099b20adde05ebb0262a8129e0126c44fe7757f3d0cc7c8cb10632b1dcd95eb5"
+checksum = "923fa7d3951e1530f8dba220d2a95b040b158f7e05976b5d69b89ae0d9a6a6d0"
 dependencies = [
  "base64 0.22.1",
  "bech32 0.11.0",
- "cosmwasm-std",
  "hex",
  "parity-scale-codec",
  "saa-common",
@@ -2839,9 +2838,9 @@ dependencies = [
 
 [[package]]
 name = "saa-macros-proto"
-version = "0.14.7"
+version = "0.14.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8248740ec8c01cc4642913cc139a92c06093af497f2afbbf7783d6bed73432f5"
+checksum = "c819c5ab1fc5c083cd59dc64d979db43ac0ec97953bd3c3e1fd3aef6ff95d7a0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2850,9 +2849,9 @@ dependencies = [
 
 [[package]]
 name = "saa-schema"
-version = "0.14.7"
+version = "0.14.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8dbe409b742ead76da5f535204ef27f69d3c6d297db8a9000570efe860111f85"
+checksum = "2b9bce9266f3f62547cb8b3e4ea6c9d7eb37195725cb72384cb79ec133274398"
 dependencies = [
  "parity-scale-codec",
  "saa-macros-proto",
@@ -3246,9 +3245,9 @@ checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 
 [[package]]
 name = "smart-account-auth"
-version = "0.14.7"
+version = "0.14.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a105682b068cb3957979b24480c232c24df8921c3218962899115abba2800608"
+checksum = "cc96f80623bec3ce8f0dc9c692a79f37723ac67edc86ac2d7b88ed321d0fe3ec"
 dependencies = [
  "parity-scale-codec",
  "saa-common",

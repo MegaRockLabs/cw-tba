@@ -5,7 +5,6 @@ use cw_ownable::get_ownership;
 use crate::{error::ContractError, state::WITH_CALLER};
 
 
-
 #[cw_serde]
 pub struct CwGrant {
     pub fee_requested: Vec<Coin>,

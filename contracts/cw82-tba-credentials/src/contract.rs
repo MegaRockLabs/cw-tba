@@ -3,23 +3,22 @@ use cosmwasm_std::entry_point;
 #[cfg(target_arch = "wasm32")]
 use crate::utils::query_if_registry;
 
-//  #[allow(unreachable_code, unused_mut, unused_variables)] but working
 
-
-use cw_ownable::{assert_owner, get_ownership};
 use cosmwasm_std::{
-    ensure, from_json, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg
+    from_json, to_json_binary, Binary, 
+    Deps, DepsMut, Env, MessageInfo, Reply, Response, 
+    StdError, StdResult, SubMsg
 };
 
-
+use cw_ownable::get_ownership;
 use cw_tba::Status;
 
 use crate::{
     action::{self, execute_action, MINT_REPLY_ID}, 
     error::ContractError, execute, 
-    msg::{ContractResult, CredQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg}, 
+    msg::{ContractResult, CredQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg}, 
     query::{assets, can_execute, credentials, full_info, known_tokens, valid_signature, valid_signatures}, 
-    state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER}
+    state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO}, utils::assert_caller
 };
 
 
@@ -55,13 +54,11 @@ pub fn instantiate(
     )?;
     #[cfg(target_arch = "wasm32")]
     if !query_if_registry(&deps.querier, info.sender.clone())? {
-        return Err(ContractError::Unauthorized {});
+        return Err(ContractError::NotRegistry {});
     };
-
     
     TOKEN_INFO.save(deps.storage, &msg.token_info)?;
     REGISTRY_ADDRESS.save(deps.storage, &info.sender.to_string())?;
-
     STATUS.save(deps.storage, &Status { frozen: false })?;
     SERIAL.save(deps.storage, &0u128)?;
 
@@ -73,7 +70,6 @@ pub fn instantiate(
         from_json(&msg.account_data)?, 
         msg.owner.clone(),
     )?;
-
     let actions = msg.actions.unwrap_or_default();
     let mut msgs: Vec<SubMsg> = Vec::with_capacity(actions.len() + 1);
 
@@ -130,16 +126,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
             execute::try_updating_known_on_receive(deps, info.sender.to_string(), msg.token_id)
         }
 
-        ExecuteMsg::Purge {} => execute::try_purging(deps, info.sender),
+        ExecuteMsg::Purge {} => execute::try_purging(deps, info.sender.as_str()),
 
         ExecuteMsg::Freeze {} => execute::try_freezing(deps),
 
         ExecuteMsg::Extension { .. } => Ok(Response::default()),
 
         msg => {
-            let with_caller = WITH_CALLER.load(deps.storage)?;
-            ensure!(with_caller, ContractError::Unauthorized {});
-            assert_owner(deps.storage, &info.sender)?;
+            assert_caller(deps.as_ref(), info.sender.as_str())?;
             
             execute_action(
                 &deps.querier,
@@ -208,7 +202,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult {
                 &deps.querier,
                 deps.storage,
                 &env,
-                collection.to_string(),
+                collection,
                 None,
                 None,
             )
@@ -217,15 +211,15 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult {
     }
 }
 
+#[cfg(feature = "archway")]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn sudo(
     deps: DepsMut,
     env: Env,
-    msg: SudoMsg,
+    msg: crate::msg::SudoMsg,
 ) -> ContractResult {
     return match msg {
-        #[cfg(feature = "archway")]
-        SudoMsg::CwGrant(grant) => {
+        crate::msg::SudoMsg::CwGrant(grant) => { 
             crate::grants::cwfee_grant(deps, env, grant)
         }
     }

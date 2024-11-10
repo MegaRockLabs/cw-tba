@@ -9,10 +9,10 @@ mod tests {
         coins, testing::{mock_dependencies, mock_env, mock_info}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
     };
     use cw_tba::{encode_feegrant_msg, BasicAllowance, ExecuteAccountMsg, TokenInfo};
-    use saa::{messages::{MsgDataToSign, SignedData}, Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
+    use saa::{messages::SignedDataMsg, Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
 
     use crate::{
-        contract::{execute, instantiate}, msg::{ExecuteMsg, InstantiateMsg}, 
+        contract::{execute, instantiate}, msg::{ExecuteMsg, InstantiateMsg, MsgDataToSign}, 
     };
 
 
@@ -143,8 +143,8 @@ mod tests {
         ).unwrap();
 
 
-        let message = SignedData::<ExecuteAccountMsg> {
-            data: data.clone(),
+        let message = SignedDataMsg {
+            data: to_json_binary(&data).unwrap().into(),
             signature: signature.clone(),
             payload: None
         };
@@ -161,14 +161,13 @@ mod tests {
         assert!(res.is_ok());
 
 
-        let custom = SignedData::<ExecuteAccountMsg> {
-            data: data.clone(),
+        let custom = SignedDataMsg {
+            data: to_json_binary(&data).unwrap().into(),
             signature: signature.clone().into(),
             payload: None
         };
 
-        let msg = CosmosMsg::
-                <SignedData::<ExecuteAccountMsg>>::Custom(custom);
+        let msg = CosmosMsg::<SignedDataMsg>::Custom(custom);
 
         let execute_msg = ExecuteMsg::Execute { 
             msgs: vec![msg]

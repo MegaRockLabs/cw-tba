@@ -23,9 +23,9 @@ pub fn execute_action(
         ExecuteAccountMsg::Execute { msgs } => try_executing(msgs),
 
         ExecuteAccountMsg::MintToken {
-            minter: collection,
+            minter,
             msg,
-        } => try_minting_token(storage, info, collection, msg),
+        } => try_minting_token(storage, info, minter, msg),
 
         ExecuteAccountMsg::TransferToken {
             collection,
@@ -113,6 +113,7 @@ pub fn try_unfreezing(querier: &QuerierWrapper, storage: &mut dyn Storage) -> Co
     let owner = cw_ownable::get_ownership(storage)?.owner.unwrap();
     let token = TOKEN_INFO.load(storage)?;
     verify_nft_ownership(&querier, owner.as_str(), token)?;
+    STATUS.save(storage, &Status { frozen: false })?;
     Ok(Response::default().add_attribute("action", "unfreeze"))
 }
 
@@ -175,7 +176,7 @@ pub fn try_transfering_token(
 ) -> ContractResult {
 
     KNOWN_TOKENS.remove(storage, (collection.as_str(), token_id.as_str()));
-
+    
     let msg: CosmosMsg = WasmMsg::Execute {
         contract_addr: collection,
         msg: to_json_binary(&cw721_base::ExecuteMsg::<Empty, Empty>::TransferNft {

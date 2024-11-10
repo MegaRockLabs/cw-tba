@@ -9,11 +9,12 @@ use cosm_tome::modules::bank::model::SendRequest;
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{from_json, to_json_binary, Binary, Coin, CosmosMsg, Empty, Timestamp};
+use cw82_tba_credentials::msg::MsgDataToSign;
 use saa::cosmos_utils::preamble_msg_arb_036;
 use std::str::FromStr;
 
 
-use cw_tba::{MigrateAccountMsg, TokenInfo, CreateAccountMsg};
+use cw_tba::{CreateAccountMsg, MigrateAccountMsg, TokenInfo};
 use saa::{CosmosArbitrary, Credential, CredentialData, Verifiable};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -179,49 +180,56 @@ pub fn create_simple_token_account<C: CosmosClient>(
 
 
 
+pub fn get_cred_data<C: CosmosClient>(
+    chain: &mut Chain<C>,
+    user: &SigningAccount,
+) -> CredentialData {
+    let chain_id = chain.cfg.orc_cfg.chain_cfg.chain_id.clone();
+    let hrp = chain.cfg.orc_cfg.chain_cfg.prefix.clone();
+    let sk = mnemonic_to_signing_key(&user.account.mnemonic, &user.key.derivation_path).unwrap();
+    let registry = chain.orc.contract_map.address(BASE_REGISTRY_NAME).unwrap();
+    
+    let message = MsgDataToSign {
+        chain_id: chain_id.clone(),
+        contract_address: registry,
+        messages: vec![],
+        nonce: String::from("0"),
+    };
+
+    let cred = Credential::CosmosArbitrary(CosmosArbitrary {
+        pubkey: sk.public_key().to_bytes().into(),
+        signature: sk.sign(
+            &preamble_msg_arb_036(
+                &user.account.address, 
+                &to_json_binary(&message).unwrap().to_base64()
+            ).as_bytes()
+        ).unwrap().to_vec().into(),
+        message: to_json_binary(&message).unwrap().into(),
+        hrp: Some(hrp.into()),
+    });
+
+    CredentialData {
+        credentials: vec![cred],
+        with_caller: None,
+        primary_index: None,
+    }
+}
+
+
 pub fn create_cred_token_account<C: CosmosClient>(
     chain: &mut Chain<C>,
     token_contract: String,
     token_id: String,
-    user: &SigningAccount,
-    creds: Vec<Credential>,
+    user: &SigningAccount
 ) -> Result<ExecResponse, ProcessError> {
     let chain_id = chain.cfg.orc_cfg.chain_cfg.chain_id.clone();
+    //let denom = chain.cfg.orc_cfg.chain_cfg.denom.clone();
 
-    let credentials = if creds.len() > 0 {
-        creds
-    } else {
-        let hrp = chain.cfg.orc_cfg.chain_cfg.prefix.clone();
 
-        let sk = mnemonic_to_signing_key(&user.account.mnemonic, &user.key.derivation_path).unwrap();
-        
-        let message = "foo".to_string();
-
-        let cred = Credential::CosmosArbitrary(CosmosArbitrary {
-            pubkey: sk.public_key().to_bytes().into(),
-            signature: sk.sign(
-                &preamble_msg_arb_036(
-                    &user.account.address, 
-                    &message
-                ).as_bytes()
-            ).unwrap().to_vec().into(),
-            message: to_json_binary(&message).unwrap().into(),
-            hrp: Some(hrp.into()),
-        });
-
-        vec![cred]
-    };
-
-    let account_data = CredentialData {
-        credentials,
-        with_caller: None,
-        primary_index: None,
-    };
-
+    let account_data = get_cred_data(chain, user);
 
     account_data.verify().unwrap();
-
-
+    
     let init_msg = cw_tba::TokenAccount {
         token_info: TokenInfo {
             collection: token_contract,
@@ -242,7 +250,7 @@ pub fn create_cred_token_account<C: CosmosClient>(
                 code_id,
                 chain_id,
                 msg: init_msg
-        }),
+            }),
         &user.key,
         creation_fee(&chain),
     )
@@ -301,7 +309,7 @@ pub fn migrate_simple_token_account<C: CosmosClient>(
         },
         new_code_id: code_id,
         msg: MigrateAccountMsg {
-            params: Box::new(None),
+            params: None,
         },
     };
 
@@ -401,8 +409,7 @@ pub fn full_setup<C: CosmosClient>(chain: &mut Chain<C>) -> Result<FullSetupData
         chain,
         collection.clone(),
         cred_token_id.clone(),
-        &user,
-        vec![],
+        &user
     );
 
     let cred_token_account = get_init_address(cred_create_res.unwrap().res);

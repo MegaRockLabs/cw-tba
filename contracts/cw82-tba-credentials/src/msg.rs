@@ -1,10 +1,8 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, Empty, Response};
+use cosmwasm_std::{Addr, Coin, Response};
 use cw_tba::{ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, QueryAccountMsg, Status, TokenInfo};
-use saa::{messages::{AccountCredentials, SignedData}, CredentialData};
-
+use saa::{messages::{AccountCredentials, SignedDataMsg}, CredentialData};
 use crate::error::ContractError;
-
 
 
 
@@ -36,17 +34,15 @@ pub struct FullInfoResponse {
     pub credentials: AccountCredentials
 }
 
-
-
-
+pub type MsgDataToSign = saa::messages::MsgDataToSign<ExecuteAccountMsg>;
 
 pub type InstantiateMsg = InstantiateAccountMsg;
-pub type ExecuteMsg = ExecuteAccountMsg<SignedData<ExecuteAccountMsg>, Option<Empty>, CredentialData>;
+pub type ExecuteMsg = ExecuteAccountMsg<SignedDataMsg, CredentialData>;
 
 pub type MigrateMsg = MigrateAccountMsg;
 pub type ContractResult = Result<Response, ContractError>;
 
-pub type QueryMsg = QueryAccountMsg<SignedData<ExecuteAccountMsg>, CredQueryMsg>;
+pub type QueryMsg = QueryAccountMsg<SignedDataMsg, CredQueryMsg>;
 
 
 #[cw_serde]

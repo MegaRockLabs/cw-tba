@@ -1,6 +1,6 @@
 use cosmwasm_schema::serde::Serialize;
 use cosmwasm_std::{
-    ensure, ensure_eq, to_json_binary, Addr, Binary, Coin, CosmosMsg, DepsMut, Empty, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg
+    ensure, ensure_eq, to_json_binary, Addr, Coin, CosmosMsg, DepsMut, Empty, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg
 };
 
 use cw83::CREATE_ACCOUNT_REPLY_ID;
@@ -8,7 +8,6 @@ use cw_tba::{
     verify_nft_ownership, ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo,
 };
 
-type AccountMsg = ExecuteAccountMsg<Binary>;
 
 use crate::{
     error::ContractError, funds::checked_funds, registry::construct_label, state::{LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES}
@@ -52,7 +51,7 @@ pub fn create_account<T: Serialize, A: Serialize>(
         ensure!(reset, ContractError::AccountExists {});
         msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: token_address.unwrap(),
-            msg: to_json_binary(&AccountMsg::Purge {})?,
+            msg: to_json_binary(&ExecuteAccountMsg::<T, A>::Purge {})?,
             funds: vec![],
         }));
         construct_label(&token_info, Some(env.block.height))
@@ -61,7 +60,7 @@ pub fn create_account<T: Serialize, A: Serialize>(
     };
 
 
-    let init_msg = InstantiateAccountMsg::<T, A> {
+    let init_msg = InstantiateAccountMsg::<A, T> {
         owner: info.sender.to_string(),
         token_info: token_info.clone(),
         account_data,
@@ -95,11 +94,11 @@ pub fn create_account<T: Serialize, A: Serialize>(
 }
 
 
-pub fn update_account_owner(
+pub fn update_account_owner<A: Serialize>(
     deps: DepsMut,
     sender: Addr,
     token_info: TokenInfo,
-    new_account_data: Option<Binary>,
+    new_account_data: Option<A>,
     funds: Vec<Coin>,
     update_for: Option<String>,
 ) -> Result<Response, ContractError> {
@@ -117,7 +116,7 @@ pub fn update_account_owner(
         deps.storage,
         (token_info.collection.as_str(), token_info.id.as_str()),
     )?;
-    let msg = ExecuteAccountMsg::<Empty>::UpdateOwnership {
+    let msg = ExecuteAccountMsg::<Empty, A>::UpdateOwnership {
         new_owner: owner.to_string(),
         new_account_data,
     };

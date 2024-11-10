@@ -14,15 +14,14 @@ pub enum ContractError {
     #[error("{0}")]
     Auth(#[from] AuthError),
 
+    #[error("This method can only be called from the registry contract")]
+    NotRegistry {},
 
-    #[error("Unauthorized")]
-    Unauthorized {},
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
 
     #[error("Not Supported")]
     NotSupported {},
-
-    #[error("Can't derive owner from provided credentials")]
-    NotDerivable {},
 
     #[error("Invalid signed action: {0}")]
     BadSignedAction(String),
@@ -39,8 +38,8 @@ pub enum ContractError {
     #[error("At least one of the provided credentials must be deriving into owner of the token")]
     NoOwnerCred {},
 
-    #[error("At least one of the provided credentials must be must be usable for cryptographic verifications")]
-    NoVerifyingCred {},
+    #[error("Can't call this method directly. Must be signed.")]
+    NoDirectCall {},
 
     #[error("{0}")]
     Generic(String),

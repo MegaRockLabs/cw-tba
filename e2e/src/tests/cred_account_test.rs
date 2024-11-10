@@ -1,13 +1,16 @@
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
-use cosmwasm_std::{to_json_binary, CosmosMsg, Empty};
-use cw_tba::ExecuteAccountMsg;
+use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, Empty};
+use cw82_tba_credentials::contract::instantiate;
+use cw82_tba_credentials::execute::try_executing;
+use cw_tba::{ExecuteAccountMsg, TokenInfo};
 use saa::cosmos_utils::preamble_msg_arb_036;
-use saa::messages::{MsgDataToSign, SignedData};
+use saa::messages::SignedDataMsg;
 use test_context::test_context;
 
-use cw82_tba_credentials::msg::ExecuteMsg;
+use cw82_tba_credentials::msg::{ExecuteMsg, InstantiateMsg, MsgDataToSign};
 use crate::helpers::helper::{
-    get_init_address, instantiate_collection, CRED_ACOUNT_NAME
+    get_cred_data, get_init_address, instantiate_collection, CRED_ACOUNT_NAME
 };
 use crate::helpers::{
     chain::Chain,
@@ -41,7 +44,6 @@ fn test(chain: &mut Chain) {
         msg: to_json_binary(&mint_msg).unwrap(),
     };
 
-  
         
     let res = chain
         .orc
@@ -57,12 +59,11 @@ fn test(chain: &mut Chain) {
     res.unwrap_err();
 
 
-
-    let actions = MsgDataToSign::<ExecuteAccountMsg> { 
+    let actions = MsgDataToSign { 
         chain_id: chain.cfg.orc_cfg.chain_cfg.chain_id.clone(),
-        contract_address: data.token_account,
+        contract_address: data.cred_token_account.clone(),
+        messages: vec![execute_msg],
         nonce: String::from("1"),
-        messages: vec![execute_msg]
     };
 
     let sk = mnemonic_to_signing_key(
@@ -78,15 +79,61 @@ fn test(chain: &mut Chain) {
         ).as_bytes()
     ).unwrap();
 
-    let signed = SignedData { 
-        data: actions, 
+
+    let signed = SignedDataMsg { 
+        data: to_json_binary(&actions).unwrap().into(), 
         signature: signature.to_vec().into(),
-        payload: None, 
+        payload: None
     };
 
+    let msgs = vec![CosmosMsg::Custom(signed)];
+
     let msg = ExecuteMsg::Execute { 
-        msgs: vec![CosmosMsg::Custom(signed)]
+        msgs: msgs.clone()
     };
+
+
+
+    let mut deps = mock_dependencies();
+    let mut env = mock_env();
+    let info = mock_info(user.account.address.as_str(), &[]);
+
+    env.block.chain_id = chain.cfg.orc_cfg.chain_cfg.chain_id.clone();
+    env.contract.address = Addr::unchecked(data.cred_token_account.clone());
+
+    let cred_data = get_cred_data(chain, &user);
+
+    let init_msg = InstantiateMsg {
+        owner: user.account.address.clone(),
+        account_data: to_json_binary(&cred_data).unwrap(),
+        token_info: TokenInfo {
+            collection: data.collection.clone(),
+            id: data.token_id.clone()
+        },
+        actions: None
+    };
+
+
+    let init_res = instantiate(
+        deps.as_mut(), 
+        env.clone(), 
+        mock_info(data.registry.as_str(), &[]), 
+        init_msg
+    );
+    assert!(init_res.is_ok());
+    init_res.unwrap();
+
+    
+    let exec_res = try_executing(
+        deps.as_mut(),
+        env.clone(),
+        info,
+        msgs,
+    );
+    println!("Exec res: {:?}", exec_res);
+    assert!(exec_res.is_ok());
+
+
 
     let res = chain
         .orc
@@ -99,6 +146,7 @@ fn test(chain: &mut Chain) {
         );
 
     println!("{:?}", res);
+
     assert!(res.is_ok())
 
 }

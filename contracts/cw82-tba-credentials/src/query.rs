@@ -1,15 +1,11 @@
 use cosmwasm_std::{ensure, from_json, CosmosMsg, Deps, Env, Order, StdError, StdResult, Binary};
 use cw82::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
-use cw_tba::{AssetsResponse, ExecuteAccountMsg, TokenInfo};
-use saa::{
-    load_credential, 
-    messages::{AccountCredentials, AuthPayload, CredentialFullInfo, SignedData}, 
-    storage::CREDENTIAL_INFOS, CredentialName, Verifiable
-};
+use cw_tba::{AssetsResponse, TokenInfo};
+use saa::messages::{AccountCredentials, AuthPayload, MsgDataToSign, SignedDataMsg};
 
 use crate::{
     msg::FullInfoResponse,
-    state::{KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO, VERIFYING_CRED_ID, WITH_CALLER},
+    state::{KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO},
     utils::{
         assert_caller, status_ok
     },
@@ -22,7 +18,7 @@ pub fn can_execute(
     deps: Deps,
     env: Env,
     sender: String,
-    msg: CosmosMsg<SignedData<ExecuteAccountMsg>>,
+    msg: CosmosMsg<SignedDataMsg>,
 ) -> StdResult<CanExecuteResponse> {
     if !status_ok(deps.storage) {
         return Ok(CanExecuteResponse { can_execute: false });
@@ -32,7 +28,8 @@ pub fn can_execute(
         CosmosMsg::Custom(
             signed
         ) => {
-            signed.validate_cosmwasm(deps.storage, &env).is_ok()
+            let data : MsgDataToSign = from_json(signed.data)?;
+            data.validate_cosmwasm(deps.storage, &env).is_ok()
         },
         _ => assert_caller(deps,  &sender).is_ok(),
     };
@@ -51,12 +48,14 @@ pub fn valid_signature(
         let payload = payload
             .map(|p| from_json::<AuthPayload>(p)).transpose()?;
 
-        let credential = load_credential(
-                deps.storage, data.into(), signature.into(), payload
-            )
-            .map_err(|_| StdError::generic_err("Credential not found"))?;
+        saa::verify_signed_queries(
+            deps.api,
+            deps.storage, 
+            &env,
+            SignedDataMsg { data: data.into(), signature: signature.into(), payload },
+        )
+        .is_ok()
 
-        credential.assert_query_cosmwasm::<ExecuteAccountMsg>(deps.api, deps.storage, &env, &None).is_ok()
     } else {
         false
     };
@@ -92,17 +91,16 @@ pub fn valid_signatures(
         .enumerate()
         .map(|(index, signature)| {
             let data = data[index].clone();
-            let credential = load_credential(
-                        deps.storage, data.into(), signature.into(), payload.clone()
-                    )
-                    .map_err(|_| StdError::generic_err("Credential not found"));
-
-            if credential.is_err() {
-                return false;
-            }
-
-            credential.unwrap()
-            .assert_query_cosmwasm::<ExecuteAccountMsg>(deps.api, deps.storage, &env, &None)
+            saa::verify_signed_queries(
+                deps.api,
+                deps.storage, 
+                &env,
+                SignedDataMsg { 
+                    data: data.into(), 
+                    signature: signature.into(), 
+                    payload: payload.clone()
+                },
+            )
             .is_ok()
          
         })
@@ -158,33 +156,8 @@ pub fn known_tokens(
 pub fn credentials(
     deps: Deps,
 ) -> StdResult<AccountCredentials> {
-    let credentials = CREDENTIAL_INFOS
-        .range(deps.storage, None, None, Order::Ascending)
-        .map(|item| {
-            let (id, info) = item?;
-            
-            let human_id = match info.name == CredentialName::Passkey {
-                false => String::from_utf8(id.clone()).unwrap(),
-                true => Binary(id.clone()).to_base64(),
-            };
-            Ok(CredentialFullInfo {
-                id,
-                human_id,
-                name: info.name,
-                hrp: info.hrp,
-                extension: info.extension,
-            })
-        })
-        .collect::<StdResult<Vec<CredentialFullInfo>>>()?;
-
-    let verifying_id = VERIFYING_CRED_ID.load(deps.storage)?;
-
-    Ok(AccountCredentials {
-        credentials,
-        native_caller: WITH_CALLER.load(deps.storage)?,
-        verifying_human_id: Binary(verifying_id.clone()).to_base64(),
-        verifying_id: verifying_id,
-    })
+    saa::get_all_credentials(deps.storage)
+    .map_err(|_| StdError::generic_err("Error getting credentials"))
 
 }
 

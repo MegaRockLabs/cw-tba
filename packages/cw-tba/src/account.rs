@@ -10,7 +10,7 @@ use crate::common::TokenInfo;
 use cw721::Cw721ReceiveMsg;
 
 #[cw_serde]
-pub struct InstantiateAccountMsg<T = Binary, A = ExecuteAccountMsg>
+pub struct InstantiateAccountMsg<A = ExecuteAccountMsg, T = Binary>
 where
     T: Serialize,
 {
@@ -27,7 +27,7 @@ where
 
 #[cw_serde]
 pub struct MigrateAccountMsg<T = Empty> {
-    pub params: Box<Option<T>>,
+    pub params: Option<Box<T>>,
 }
 
 
@@ -46,7 +46,7 @@ pub struct BasicAllowance {
 
 
 #[cw_serde]
-pub enum ExecuteAccountMsg<T = Empty, E = Option<Empty>, A : Serialize = Binary> {
+pub enum ExecuteAccountMsg<T = Empty, A : Serialize = Binary, E = Option<Empty>> {
     /// Proxy method for executing cosmos messages
     /// Wasm and Stargate messages aren't supported
     /// Only the current holder can execute this method
@@ -98,7 +98,7 @@ pub enum ExecuteAccountMsg<T = Empty, E = Option<Empty>, A : Serialize = Binary>
 
     /// Registry only method to update the owner to the current NFT holder
     UpdateOwnership {
-        /// Current NFT holder
+        /// New NFT holder
         new_owner: String,
         /// New account data
         new_account_data: Option<A>,
@@ -134,6 +134,12 @@ pub enum ExecuteAccountMsg<T = Empty, E = Option<Empty>, A : Serialize = Binary>
     Extension { msg: E },
 }
 
+
+impl Default for ExecuteAccountMsg {
+    fn default() -> Self {
+        ExecuteAccountMsg::Execute { msgs: vec![] }
+    }
+}
 
 pub type KnownTokensResponse = Vec<TokenInfo>;
 
