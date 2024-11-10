@@ -55,7 +55,6 @@ fn test(chain: &mut Chain) {
             vec![],
         );
     // not authorized to call direcly
-    println!("{:?}", res);
     res.unwrap_err();
 
 
@@ -123,17 +122,14 @@ fn test(chain: &mut Chain) {
     assert!(init_res.is_ok());
     init_res.unwrap();
 
-    
+
     let exec_res = try_executing(
         deps.as_mut(),
         env.clone(),
         info,
         msgs,
     );
-    println!("Exec res: {:?}", exec_res);
     assert!(exec_res.is_ok());
-
-
 
     let res = chain
         .orc
@@ -144,8 +140,6 @@ fn test(chain: &mut Chain) {
             &user.key,
             vec![],
         );
-
-    println!("{:?}", res);
 
     assert!(res.is_ok())
 

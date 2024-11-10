@@ -42,7 +42,7 @@ cw82-tba-credentials    = { path = "contracts/cw82-tba-credentials", features = 
 cw83-tba-registry       = { path = "contracts/cw83-tba-registry", features = ["library"] }
 cw-tba                  = { path = "packages/cw-tba"     }
 
-saa                     = { version = "0.14.16", package = "smart-account-auth", features = ["cosmwasm", "replay"] }
+saa                     = { version = "0.14.18", package = "smart-account-auth", features = ["cosmwasm", "replay"] }
 
 
 [profile.release]

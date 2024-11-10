@@ -241,7 +241,6 @@ mod tests {
 
         let res = credential.verify_cosmwasm(deps.api, &env);
 
-        println!("Res: {:?}", res);
         assert!(res.is_ok());
     }
 

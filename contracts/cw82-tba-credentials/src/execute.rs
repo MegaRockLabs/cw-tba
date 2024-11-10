@@ -23,22 +23,16 @@ pub fn try_executing(
     assert_status(deps.storage)?;
     let mut res = Response::new();
 
-    println!("Before msgs loop");
     for msg in msgs {
-        println!("Executing cosmos msg: {:?}", msg);
 
         if let CosmosMsg::Custom(signed) = msg.clone() {
 
-            println!("Is custom with signed data");
-            
             saa::verify_signed_actions(
                 deps.api,
                 deps.storage, 
                 &env,
                 signed.clone()
             )?;
-
-            println!("Verified signed actions");
 
             let data : MsgDataToSign::<ExecuteAccountMsg> = from_json(&signed.data)?;
 
@@ -54,8 +48,6 @@ pub fn try_executing(
                 }
             }
         } else {
-            println!("Is not custom");
-
             assert_caller(deps.as_ref(), info.sender.as_str())?;
             let msg = from_json(to_json_binary(&msg)?)?;
             assert_ok_cosmos_msg(&msg)?;
