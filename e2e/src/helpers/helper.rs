@@ -9,8 +9,8 @@ use cosm_tome::modules::bank::model::SendRequest;
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{from_json, to_json_binary, Binary, Coin, CosmosMsg, Empty, Timestamp};
-use cw82_tba_credentials::msg::MsgDataToSign;
 use saa::cosmos_utils::preamble_msg_arb_036;
+use saa::messages::MsgDataToVerify;
 use std::str::FromStr;
 
 
@@ -189,10 +189,9 @@ pub fn get_cred_data<C: CosmosClient>(
     let sk = mnemonic_to_signing_key(&user.account.mnemonic, &user.key.derivation_path).unwrap();
     let registry = chain.orc.contract_map.address(BASE_REGISTRY_NAME).unwrap();
     
-    let message = MsgDataToSign {
+    let message = MsgDataToVerify {
         chain_id: chain_id.clone(),
         contract_address: registry,
-        messages: vec![],
         nonce: String::from("0"),
     };
 

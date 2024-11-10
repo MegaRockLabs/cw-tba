@@ -21,7 +21,6 @@ pub struct CwGrantMessage {
 
 
 
-
 pub fn cwfee_grant(deps: DepsMut, env: Env, msg: CwGrant) -> Result<Response, ContractError> {
     let with_caller = WITH_CALLER.load(deps.storage)?;
     let owner = get_ownership(deps.storage)?.owner.unwrap().to_string();
@@ -40,7 +39,7 @@ pub fn cwfee_grant(deps: DepsMut, env: Env, msg: CwGrant) -> Result<Response, Co
                 continue;
             }
         }
-        return Err(ContractError::Unauthorized {});
+        return Err(ContractError::Unauthorized("Not ellible for a cwfee grant".to_string()));
     }
 
     Ok(Response::default())

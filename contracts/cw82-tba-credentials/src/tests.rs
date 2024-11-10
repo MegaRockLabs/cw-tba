@@ -9,10 +9,10 @@ mod tests {
         coins, testing::{mock_dependencies, mock_env, mock_info}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
     };
     use cw_tba::{encode_feegrant_msg, BasicAllowance, ExecuteAccountMsg, TokenInfo};
-    use saa::{messages::SignedDataMsg, Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
+    use saa::{messages::{MsgDataToSign, SignedDataMsg}, Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
 
     use crate::{
-        contract::{execute, instantiate}, msg::{ExecuteMsg, InstantiateMsg, MsgDataToSign}, 
+        contract::{execute, instantiate}, msg::{ExecuteMsg, InstantiateMsg}, 
     };
 
 
@@ -32,7 +32,6 @@ mod tests {
         });
         let res = cred.verify_cosmwasm(deps.as_ref().api, &env);
         assert!(res.is_ok());
-
 
         let auth_data  = CredentialData {
             credentials: vec![cred],       
@@ -127,7 +126,7 @@ mod tests {
             msgs: vec![staking] 
         };
 
-        let data = MsgDataToSign {
+        let data = MsgDataToSign::<ExecuteAccountMsg> {
             chain_id: "constantine-3".into(),
             contract_address: "archway1hf0quw8lgxn4p9vlmk3jdlgg460asp87c75s9xfm33axkczu2j3s7mwfke".into(),
             messages: vec![action],

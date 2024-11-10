@@ -1,15 +1,15 @@
 use crate::{
-    action::execute_action, error::ContractError, msg::ContractResult, state::{
+    action::execute_action, error::ContractError, msg::{ContractResult, SignedMessages}, state::{
         save_credentials, KNOWN_TOKENS, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER
     }, utils::{assert_caller, assert_ok_cosmos_msg, assert_owner_derivable, assert_registry, assert_status, assert_valid_signed_action}
 };
-use cosmwasm_std::{ensure, from_json, CosmosMsg, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{ensure, from_json, Api, CosmosMsg, DepsMut, Env, MessageInfo, Response, Storage};
 use cw2::CONTRACT;
 use cw22::SUPPORTED_INTERFACES;
 use cw_ownable::{get_ownership, is_owner};
-use cw_tba::{verify_nft_ownership, ExecuteAccountMsg, Status};
+use cw_tba::{verify_nft_ownership, Status};
 use saa::{ 
-    messages::{MsgDataToSign, SignedDataMsg}, storage::{CALLER, CREDENTIAL_INFOS, VERIFYING_CRED_ID}, to_json_binary, CredentialData, UpdateOperation
+    messages::SignedDataMsg, to_json_binary, CredentialData, UpdateOperation
 };
 
 
@@ -34,7 +34,7 @@ pub fn try_executing(
                 signed.clone()
             )?;
 
-            let data : MsgDataToSign::<ExecuteAccountMsg> = from_json(&signed.data)?;
+            let data : SignedMessages = from_json(&signed.data)?;
 
             for action in data.messages {
                 assert_valid_signed_action(&action)?;
@@ -57,6 +57,7 @@ pub fn try_executing(
     
     Ok(res)
 }
+
 
 
 pub fn try_updating_account_data(
@@ -92,9 +93,7 @@ pub fn try_updating_ownership(
 
     let owner = get_ownership(deps.storage)?.owner.unwrap().to_string();
     if new_owner != owner {
-        CREDENTIAL_INFOS.clear(deps.storage);
-        VERIFYING_CRED_ID.remove(deps.storage);
-        CALLER.remove(deps.storage);
+        saa::reset_credentials(deps.storage)?;
     }
 
     if new_account_data.is_some() {
@@ -105,7 +104,6 @@ pub fn try_updating_ownership(
         cw_ownable::initialize_owner(deps.storage, deps.api, Some(new_owner.as_str()))?;
     }
         
-
     Ok(Response::default()
         .add_attribute("action", "update_ownership")
         .add_attribute("new_owner", new_owner.as_str()))
@@ -139,27 +137,24 @@ pub fn try_freezing(deps: DepsMut) -> ContractResult {
             "Can only freeze if the owner has changed or called by the owner".into()
         )
     );
-
     STATUS.save(deps.storage, &Status { frozen: true })?;
-
     Ok(Response::default().add_attribute("action", "freeze"))
 }
 
 
 
-pub fn try_purging(deps: DepsMut, sender: &str) -> ContractResult {
-    assert_registry(deps.storage, sender)?;
-    cw_ownable::initialize_owner(deps.storage, deps.api, None)?;
-    SUPPORTED_INTERFACES.clear(deps.storage);
-    CONTRACT.remove(deps.storage);
-    REGISTRY_ADDRESS.remove(deps.storage);
-    TOKEN_INFO.remove(deps.storage);
-    MINT_CACHE.remove(deps.storage);
-    STATUS.remove(deps.storage);
-    SERIAL.remove(deps.storage);
-    VERIFYING_CRED_ID.remove(deps.storage);
-    WITH_CALLER.remove(deps.storage);
-    CREDENTIAL_INFOS.clear(deps.storage);
-    KNOWN_TOKENS.clear(deps.storage);
+pub fn try_purging(api: &dyn Api, store: &mut dyn Storage, sender: &str) -> ContractResult {
+    assert_registry(store, sender)?;
+    cw_ownable::initialize_owner(store, api, None)?;
+    saa::reset_credentials(store)?;
+    SUPPORTED_INTERFACES.clear(store);
+    CONTRACT.remove(store);
+    REGISTRY_ADDRESS.remove(store);
+    TOKEN_INFO.remove(store);
+    MINT_CACHE.remove(store);
+    STATUS.remove(store);
+    SERIAL.remove(store);
+    WITH_CALLER.remove(store);
+    KNOWN_TOKENS.clear(store);
     Ok(Response::default().add_attribute("action", "purge"))
 }

@@ -2,7 +2,7 @@ use crate::{
     error::ContractError, msg::ContractResult, state::{KNOWN_TOKENS, MINT_CACHE, STATUS, TOKEN_INFO}, utils::assert_status
 };
 use cosmwasm_std::{
-    to_json_binary, Binary, Coin, CosmosMsg, Empty, Env, MessageInfo, QuerierWrapper, ReplyOn, Response, StdResult, Storage, SubMsg, WasmMsg
+    to_json_binary, Binary, CosmosMsg, Empty, Env, MessageInfo, QuerierWrapper, ReplyOn, Response, StdResult, Storage, SubMsg, WasmMsg
 };
 use cw_tba::{encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance, ExecuteAccountMsg, Status};
 
@@ -19,7 +19,6 @@ pub fn execute_action(
     assert_status(storage)?;
 
     match msg {
-
         ExecuteAccountMsg::Execute { msgs } => try_executing(msgs),
 
         ExecuteAccountMsg::MintToken {
@@ -32,7 +31,7 @@ pub fn execute_action(
             token_id,
             recipient,
         } => {
-            try_transfering_token(storage, collection, token_id, recipient, info.funds.clone())
+            try_transfering_token(storage, collection, token_id, recipient)
         }
 
         ExecuteAccountMsg::SendToken {
@@ -45,8 +44,7 @@ pub fn execute_action(
             collection,
             token_id,
             contract,
-            msg,
-            info.funds.clone(),
+            msg
         ),
 
         ExecuteAccountMsg::UpdateKnownTokens {
@@ -172,7 +170,6 @@ pub fn try_transfering_token(
     collection: String,
     token_id: String,
     recipient: String,
-    funds: Vec<Coin>,
 ) -> ContractResult {
 
     KNOWN_TOKENS.remove(storage, (collection.as_str(), token_id.as_str()));
@@ -183,7 +180,7 @@ pub fn try_transfering_token(
             recipient,
             token_id,
         })?,
-        funds,
+        funds: vec![],
     }
     .into();
 
@@ -198,7 +195,6 @@ pub fn try_sending_token(
     token_id: String,
     contract: String,
     msg: Binary,
-    funds: Vec<Coin>,
 ) -> ContractResult {
     KNOWN_TOKENS.remove(storage, (collection.as_str(), token_id.as_str()));
     let msg: CosmosMsg = WasmMsg::Execute {
@@ -208,7 +204,7 @@ pub fn try_sending_token(
             token_id,
             msg,
         })?,
-        funds,
+        funds: vec![],
     }
     .into();
 

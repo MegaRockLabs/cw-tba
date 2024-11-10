@@ -15,15 +15,10 @@ use crate::{
 
 
 
-pub fn assert_status(store: &dyn Storage) -> StdResult<bool> {
+pub fn assert_status(store: &dyn Storage) -> StdResult<()> {
     let status = STATUS.load(store)?;
-    ensure!(
-        !status.frozen,
-        StdError::GenericErr {
-            msg: ContractError::Frozen {}.to_string()
-        }
-    );
-    Ok(true)
+    ensure!(!status.frozen, StdError::GenericErr { msg: ContractError::Frozen {}.to_string()});
+    Ok(())
 }
 
 pub fn status_ok(store: &dyn Storage) -> bool {
@@ -54,7 +49,6 @@ pub fn assert_registry(store: &dyn Storage, addr: &str) -> Result<(), ContractEr
         Err(ContractError::NotRegistry{})
     }
 }
-
 
 
 pub fn assert_owner_derivable(
@@ -97,7 +91,7 @@ pub fn assert_valid_signed_action(action: &ExecuteAccountMsg) -> Result<(), Cont
             "Nested 'Extension' is not supported",
         ))),
         ExecuteAccountMsg::ReceiveNft { .. } => Err(ContractError::BadSignedAction(
-            String::from("ReceiveNft can only be called by another NFT contract"),
+            String::from("ReceiveNft can only be called by an NFT contract"),
         )),
         ExecuteAccountMsg::UpdateAccountData { .. } => Err(ContractError::NotRegistry {}),
         ExecuteAccountMsg::UpdateOwnership { .. } => Err(ContractError::NotRegistry {}),
@@ -120,7 +114,7 @@ pub fn assert_caller(
     );
     ensure!(
         is_owner(deps.storage, &deps.api.addr_validate(sender)?)?,
-        ContractError::Unauthorized("Only the owner can call this method directly".to_string())
+        ContractError::Unauthorized("Only the owner can call directly".to_string())
     );
     Ok(())
 }

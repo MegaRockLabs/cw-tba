@@ -5,10 +5,10 @@ use cw82_tba_credentials::contract::instantiate;
 use cw82_tba_credentials::execute::try_executing;
 use cw_tba::{ExecuteAccountMsg, TokenInfo};
 use saa::cosmos_utils::preamble_msg_arb_036;
-use saa::messages::SignedDataMsg;
+use saa::messages::{MsgDataToSign, SignedDataMsg};
 use test_context::test_context;
 
-use cw82_tba_credentials::msg::{ExecuteMsg, InstantiateMsg, MsgDataToSign};
+use cw82_tba_credentials::msg::{ExecuteMsg, InstantiateMsg};
 use crate::helpers::helper::{
     get_cred_data, get_init_address, instantiate_collection, CRED_ACOUNT_NAME
 };
@@ -58,7 +58,7 @@ fn test(chain: &mut Chain) {
     res.unwrap_err();
 
 
-    let actions = MsgDataToSign { 
+    let actions = MsgDataToSign::<ExecuteAccountMsg> { 
         chain_id: chain.cfg.orc_cfg.chain_cfg.chain_id.clone(),
         contract_address: data.cred_token_account.clone(),
         messages: vec![execute_msg],
@@ -90,8 +90,6 @@ fn test(chain: &mut Chain) {
     let msg = ExecuteMsg::Execute { 
         msgs: msgs.clone()
     };
-
-
 
     let mut deps = mock_dependencies();
     let mut env = mock_env();

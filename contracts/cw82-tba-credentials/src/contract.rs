@@ -104,7 +104,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
         return Err(ContractError::Deleted {});
     }
     SERIAL.update(deps.storage, |s| Ok::<u128, StdError>((s + 1) % u128::MAX))?;
-
+    
     match msg {
         ExecuteMsg::Execute { 
             msgs 
@@ -126,7 +126,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
             execute::try_updating_known_on_receive(deps, info.sender.to_string(), msg.token_id)
         }
 
-        ExecuteMsg::Purge {} => execute::try_purging(deps, info.sender.as_str()),
+        ExecuteMsg::Purge {} => execute::try_purging(deps.api, deps.storage, info.sender.as_str()),
 
         ExecuteMsg::Freeze {} => execute::try_freezing(deps),
 

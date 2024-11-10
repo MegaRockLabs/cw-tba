@@ -45,6 +45,7 @@ pub fn valid_signature(
     payload: Option<Binary>,
 ) -> StdResult<ValidSignatureResponse> {
     let is_valid = if status_ok(deps.storage) {
+
         let payload = payload
             .map(|p| from_json::<AuthPayload>(p)).transpose()?;
 
@@ -83,7 +84,6 @@ pub fn valid_signatures(
 
     let payload = payload
             .map(|p| from_json::<AuthPayload>(p)).transpose()?;
-
     
 
     let are_valid: Vec<bool> = signatures
@@ -160,7 +160,6 @@ pub fn credentials(
     .map_err(|_| StdError::generic_err("Error getting credentials"))
 
 }
-
 
 
 pub fn full_info(

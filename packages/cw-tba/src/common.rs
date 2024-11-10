@@ -25,7 +25,7 @@ pub fn verify_nft_ownership(
     )?;
 
     if owner_res.owner.as_str() != address {
-        return Err(StdError::generic_err("Unauthorized: Not the owner of the NFT"));
+        return Err(StdError::generic_err("Not NFT owner"));
     }
 
     Ok(())

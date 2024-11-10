@@ -40,9 +40,14 @@ pub fn save_credentials(
 
     // save the owner adderss to the storage
     initialize_owner(storage, api, Some(owner.as_str()))?;
-    
-    // ensure that at least one of the credentials can be derived into the owner address
-    assert_owner_derivable(api, storage, &data, Some(owner))?;
+
+    if with_caller {
+        // ensure that the owner is a valid cosmos address
+        api.addr_validate(&owner)?;
+    } else {
+        // ensure that at least one of the credentials can be derived into the owner address
+        assert_owner_derivable(api, storage, &data, Some(owner))?;
+    }
     
     Ok(())
 }

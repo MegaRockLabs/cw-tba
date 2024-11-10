@@ -15,12 +15,13 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = []
+default = ["archway"]
 archway = []
 library = []
 
 [dependencies]
 semver          = { workspace = true }
+serde           = { workspace = true }
 thiserror       = { workspace = true }
 cosmwasm-schema = { workspace = true }
 cosmwasm-std    = { workspace = true }
