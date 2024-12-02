@@ -17,7 +17,7 @@ use crate::{
 
 pub fn assert_status(store: &dyn Storage) -> StdResult<()> {
     let status = STATUS.load(store)?;
-    ensure!(!status.frozen, StdError::GenericErr { msg: ContractError::Frozen {}.to_string()});
+    ensure!(!status.frozen, StdError::generic_err(ContractError::Frozen {}.to_string()));
     Ok(())
 }
 
@@ -25,11 +25,10 @@ pub fn status_ok(store: &dyn Storage) -> bool {
     assert_status(store).is_ok()
 }
 
-
 #[cfg(target_arch = "wasm32")]
 pub fn query_if_registry(querier: &cosmwasm_std::QuerierWrapper, addr: cosmwasm_std::Addr) -> StdResult<bool> {
     let key = cosmwasm_std::storage_keys::namespace_with_key(
-        &[cw22::SUPPORTED_INTERFACES.namespace()], 
+        &[cw22::INTERFACE_NAMESPACE.as_bytes()], 
         "crates:cw83".as_bytes()
     );
     let raw_query = cosmwasm_std::WasmQuery::Raw { 
@@ -72,7 +71,7 @@ pub fn assert_owner_derivable(
             if addr.is_err() {
                 return false;
             }
-            addr.unwrap() == owner
+            addr.unwrap().to_string() == owner
         }), 
         ContractError::NoOwnerCred {}
     );
@@ -132,11 +131,8 @@ pub fn assert_ok_wasm_msg(msg: &WasmMsg) -> StdResult<()> {
 pub fn assert_ok_cosmos_msg(msg: &CosmosMsg) -> StdResult<()> {
     match msg {
         CosmosMsg::Wasm(msg) => assert_ok_wasm_msg(msg),
-        CosmosMsg::Stargate { 
-            type_url,
-            .. 
-        } => {
-            if type_url.to_lowercase().contains("authz") {
+        CosmosMsg::Any(msg)  => {
+            if msg.type_url.to_lowercase().contains("authz") {
                 Err(StdError::generic_err("Not Supported"))
             } else {
                 Ok(())

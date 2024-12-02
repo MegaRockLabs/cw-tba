@@ -6,9 +6,9 @@ use cw_tba::{Status, TokenInfo};
 use saa::CredentialData;
 
 
+
 pub static REGISTRY_ADDRESS: Item<String> = Item::new("r");
 pub static TOKEN_INFO: Item<TokenInfo> = Item::new("t");
-pub static MINT_CACHE: Item<String> = Item::new("m");
 pub static STATUS: Item<Status> = Item::new("s");
 pub static SERIAL: Item<u128> = Item::new("l");
 

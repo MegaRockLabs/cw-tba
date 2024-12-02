@@ -1,18 +1,18 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    from_json, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, SubMsgResult
 };
 
-use cw82::Cw82Contract;
 use cw83::CREATE_ACCOUNT_REPLY_ID;
+use cw_tba::TokenInfo;
 
 use crate::{
     error::ContractError,
     execute::{create_account, migrate_account, update_account_owner},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query::{account_info, accounts, collection_accounts, collections},
-    state::{COL_TOKEN_COUNTS, LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES},
+    state::{COL_TOKEN_COUNTS, REGISTRY_PARAMS, TOKEN_ADDRESSES},
 };
 
 pub const CONTRACT_NAME: &str = "crates:cw83-token-account-registry";
@@ -96,21 +96,25 @@ pub fn execute(
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, _: Env, msg: Reply) -> Result<Response, ContractError> {
-    if msg.id == CREATE_ACCOUNT_REPLY_ID {
-        let res = cw_utils::parse_reply_instantiate_data(msg)?;
+pub fn reply(deps: DepsMut, _: Env, reply: Reply) -> Result<Response, ContractError> {
+    if reply.id == CREATE_ACCOUNT_REPLY_ID {
 
-        let addr = res.contract_address;
-        let ver_addr = deps.api.addr_validate(addr.as_str())?;
+        let data = if let SubMsgResult::Ok(res) = reply.result {
+            res.msg_responses[0].clone()
+        } else {
+            return Err(ContractError::Unauthorized {})
+        };
+        
+        let init_res = cw_utils::parse_instantiate_response_data(data.value.as_slice())?;
 
-        Cw82Contract(ver_addr).supports_interface(&deps.querier)?;
+        let addr = init_res.contract_address;
+        deps.api.addr_validate(addr.as_str())?;
 
-        let stored = LAST_ATTEMPTING.load(deps.storage)?;
-        LAST_ATTEMPTING.remove(deps.storage);
+        let token_info : TokenInfo = from_json(&reply.payload)?;
 
         COL_TOKEN_COUNTS.update(
             deps.storage,
-            stored.collection.as_str(),
+            token_info.collection.as_str(),
             |count| -> StdResult<u32> {
                 match count {
                     Some(c) => Ok(c + 1),
@@ -121,7 +125,7 @@ pub fn reply(deps: DepsMut, _: Env, msg: Reply) -> Result<Response, ContractErro
 
         TOKEN_ADDRESSES.save(
             deps.storage,
-            (stored.collection.as_str(), stored.id.as_str()),
+            (token_info.collection.as_str(), token_info.id.as_str()),
             &addr,
         )?;
 

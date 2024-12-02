@@ -15,7 +15,7 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["archway"]
+default = []
 archway = []
 library = []
 
@@ -30,7 +30,6 @@ cw-ownable      = { workspace = true }
 cw2             = { workspace = true }
 cw22            = { workspace = true }
 cw82            = { workspace = true }
-cw721-base      = { workspace = true }
 cw-tba          = { workspace = true }
 saa             = { workspace = true }
 

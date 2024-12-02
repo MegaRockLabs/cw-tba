@@ -18,7 +18,7 @@ use crate::{
     error::ContractError, execute, 
     msg::{ContractResult, CredQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg}, 
     query::{assets, can_execute, credentials, full_info, known_tokens, valid_signature, valid_signatures}, 
-    state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO}, utils::assert_caller
+    state::{save_credentials, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO}, utils::assert_caller
 };
 
 
@@ -149,9 +149,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     if REGISTRY_ADDRESS.load(deps.storage).is_err() {
-        return Err(StdError::GenericErr {
-            msg: ContractError::Deleted {}.to_string(),
-        });
+        return Err(StdError::generic_err(ContractError::Deleted {}.to_string()));
     };
     match msg {
         QueryMsg::Token {} => to_json_binary(&TOKEN_INFO.load(deps.storage)?),
@@ -195,8 +193,7 @@ pub fn migrate(deps: DepsMut, _: Env, _: MigrateMsg) -> ContractResult {
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult {
     match msg.id {
         MINT_REPLY_ID => {
-            let collection = MINT_CACHE.load(deps.storage)?;
-            MINT_CACHE.remove(deps.storage);
+            let collection = from_json(&msg.payload)?;
             // query all the held tokens for the collection stored in CACHE
             action::try_updating_known_tokens(
                 &deps.querier,

@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    from_json, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult
 };
 use cw_ownable::{get_ownership, initialize_owner};
 use cw_tba::UpdateOperation;
@@ -14,9 +14,8 @@ use crate::{
     },
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Status},
     query::{assets, can_execute, full_info, known_tokens, valid_signature, valid_signatures},
-    state::{MINT_CACHE, PUBKEY, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO},
+    state::{PUBKEY, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO},
 };
-
 #[cfg(target_arch = "wasm32")]
 use crate::utils::query_if_registry;
 
@@ -130,9 +129,7 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     if REGISTRY_ADDRESS.load(deps.storage).is_err() {
-        return Err(StdError::GenericErr {
-            msg: ContractError::Deleted {}.to_string(),
-        });
+        return Err(StdError::generic_err(ContractError::Deleted {}.to_string()));
     };
     match msg {
         QueryMsg::Token {} => to_json_binary(&TOKEN_INFO.load(deps.storage)?),
@@ -169,14 +166,13 @@ pub fn migrate(deps: DepsMut, _: Env, _: MigrateMsg) -> StdResult<Response> {
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         MINT_REPLY_ID => {
-            let collection = MINT_CACHE.load(deps.storage)?;
-            MINT_CACHE.remove(deps.storage);
+            let collection : String = from_json(&msg.payload)?;
             // query all the held tokens for the collection stored in CACHE
             try_updating_known_tokens(
                 deps,
                 env.clone(),
                 env.contract.address,
-                collection.to_string(),
+                collection,
                 None,
                 None,
             )

@@ -28,6 +28,5 @@ cw2                 = { workspace = true }
 cw82                = { workspace = true }
 cw83                = { workspace = true }
 cw22                = { workspace = true }
-cw721               = { workspace = true }
 cw-tba              = { workspace = true }
 saa                 = { workspace = true }

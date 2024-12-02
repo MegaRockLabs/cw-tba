@@ -7,6 +7,7 @@ use crate::error::ContractError;
 
 
 #[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum CredQueryMsg {
     FullInfo {
         skip: Option<u32>,

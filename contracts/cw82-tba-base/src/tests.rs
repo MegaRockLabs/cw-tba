@@ -4,9 +4,7 @@ use crate::{
     query::verify_arbitrary,
 };
 use cosmwasm_std::{
-    from_json,
-    testing::{mock_dependencies, mock_env, mock_info},
-    to_json_binary, Binary,
+    from_json, testing::{message_info, mock_dependencies, mock_env}, to_json_binary, Addr, Binary
 };
 use cw22::set_contract_supported_interface;
 use cw82::ValidSignatureResponse;
@@ -37,7 +35,7 @@ fn amino_check() {
 fn amino_check_contract() {
     let mut deps = mock_dependencies();
     let env = mock_env();
-    let info = mock_info("alice", &[]);
+    let info = message_info(&Addr::unchecked("alice"), &[]);
 
     set_contract_supported_interface(
         deps.as_mut().storage,

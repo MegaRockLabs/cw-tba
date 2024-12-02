@@ -16,9 +16,7 @@ pub fn status_ok(store: &dyn Storage) -> bool {
 }
 
 pub fn assert_ok_wasm_msg(msg: &WasmMsg) -> StdResult<()> {
-    let bad_wasm_error = StdError::GenericErr {
-        msg: "Not Supported".into(),
-    };
+    let bad_wasm_error = StdError::generic_err("Not Supported");
     match msg {
         // todo: add whitelististed messages
         WasmMsg::Execute { .. } => Err(bad_wasm_error),
@@ -27,12 +25,10 @@ pub fn assert_ok_wasm_msg(msg: &WasmMsg) -> StdResult<()> {
 }
 
 pub fn assert_ok_cosmos_msg(msg: &CosmosMsg) -> StdResult<()> {
-    let bad_msg_error = StdError::GenericErr {
-        msg: "Not Supported".into(),
-    };
+    let bad_msg_error = StdError::generic_err("Not Supported");
     match msg {
         CosmosMsg::Wasm(msg) => assert_ok_wasm_msg(msg),
-        CosmosMsg::Stargate { .. } => Err(bad_msg_error),
+        CosmosMsg::Any { .. } => Err(bad_msg_error),
         _ => Ok(()),
     }
 }
@@ -54,7 +50,7 @@ pub fn assert_registry(store: &dyn Storage, addr: &Addr) -> Result<(), ContractE
 }
 
 pub fn is_registry(store: &dyn Storage, addr: &Addr) -> StdResult<bool> {
-    REGISTRY_ADDRESS.load(store).map(|a| a == *addr)
+    REGISTRY_ADDRESS.load(store).map(|a| a == addr.to_string())
 }
 
 pub fn generate_amino_transaction_string(signer: &str, data: &str) -> String {

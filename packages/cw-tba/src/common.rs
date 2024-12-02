@@ -1,6 +1,8 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
 
+use crate::msgs::*;
+
 #[cw_serde]
 pub struct TokenInfo {
     /// Contract address of the collection
@@ -16,9 +18,9 @@ pub fn verify_nft_ownership(
     address: &str,
     token_info: TokenInfo,
 ) -> StdResult<()> {
-    let owner_res = querier.query_wasm_smart::<cw721::OwnerOfResponse>(
+    let owner_res = querier.query_wasm_smart::<OwnerOfResponse>(
         token_info.collection,
-        &cw721::Cw721QueryMsg::OwnerOf {
+        &Cw721Msg::OwnerOf {
             token_id: token_info.id,
             include_expired: None,
         },
@@ -37,10 +39,10 @@ pub fn query_tokens(
     owner: String,
     start_after: Option<String>,
     limit: Option<u32>,
-) -> StdResult<cw721::TokensResponse> {
+) -> StdResult<TokensResponse> {
     querier.query_wasm_smart(
         collection,
-        &cw721::Cw721QueryMsg::Tokens {
+        &Cw721Msg::Tokens {
             owner,
             start_after,
             limit,

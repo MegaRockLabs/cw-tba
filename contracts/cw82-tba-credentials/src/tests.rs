@@ -6,7 +6,7 @@ mod tests {
     
 
     use cosmwasm_std::{
-        coins, testing::{mock_dependencies, mock_env, mock_info}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
+        coins, testing::{message_info, mock_dependencies, mock_env}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
     };
     use cw_tba::{encode_feegrant_msg, BasicAllowance, ExecuteAccountMsg, TokenInfo};
     use saa::{messages::{MsgDataToSign, SignedDataMsg}, Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
@@ -21,16 +21,16 @@ mod tests {
 
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info("alice", &vec![]);
+        let info = message_info(&Addr::unchecked("alice"), &vec![]);
         
 
         let cred = Credential::CosmosArbitrary(saa::CosmosArbitrary {
             pubkey: Binary::from_base64("A2LjUH7Q0gi7+Wi0/MnXMZqN8slsz7iHMfTWp8xUXspH").unwrap(),
             signature: Binary::from_base64("TFcYDwzxeRLqowzTOCx0RL0pvDgKngh8ijdNBzFEcMtu5HZVhN03sY3BG9DNIqwuuiJkZDcQFE2CCVM5PwLHpQ==").unwrap(),
-            message: Binary("Hello".as_bytes().to_vec()),
+            message: Binary::new("Hello".as_bytes().to_vec()),
             hrp: Some(String::from("archway")),
         });
-        let res = cred.verify_cosmwasm(deps.as_ref().api, &env);
+        let res = cred.verify_cosmwasm(deps.as_ref().api);
         assert!(res.is_ok());
 
         let auth_data  = CredentialData {
@@ -39,7 +39,7 @@ mod tests {
             primary_index: None,
         };
 
-        let res = auth_data.verify_cosmwasm(deps.as_ref().api, &env);
+        let res = auth_data.verify_cosmwasm(deps.as_ref().api);
         assert!(res.is_ok());
 
         let res = instantiate(
@@ -68,7 +68,7 @@ mod tests {
 
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info("alice", &vec![]);
+        let info = message_info(&Addr::unchecked("alice"), &vec![]);
 
 
          let cred = Credential::CosmosArbitrary(saa::CosmosArbitrary {
@@ -86,7 +86,7 @@ mod tests {
         };
 
 
-        let res = auth_data.verify_cosmwasm(deps.as_ref().api, &env);
+        let res = auth_data.verify_cosmwasm(deps.as_ref().api);
         assert!(res.is_ok());
 
         let res = instantiate(
@@ -154,7 +154,7 @@ mod tests {
             pubkey: pubkey.clone().into(),
             hrp: Some("archway".to_string())
         };
-        let res = cred.verify_cosmwasm(deps.as_ref().api, &env);
+        let res = cred.verify_cosmwasm(deps.as_ref().api);
         
 
         assert!(res.is_ok());
@@ -218,7 +218,6 @@ mod tests {
 
         let mut deps = mock_dependencies();
         let deps = deps.as_ref();
-        let env = mock_env();
 
         let public_key = Binary::from_base64("BGDRdC9Ynea9vlpLxFZmEGL1cYpxGgzRvEMzlugVfmYOyACjQ5wHA8DNuCR4GI/Sfj6OkVNlyvuwyfkeOPavcG8=").unwrap();
         let auth_data  = Binary::from_base64("SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2MFAAAAAA==").unwrap();
@@ -238,7 +237,7 @@ mod tests {
             user_handle: None
         });
 
-        let res = credential.verify_cosmwasm(deps.api, &env);
+        let res = credential.verify_cosmwasm(deps.api);
 
         assert!(res.is_ok());
     }
@@ -258,10 +257,10 @@ mod tests {
         ).unwrap();
 
         match msg {
-            CosmosMsg::Stargate { type_url, value } => {
-                assert!(type_url == "/cosmos.feegrant.v1beta1.MsgGrantAllowance");
+            CosmosMsg::Any(msg) =>  {
+                assert!(msg.type_url == "/cosmos.feegrant.v1beta1.MsgGrantAllowance");
                 assert_eq!(
-                    value.to_base64().as_str(),
+                    msg.value.to_base64().as_str(),
                     "CkBzdGFyczFzaHFxZGhlZ2hrNnJldTUyNXdocTBjYXYwZDQzdDNhdWVteDdheWFud210bTc0MmVneGVzOWgya2MyEixzdGFyczF2ODVtNHN4bm5kd21zd3RkOGpyejNjZDJtOHU4ZWVncWR4eWx1ehqWAQosL2Nvc21vcy5mZWVncmFudC52MWJldGExLkFsbG93ZWRNc2dBbGxvd2FuY2USZgo+CicvY29zbW9zLmZlZWdyYW50LnYxYmV0YTEuQmFzaWNBbGxvd2FuY2USEwoRCgZ1c3RhcnMSBzEwMDAwMDASJC9jb3Ntd2FzbS53YXNtLnYxLk1zZ0V4ZWN1dGVDb250cmFjdA=="
                 )
             },

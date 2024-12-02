@@ -131,7 +131,7 @@ pub fn send_token<C: CosmosClient>(
     let send_msg = cw721_base::ExecuteMsg::<Option<Empty>, Empty>::SendNft {
         contract: recipient,
         token_id,
-        msg,
+        msg: msg.to_vec().into(),
     };
 
     chain.orc.execute(

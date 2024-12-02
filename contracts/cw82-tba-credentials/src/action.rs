@@ -1,10 +1,10 @@
 use crate::{
-    error::ContractError, msg::ContractResult, state::{KNOWN_TOKENS, MINT_CACHE, STATUS, TOKEN_INFO}, utils::assert_status
+    error::ContractError, msg::ContractResult, state::{KNOWN_TOKENS, STATUS, TOKEN_INFO}, utils::assert_status
 };
 use cosmwasm_std::{
-    to_json_binary, Binary, CosmosMsg, Empty, Env, MessageInfo, QuerierWrapper, ReplyOn, Response, StdResult, Storage, SubMsg, WasmMsg
+    to_json_binary, Binary, CosmosMsg, Env, MessageInfo, QuerierWrapper, ReplyOn, Response, StdResult, Storage, SubMsg, WasmMsg
 };
-use cw_tba::{encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance, ExecuteAccountMsg, Status};
+use cw_tba::{encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance, Cw721Msg, ExecuteAccountMsg, Status};
 
 pub const MINT_REPLY_ID: u64 = 1;
 
@@ -24,7 +24,7 @@ pub fn execute_action(
         ExecuteAccountMsg::MintToken {
             minter,
             msg,
-        } => try_minting_token(storage, info, minter, msg),
+        } => try_minting_token(info, minter, msg),
 
         ExecuteAccountMsg::TransferToken {
             collection,
@@ -81,15 +81,13 @@ pub fn try_executing(
 
 
 pub fn try_minting_token(
-    storage: &mut dyn Storage,
     info: &MessageInfo,
     collection: String,
     mint_msg: Binary,
 ) -> ContractResult {
-    MINT_CACHE.save(storage, &collection)?;
     Ok(Response::new().add_submessage(SubMsg {
         msg: WasmMsg::Execute {
-            contract_addr: collection,
+            contract_addr: collection.clone(),
             msg: mint_msg,
             funds: info.funds.clone(),
         }
@@ -97,6 +95,7 @@ pub fn try_minting_token(
         reply_on: ReplyOn::Success,
         id: MINT_REPLY_ID,
         gas_limit: None,
+        payload: to_json_binary(&collection)?
     }))
 }
 
@@ -176,7 +175,7 @@ pub fn try_transfering_token(
     
     let msg: CosmosMsg = WasmMsg::Execute {
         contract_addr: collection,
-        msg: to_json_binary(&cw721_base::ExecuteMsg::<Empty, Empty>::TransferNft {
+        msg: to_json_binary(&Cw721Msg::TransferNft {
             recipient,
             token_id,
         })?,
@@ -199,10 +198,10 @@ pub fn try_sending_token(
     KNOWN_TOKENS.remove(storage, (collection.as_str(), token_id.as_str()));
     let msg: CosmosMsg = WasmMsg::Execute {
         contract_addr: collection,
-        msg: to_json_binary(&cw721_base::ExecuteMsg::<Empty, Empty>::SendNft {
+        msg: to_json_binary(&Cw721Msg::SendNft {
             contract,
             token_id,
-            msg,
+            msg: msg.to_vec().into(),
         })?,
         funds: vec![],
     }

@@ -1,15 +1,15 @@
 use crate::{
     error::ContractError,
     msg::Status,
-    state::{KNOWN_TOKENS, MINT_CACHE, PUBKEY, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO},
+    state::{KNOWN_TOKENS, PUBKEY, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO},
     utils::{assert_registry, assert_status, is_ok_cosmos_msg},
 };
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, Coin, CosmosMsg, Deps, DepsMut, Empty, Env, ReplyOn, Response,
+    to_json_binary, Addr, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, ReplyOn, Response,
     StdResult, SubMsg, WasmMsg,
 };
 use cw_ownable::{assert_owner, initialize_owner, is_owner};
-use cw_tba::{encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance};
+use cw_tba::{encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance, Cw721Msg};
 
 pub const MINT_REPLY_ID: u64 = 1;
 
@@ -35,10 +35,9 @@ pub fn try_minting_token(
 ) -> Result<Response, ContractError> {
     assert_owner(deps.storage, &sender)?;
     assert_status(deps.storage)?;
-    MINT_CACHE.save(deps.storage, &collection)?;
     Ok(Response::new().add_submessage(SubMsg {
         msg: WasmMsg::Execute {
-            contract_addr: collection,
+            contract_addr: collection.clone(),
             msg,
             funds,
         }
@@ -46,6 +45,7 @@ pub fn try_minting_token(
         reply_on: ReplyOn::Success,
         id: MINT_REPLY_ID,
         gas_limit: None,
+        payload: to_json_binary(&collection)?,
     }))
 }
 
@@ -186,7 +186,7 @@ pub fn try_transfering_token(
     KNOWN_TOKENS.remove(deps.storage, (collection.as_str(), token_id.as_str()));
     let msg: CosmosMsg = WasmMsg::Execute {
         contract_addr: collection,
-        msg: to_json_binary(&cw721_base::ExecuteMsg::<Empty, Empty>::TransferNft {
+        msg: to_json_binary(&Cw721Msg::TransferNft {
             recipient,
             token_id,
         })?,
@@ -210,10 +210,10 @@ pub fn try_sending_token(
     KNOWN_TOKENS.remove(deps.storage, (collection.as_str(), token_id.as_str()));
     let msg: CosmosMsg = WasmMsg::Execute {
         contract_addr: collection,
-        msg: to_json_binary(&cw721_base::ExecuteMsg::<Empty, Empty>::SendNft {
+        msg: to_json_binary(&Cw721Msg::SendNft {
             contract,
             token_id,
-            msg,
+            msg: msg.to_vec().into(),
         })?,
         funds,
     }
@@ -227,7 +227,6 @@ pub fn try_purging(deps: DepsMut, sender: Addr) -> Result<Response, ContractErro
     assert_registry(deps.storage, &sender)?;
     KNOWN_TOKENS.clear(deps.storage);
     REGISTRY_ADDRESS.remove(deps.storage);
-    MINT_CACHE.remove(deps.storage);
     TOKEN_INFO.remove(deps.storage);
     SERIAL.remove(deps.storage);
     PUBKEY.remove(deps.storage);

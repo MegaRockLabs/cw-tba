@@ -1,7 +1,7 @@
 pub mod contract;
 pub mod error;
 pub mod msg;
-mod execute;
+pub mod execute;
 mod action;
 mod query;
 mod state;

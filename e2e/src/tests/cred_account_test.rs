@@ -1,5 +1,5 @@
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
-use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+use cosmwasm_std::testing::{message_info, mock_dependencies, mock_env};
 use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, Empty};
 use cw82_tba_credentials::contract::instantiate;
 use cw82_tba_credentials::execute::try_executing;
@@ -9,14 +9,15 @@ use saa::messages::{MsgDataToSign, SignedDataMsg};
 use test_context::test_context;
 
 use cw82_tba_credentials::msg::{ExecuteMsg, InstantiateMsg};
+
 use crate::helpers::helper::{
     get_cred_data, get_init_address, instantiate_collection, CRED_ACOUNT_NAME
 };
+
 use crate::helpers::{
     chain::Chain,
     helper::full_setup,
 };
-
 
 
 #[test_context(Chain)]
@@ -93,7 +94,7 @@ fn test(chain: &mut Chain) {
 
     let mut deps = mock_dependencies();
     let mut env = mock_env();
-    let info = mock_info(user.account.address.as_str(), &[]);
+    let info = message_info(&Addr::unchecked(user.account.address.as_str()), &vec![]);
 
     env.block.chain_id = chain.cfg.orc_cfg.chain_cfg.chain_id.clone();
     env.contract.address = Addr::unchecked(data.cred_token_account.clone());
@@ -114,7 +115,7 @@ fn test(chain: &mut Chain) {
     let init_res = instantiate(
         deps.as_mut(), 
         env.clone(), 
-        mock_info(data.registry.as_str(), &[]), 
+        message_info(&Addr::unchecked(data.registry.as_str()), &[]), 
         init_msg
     );
     assert!(init_res.is_ok());

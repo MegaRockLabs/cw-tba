@@ -1,6 +1,6 @@
 use crate::{
     action::execute_action, error::ContractError, msg::{ContractResult, SignedMessages}, state::{
-        save_credentials, KNOWN_TOKENS, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER
+        save_credentials, KNOWN_TOKENS, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER
     }, utils::{assert_caller, assert_ok_cosmos_msg, assert_owner_derivable, assert_registry, assert_status, assert_valid_signed_action}
 };
 use cosmwasm_std::{ensure, from_json, Api, CosmosMsg, DepsMut, Env, MessageInfo, Response, Storage};
@@ -73,10 +73,12 @@ pub fn try_updating_account_data(
     let owner = if is_owner(deps.storage, &info.sender)? {
         info.sender.clone()
     } else {
-        data.update(op, deps.api, deps.storage, &env, &info)?;
         assert_owner_derivable(deps.api, deps.storage, &data, None)?;
         get_ownership(deps.storage)?.owner.unwrap()
     };
+    
+    data.update_cosmwasm(op, deps.api, deps.storage, &env, &info)?;
+
     save_credentials(deps.api, deps.storage, &env, info, data, owner.to_string())?;
     Ok(Response::new().add_attributes(vec![("action", "update_account_data")]))
 }
@@ -151,7 +153,6 @@ pub fn try_purging(api: &dyn Api, store: &mut dyn Storage, sender: &str) -> Cont
     CONTRACT.remove(store);
     REGISTRY_ADDRESS.remove(store);
     TOKEN_INFO.remove(store);
-    MINT_CACHE.remove(store);
     STATUS.remove(store);
     SERIAL.remove(store);
     WITH_CALLER.remove(store);
