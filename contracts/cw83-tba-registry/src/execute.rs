@@ -10,7 +10,7 @@ use cw_tba::{
 
 
 use crate::{
-    error::ContractError, funds::checked_funds, registry::construct_label, state::{REGISTRY_PARAMS, TOKEN_ADDRESSES}
+    error::ContractError, funds::checked_funds, registry::construct_label, state::{LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES}
 };
 
 pub fn create_account<T: Serialize, A: Serialize>(
@@ -37,6 +37,8 @@ pub fn create_account<T: Serialize, A: Serialize>(
     ensure!(owner == info.sender.to_string() || is_manager, ContractError::Unauthorized {});
     verify_nft_ownership(&deps.querier, owner.as_str(), token_info.clone())?;
 
+    LAST_ATTEMPTING.save(deps.storage, &token_info)?;
+    
     let mut msgs : Vec<CosmosMsg> = Vec::with_capacity(1);
     let funds = checked_funds(deps.storage, &info)?;
 
@@ -79,7 +81,6 @@ pub fn create_account<T: Serialize, A: Serialize>(
             }),
             reply_on: ReplyOn::Success,
             gas_limit: None,
-            payload: to_json_binary(&token_info)?,
         })
         .add_attributes(vec![
             ("action", if reset { "reset_account"} else { "create_account" }),

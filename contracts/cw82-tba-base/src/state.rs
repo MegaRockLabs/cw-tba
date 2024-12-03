@@ -9,4 +9,5 @@ pub static TOKEN_INFO: Item<TokenInfo> = Item::new("t");
 pub static STATUS: Item<Status> = Item::new("s");
 pub static PUBKEY: Item<Binary> = Item::new("p");
 pub static SERIAL: Item<u128> = Item::new("l");
+pub static MINT_CACHE: Item<String> = Item::new("m");
 pub static KNOWN_TOKENS: Map<(&str, &str), bool> = Map::new("k");

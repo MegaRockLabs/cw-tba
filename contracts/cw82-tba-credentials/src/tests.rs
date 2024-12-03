@@ -6,7 +6,7 @@ mod tests {
     
 
     use cosmwasm_std::{
-        coins, testing::{message_info, mock_dependencies, mock_env}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
+        coins, testing::{mock_info, mock_dependencies, mock_env}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
     };
     use cw_tba::{encode_feegrant_msg, BasicAllowance, ExecuteAccountMsg, TokenInfo};
     use saa::{messages::{MsgDataToSign, SignedDataMsg}, Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
@@ -21,7 +21,7 @@ mod tests {
 
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = message_info(&Addr::unchecked("alice"), &vec![]);
+        let info = mock_info("alice", &vec![]);
         
 
         let cred = Credential::CosmosArbitrary(saa::CosmosArbitrary {
@@ -68,7 +68,7 @@ mod tests {
 
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = message_info(&Addr::unchecked("alice"), &vec![]);
+        let info = mock_info("alice", &vec![]);
 
 
          let cred = Credential::CosmosArbitrary(saa::CosmosArbitrary {
@@ -257,10 +257,10 @@ mod tests {
         ).unwrap();
 
         match msg {
-            CosmosMsg::Any(msg) =>  {
-                assert!(msg.type_url == "/cosmos.feegrant.v1beta1.MsgGrantAllowance");
+            CosmosMsg::Stargate { type_url, value} =>  {
+                assert!(type_url == "/cosmos.feegrant.v1beta1.MsgGrantAllowance");
                 assert_eq!(
-                    msg.value.to_base64().as_str(),
+                    value.to_base64().as_str(),
                     "CkBzdGFyczFzaHFxZGhlZ2hrNnJldTUyNXdocTBjYXYwZDQzdDNhdWVteDdheWFud210bTc0MmVneGVzOWgya2MyEixzdGFyczF2ODVtNHN4bm5kd21zd3RkOGpyejNjZDJtOHU4ZWVncWR4eWx1ehqWAQosL2Nvc21vcy5mZWVncmFudC52MWJldGExLkFsbG93ZWRNc2dBbGxvd2FuY2USZgo+CicvY29zbW9zLmZlZWdyYW50LnYxYmV0YTEuQmFzaWNBbGxvd2FuY2USEwoRCgZ1c3RhcnMSBzEwMDAwMDASJC9jb3Ntd2FzbS53YXNtLnYxLk1zZ0V4ZWN1dGVDb250cmFjdA=="
                 )
             },

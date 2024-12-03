@@ -1,6 +1,6 @@
 use anybuf::Anybuf;
 use cosmwasm_schema::{cw_serde, serde::Serialize, QueryResponses};
-use cosmwasm_std::{AnyMsg, Binary, Coin, CosmosMsg, Empty, StdResult, Timestamp};
+use cosmwasm_std::{Binary, Coin, CosmosMsg, Empty, StdResult, Timestamp};
 use cw82::smart_account_query;
 use cw_ownable::cw_ownable_query;
 use schemars::JsonSchema;
@@ -246,7 +246,7 @@ pub fn encode_feegrant_msg(
         );
 
 
-    let msg : CosmosMsg = CosmosMsg::Any(AnyMsg {
+    let msg : CosmosMsg = CosmosMsg::Stargate {
         type_url: "/cosmos.feegrant.v1beta1.MsgGrantAllowance".to_string(),
         value: anybuf::Anybuf::new()
                 .append_string(1, granter)
@@ -254,7 +254,7 @@ pub fn encode_feegrant_msg(
                 .append_message(3, &allowed_msg)
                 .into_vec()
                 .into()
-    });
+    };
 
 
     Ok(msg)

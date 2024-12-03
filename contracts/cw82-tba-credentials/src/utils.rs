@@ -131,8 +131,8 @@ pub fn assert_ok_wasm_msg(msg: &WasmMsg) -> StdResult<()> {
 pub fn assert_ok_cosmos_msg(msg: &CosmosMsg) -> StdResult<()> {
     match msg {
         CosmosMsg::Wasm(msg) => assert_ok_wasm_msg(msg),
-        CosmosMsg::Any(msg)  => {
-            if msg.type_url.to_lowercase().contains("authz") {
+        CosmosMsg::Stargate { type_url, .. }  => {
+            if type_url.to_lowercase().contains("authz") {
                 Err(StdError::generic_err("Not Supported"))
             } else {
                 Ok(())

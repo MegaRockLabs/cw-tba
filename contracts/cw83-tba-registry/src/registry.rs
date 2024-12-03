@@ -69,7 +69,6 @@ impl Cw83TokenRegistryContract {
         funds: Vec<Coin>,
         serial: Option<u64>,
         actions: Option<Vec<CosmosMsg<E>>>,
-        payload: Option<Binary>,
     ) -> StdResult<SubMsg> {
         Ok(SubMsg {
             id: CREATE_ACCOUNT_REPLY_ID,
@@ -84,7 +83,6 @@ impl Cw83TokenRegistryContract {
             )?,
             reply_on: ReplyOn::Success,
             gas_limit: None,
-            payload: payload.unwrap_or_default(),
         })
     }
 

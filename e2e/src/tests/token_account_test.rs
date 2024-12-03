@@ -1,7 +1,7 @@
 use cosm_orc::orchestrator::cosm_orc::tokio_block;
 use cosm_tome::chain::coin::Coin;
 use cosm_tome::{chain::request::TxOptions, modules::bank::model::SendRequest};
-use cosmwasm_std::{from_json, to_json_binary, AnyMsg, BankMsg, Binary, CosmosMsg, Empty, WasmMsg};
+use cosmwasm_std::{from_json, to_json_binary, BankMsg, Binary, CosmosMsg, Empty, WasmMsg};
 use cw_ownable::Ownership;
 use cw_tba::TokenInfo;
 use test_context::test_context;
@@ -76,10 +76,10 @@ fn can_execute_test(chain: &mut Chain) {
             chain,
             &data.token_account,
             data.signer_address.clone(),
-            CosmosMsg::Any(AnyMsg {
+            CosmosMsg::Stargate { 
                 type_url: String::default(),
                 value: Binary::default()
-            }) 
+            }
         )
         .can_execute
     );
@@ -90,10 +90,10 @@ fn can_execute_test(chain: &mut Chain) {
             chain,
             &data.token_account,
             data.signer_address.clone(),
-            CosmosMsg::Any(AnyMsg {
+            CosmosMsg::Stargate {
                 type_url: String::from("/cosmos/authz/v1beta1/..."),
                 value: Binary::default()
-            }) 
+            }
         )
         .can_execute
     );

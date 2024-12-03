@@ -1,7 +1,7 @@
 use crate::{
     error::ContractError,
     msg::Status,
-    state::{KNOWN_TOKENS, PUBKEY, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO},
+    state::{KNOWN_TOKENS, MINT_CACHE, PUBKEY, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO},
     utils::{assert_registry, assert_status, is_ok_cosmos_msg},
 };
 use cosmwasm_std::{
@@ -35,6 +35,7 @@ pub fn try_minting_token(
 ) -> Result<Response, ContractError> {
     assert_owner(deps.storage, &sender)?;
     assert_status(deps.storage)?;
+    MINT_CACHE.save(deps.storage, &collection)?;
     Ok(Response::new().add_submessage(SubMsg {
         msg: WasmMsg::Execute {
             contract_addr: collection.clone(),
@@ -44,8 +45,7 @@ pub fn try_minting_token(
         .into(),
         reply_on: ReplyOn::Success,
         id: MINT_REPLY_ID,
-        gas_limit: None,
-        payload: to_json_binary(&collection)?,
+        gas_limit: None
     }))
 }
 

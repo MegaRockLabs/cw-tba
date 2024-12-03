@@ -1,5 +1,5 @@
 use crate::{
-    error::ContractError, msg::ContractResult, state::{KNOWN_TOKENS, STATUS, TOKEN_INFO}, utils::assert_status
+    error::ContractError, msg::ContractResult, state::{KNOWN_TOKENS, MINT_CACHE, STATUS, TOKEN_INFO}, utils::assert_status
 };
 use cosmwasm_std::{
     to_json_binary, Binary, CosmosMsg, Env, MessageInfo, QuerierWrapper, ReplyOn, Response, StdResult, Storage, SubMsg, WasmMsg
@@ -24,7 +24,7 @@ pub fn execute_action(
         ExecuteAccountMsg::MintToken {
             minter,
             msg,
-        } => try_minting_token(info, minter, msg),
+        } => try_minting_token(storage, info, minter, msg),
 
         ExecuteAccountMsg::TransferToken {
             collection,
@@ -81,10 +81,12 @@ pub fn try_executing(
 
 
 pub fn try_minting_token(
+    storage: &mut dyn Storage,
     info: &MessageInfo,
     collection: String,
     mint_msg: Binary,
 ) -> ContractResult {
+    MINT_CACHE.save(storage, &collection)?;
     Ok(Response::new().add_submessage(SubMsg {
         msg: WasmMsg::Execute {
             contract_addr: collection.clone(),
@@ -94,8 +96,7 @@ pub fn try_minting_token(
         .into(),
         reply_on: ReplyOn::Success,
         id: MINT_REPLY_ID,
-        gas_limit: None,
-        payload: to_json_binary(&collection)?
+        gas_limit: None
     }))
 }
 

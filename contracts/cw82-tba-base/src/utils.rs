@@ -27,7 +27,7 @@ pub fn assert_ok_cosmos_msg(msg: &CosmosMsg) -> StdResult<()> {
     let bad_msg_error = StdError::generic_err("Not Supported");
     match msg {
         CosmosMsg::Wasm(msg) => assert_ok_wasm_msg(msg),
-        CosmosMsg::Any { .. } => Err(bad_msg_error),
+        CosmosMsg::Stargate { .. } => Err(bad_msg_error),
         _ => Ok(()),
     }
 }

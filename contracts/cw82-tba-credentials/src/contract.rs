@@ -18,7 +18,7 @@ use crate::{
     error::ContractError, execute, 
     msg::{ContractResult, CredQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg}, 
     query::{assets, can_execute, credentials, full_info, known_tokens, valid_signature, valid_signatures}, 
-    state::{save_credentials, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO}, utils::assert_caller
+    state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO}, utils::assert_caller
 };
 
 
@@ -193,7 +193,8 @@ pub fn migrate(deps: DepsMut, _: Env, _: MigrateMsg) -> ContractResult {
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult {
     match msg.id {
         MINT_REPLY_ID => {
-            let collection = from_json(&msg.payload)?;
+            let collection = MINT_CACHE.load(deps.storage)?;
+            MINT_CACHE.remove(deps.storage);
             // query all the held tokens for the collection stored in CACHE
             action::try_updating_known_tokens(
                 &deps.querier,

@@ -11,7 +11,7 @@ pub static REGISTRY_ADDRESS: Item<String> = Item::new("r");
 pub static TOKEN_INFO: Item<TokenInfo> = Item::new("t");
 pub static STATUS: Item<Status> = Item::new("s");
 pub static SERIAL: Item<u128> = Item::new("l");
-
+pub static MINT_CACHE: Item<String> = Item::new("m");
 pub static WITH_CALLER: Item<bool> = Item::new("w");
 pub static KNOWN_TOKENS: Map<(&str, &str), bool> = Map::new("k");
 
