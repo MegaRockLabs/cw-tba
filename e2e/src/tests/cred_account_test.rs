@@ -99,7 +99,10 @@ fn test(chain: &mut Chain) {
     env.block.chain_id = chain.cfg.orc_cfg.chain_cfg.chain_id.clone();
     env.contract.address = Addr::unchecked(data.cred_token_account.clone());
 
-    let cred_data = get_cred_data(chain, &user);
+    println!("contract address: {:?}", env.contract.address);
+
+    let cred_data = get_cred_data(chain, &user, msgs.clone());
+    println!("Cred data: {:?}", cred_data);
 
     let init_msg = InstantiateMsg {
         owner: user.account.address.clone(),
@@ -111,6 +114,9 @@ fn test(chain: &mut Chain) {
         actions: None
     };
 
+    println!("Registry: {:?}", data.registry);
+
+    println!("User account: {:?}", user.account.address);
 
     let init_res = instantiate(
         deps.as_mut(), 
@@ -118,6 +124,8 @@ fn test(chain: &mut Chain) {
         message_info(&Addr::unchecked(data.registry.as_str()), &[]), 
         init_msg
     );
+
+    println!("Init res: {:?}", init_res);
     assert!(init_res.is_ok());
     init_res.unwrap();
 

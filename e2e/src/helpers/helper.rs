@@ -10,7 +10,7 @@ use cosm_tome::signing_key::key::mnemonic_to_signing_key;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{from_json, to_json_binary, Binary, Coin, CosmosMsg, Empty, Timestamp};
 use saa::cosmos_utils::preamble_msg_arb_036;
-use saa::messages::MsgDataToVerify;
+use saa::messages::MsgDataToSign;
 use std::str::FromStr;
 
 
@@ -180,18 +180,20 @@ pub fn create_simple_token_account<C: CosmosClient>(
 
 
 
-pub fn get_cred_data<C: CosmosClient>(
+pub fn get_cred_data<C: CosmosClient, M : Serialize>(
     chain: &mut Chain<C>,
     user: &SigningAccount,
+    messages: Vec<M>,
 ) -> CredentialData {
     let chain_id = chain.cfg.orc_cfg.chain_cfg.chain_id.clone();
     let hrp = chain.cfg.orc_cfg.chain_cfg.prefix.clone();
     let sk = mnemonic_to_signing_key(&user.account.mnemonic, &user.key.derivation_path).unwrap();
     let registry = chain.orc.contract_map.address(BASE_REGISTRY_NAME).unwrap();
     
-    let message = MsgDataToVerify {
+    let message = MsgDataToSign {
         chain_id: chain_id.clone(),
         contract_address: registry,
+        messages,
         nonce: String::from("0"),
     };
 
@@ -224,8 +226,7 @@ pub fn create_cred_token_account<C: CosmosClient>(
     let chain_id = chain.cfg.orc_cfg.chain_cfg.chain_id.clone();
     //let denom = chain.cfg.orc_cfg.chain_cfg.denom.clone();
 
-
-    let account_data = get_cred_data(chain, user);
+    let account_data = get_cred_data(chain, user, Vec::<String>::new());
 
     account_data.verify().unwrap();
     

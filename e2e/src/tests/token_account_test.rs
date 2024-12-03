@@ -1,7 +1,7 @@
 use cosm_orc::orchestrator::cosm_orc::tokio_block;
 use cosm_tome::chain::coin::Coin;
 use cosm_tome::{chain::request::TxOptions, modules::bank::model::SendRequest};
-use cosmwasm_std::{from_json, to_json_binary, BankMsg, Binary, CosmosMsg, Empty, WasmMsg};
+use cosmwasm_std::{from_json, to_json_binary, AnyMsg, BankMsg, Binary, CosmosMsg, Empty, WasmMsg};
 use cw_ownable::Ownership;
 use cw_tba::TokenInfo;
 use test_context::test_context;
@@ -18,6 +18,7 @@ use crate::helpers::{
     chain::Chain,
     helper::{can_execute, full_setup, wasm_query, wasm_query_typed},
 };
+
 
 #[test_context(Chain)]
 #[test]
@@ -75,15 +76,28 @@ fn can_execute_test(chain: &mut Chain) {
             chain,
             &data.token_account,
             data.signer_address.clone(),
-            CosmosMsg::Stargate {
+            CosmosMsg::Any(AnyMsg {
                 type_url: String::default(),
                 value: Binary::default()
-            }
+            }) 
+        )
+        .can_execute
+    );
+
+    // authz
+    assert!(
+        !can_execute(
+            chain,
+            &data.token_account,
+            data.signer_address.clone(),
+            CosmosMsg::Any(AnyMsg {
+                type_url: String::from("/cosmos/authz/v1beta1/..."),
+                value: Binary::default()
+            }) 
         )
         .can_execute
     );
 }
-
 #[test_context(Chain)]
 #[test]
 #[ignore]
@@ -591,6 +605,7 @@ fn tokens_acknowlegement(chain: &mut Chain) {
     assert_eq!(res.tokens.len(), 3);
 }
 
+
 #[test_context(Chain)]
 #[test]
 #[ignore]
@@ -599,10 +614,9 @@ fn direct_mint(chain: &mut Chain) {
     let user = chain.cfg.users[0].clone();
 
     let init_res =
-        instantiate_collection(chain, user.account.address.clone(), None, &user.key).unwrap();
+        instantiate_collection(chain, data.token_account.clone(), None, &user.key).unwrap();
 
     let collection = get_init_address(init_res.res);
-
     let mint_msg: cw721_base::ExecuteMsg<Option<Empty>, Empty> = cw721_base::ExecuteMsg::Mint {
         token_id: "1".to_string(),
         owner: data.token_account.clone(),
@@ -623,17 +637,16 @@ fn direct_mint(chain: &mut Chain) {
             &account_msg,
             &user.key,
             vec![],
-        )
-        .unwrap_err();
+        ).unwrap();
+    
 
-    /*   let tokens : KnownTokensResponse = wasm_query_typed(
+    let tokens : KnownTokensResponse = wasm_query_typed(
         chain,
         &data.token_account,
         &QueryMsg::KnownTokens { skip: None, limit: None }
     ).unwrap();
 
     assert_eq!(tokens.len(), 1);
-
 
 
     let res : cw721::TokensResponse = wasm_query_typed(
@@ -645,5 +658,5 @@ fn direct_mint(chain: &mut Chain) {
             limit: None
         }
     ).unwrap();
-    assert_eq!(res.tokens.len(), 1); */
+    assert_eq!(res.tokens.len(), 1);
 }

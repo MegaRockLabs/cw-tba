@@ -4,7 +4,6 @@ use crate::{
 };
 use cosmwasm_std::{Addr, CosmosMsg, QuerierWrapper, StdError, StdResult, Storage, WasmMsg};
 
-pub const HRP: &str = "archway";
 
 pub fn assert_status(store: &dyn Storage) -> StdResult<bool> {
     let status = STATUS.load(store)?;
