@@ -15,7 +15,7 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = []
+default = ["archway"]
 archway = []
 library = []
 

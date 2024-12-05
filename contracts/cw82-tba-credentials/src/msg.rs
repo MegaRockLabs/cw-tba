@@ -1,4 +1,4 @@
-use cosmwasm_schema::schemars;
+use cosmwasm_schema::{cw_serde, schemars};
 use cosmwasm_std::{Addr, Coin, Response};
 use cw_tba::{ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, QueryAccountMsg, Status, TokenInfo};
 use saa::{messages::{AccountCredentials, SignedDataMsg}, CredentialData};
@@ -6,8 +6,7 @@ use crate::error::ContractError;
 
 
 
-#[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum CredQueryMsg {
     FullInfo {
         skip: Option<u32>,
@@ -17,7 +16,7 @@ pub enum CredQueryMsg {
 }
 
 
-#[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[cw_serde]
 pub struct FullInfoResponse {
     /// Current owner of the token account that is ideally a holder of an NFT
     pub ownership: cw_ownable::Ownership<Addr>,
@@ -35,13 +34,15 @@ pub struct FullInfoResponse {
     pub credentials: AccountCredentials
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+
+
+#[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema, Clone, Debug, PartialEq)]
 pub struct SignedMessages {
     pub messages: Vec<ExecuteAccountMsg>
 }
 
 
-#[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[cw_serde]
 pub enum SudoMsg {
     #[cfg(feature = "archway")]
     CwGrant(crate::grants::CwGrant)

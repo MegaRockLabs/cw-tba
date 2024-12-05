@@ -1,5 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use saa::storage::ACCOUNT_NUMBER;
 #[cfg(target_arch = "wasm32")]
 use crate::utils::query_if_registry;
 
@@ -18,7 +19,7 @@ use crate::{
     error::ContractError, execute, 
     msg::{ContractResult, CredQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg}, 
     query::{assets, can_execute, credentials, full_info, known_tokens, valid_signature, valid_signatures}, 
-    state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO}, utils::assert_caller
+    state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, STATUS, TOKEN_INFO}, utils::assert_caller
 };
 
 
@@ -60,7 +61,6 @@ pub fn instantiate(
     TOKEN_INFO.save(deps.storage, &msg.token_info)?;
     REGISTRY_ADDRESS.save(deps.storage, &info.sender.to_string())?;
     STATUS.save(deps.storage, &Status { frozen: false })?;
-    SERIAL.save(deps.storage, &0u128)?;
 
     save_credentials(
         deps.api, 
@@ -103,8 +103,6 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
     if REGISTRY_ADDRESS.load(deps.storage).is_err() {
         return Err(ContractError::Deleted {});
     }
-    SERIAL.update(deps.storage, |s| Ok::<u128, StdError>((s + 1) % u128::MAX))?;
-    
     match msg {
         ExecuteMsg::Execute { 
             msgs 
@@ -154,7 +152,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Token {} => to_json_binary(&TOKEN_INFO.load(deps.storage)?),
         QueryMsg::Status {} => to_json_binary(&STATUS.load(deps.storage)?),
-        QueryMsg::Serial {} => to_json_binary(&SERIAL.load(deps.storage)?),
+        QueryMsg::AccountNumber {} => to_json_binary(&ACCOUNT_NUMBER.load(deps.storage)?),
         QueryMsg::Registry {} => to_json_binary(&REGISTRY_ADDRESS.load(deps.storage)?),
         QueryMsg::Ownership {} => to_json_binary(&get_ownership(deps.storage)?),
         QueryMsg::CanExecute { sender, msg } => {

@@ -1,6 +1,6 @@
 use crate::{
     action::execute_action, error::ContractError, msg::{ContractResult, SignedMessages}, state::{
-        save_credentials, KNOWN_TOKENS, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO, WITH_CALLER
+        save_credentials, KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO, WITH_CALLER
     }, utils::{assert_caller, assert_ok_cosmos_msg, assert_owner_derivable, assert_registry, assert_status, assert_valid_signed_action}
 };
 use cosmwasm_std::{ensure, from_json, Api, CosmosMsg, DepsMut, Env, MessageInfo, Response, Storage};
@@ -9,7 +9,7 @@ use cw22::SUPPORTED_INTERFACES;
 use cw_ownable::{get_ownership, is_owner};
 use cw_tba::{verify_nft_ownership, Status};
 use saa::{ 
-    messages::SignedDataMsg, to_json_binary, CredentialData, UpdateOperation
+    messages::SignedDataMsg, storage::increment_account_number, to_json_binary, CredentialData, UpdateOperation
 };
 
 
@@ -49,6 +49,7 @@ pub fn try_executing(
             }
         } else {
             assert_caller(deps.as_ref(), info.sender.as_str())?;
+            increment_account_number(deps.storage)?;
             let msg = from_json(to_json_binary(&msg)?)?;
             assert_ok_cosmos_msg(&msg)?;
             res = res.add_message(msg);
@@ -154,7 +155,6 @@ pub fn try_purging(api: &dyn Api, store: &mut dyn Storage, sender: &str) -> Cont
     REGISTRY_ADDRESS.remove(store);
     TOKEN_INFO.remove(store);
     STATUS.remove(store);
-    SERIAL.remove(store);
     WITH_CALLER.remove(store);
     KNOWN_TOKENS.clear(store);
     Ok(Response::default().add_attribute("action", "purge"))

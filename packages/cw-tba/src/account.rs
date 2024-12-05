@@ -188,7 +188,7 @@ pub enum QueryAccountMsg<T = Empty, Q: JsonSchema = Empty> {
 
     /// Incremental number telling wether a direct interaction with the account has occured
     #[returns(u128)]
-    Serial {},
+    AccountNumber {},
 
     #[returns(())]
     Extension { msg: Q },

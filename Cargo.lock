@@ -3430,10 +3430,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3cb5ba0dc43242ce17de99c180e96db90b235b8a9fdc9543c96d2209116bd9f"
 
 [[package]]
-name = "saa-common"
-version = "0.22.0"
+name = "saa-auth"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "389d39c6153de08663178f7a7cf89dc29defc88c01cd25c66acfda5e96e82af6"
+checksum = "4e0b45931eb7c78d3aa3e904ec0b7a43ccac8765acfb9ece62f7c9036026447e"
+dependencies = [
+ "base64 0.22.1",
+ "bech32 0.11.0",
+ "hex",
+ "parity-scale-codec",
+ "saa-common",
+ "saa-curves",
+ "saa-schema",
+ "scale-info",
+ "serde",
+ "sha2 0.10.8",
+]
+
+[[package]]
+name = "saa-common"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fdd22ba1cc9691b17fcf45fe82ce754fee2ee0d67d4e4a753e4721b27902a91e"
 dependencies = [
  "base64 0.22.1",
  "bech32 0.11.0",
@@ -3459,9 +3477,9 @@ dependencies = [
 
 [[package]]
 name = "saa-curves"
-version = "0.22.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcffd1f25af6ea232d00f80222c86c8f0d6b7b30d1fb7df41e7fc5635e334d8e"
+checksum = "916d7d03d53aeb36f2436b7ece26831f4429d588fa2f323903499a2a104d203e"
 dependencies = [
  "bech32 0.11.0",
  "digest 0.10.7",
@@ -3475,28 +3493,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "saa-custom"
-version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a6a0d190eb04036d64693331c4ffb325954dd239da1e54acc5d4d6233e26cf4"
-dependencies = [
- "base64 0.22.1",
- "bech32 0.11.0",
- "hex",
- "parity-scale-codec",
- "saa-common",
- "saa-curves",
- "saa-schema",
- "scale-info",
- "serde",
- "sha2 0.10.8",
-]
-
-[[package]]
 name = "saa-macros-proto"
-version = "0.22.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fff1c534d3a0762e94a5ac5964c094060af0746f2ae4db153bc0962d6beb8d98"
+checksum = "97855c4e195efcf9a4f8329ba8779c910437089194cf82183d2b6ab41a53a33b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3505,9 +3505,9 @@ dependencies = [
 
 [[package]]
 name = "saa-schema"
-version = "0.22.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8fbb76cd24940834bca6856ce5174f6dba17a55c0e3aeb310627d33a028283b"
+checksum = "4e4611331a5be56112b399f4643ce4ff1617512f217706bf26fc0679c4324d37"
 dependencies = [
  "parity-scale-codec",
  "saa-macros-proto",
@@ -3990,14 +3990,14 @@ checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 
 [[package]]
 name = "smart-account-auth"
-version = "0.22.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "864c65a810a9de83caf48176de1395b9b35d6303578b3608b1b2eb743ae63d43"
+checksum = "a8a5406d16001e47d922a7975ce4fecb37020d1b79e4b33a274fb32fe73c834a"
 dependencies = [
  "parity-scale-codec",
+ "saa-auth",
  "saa-common",
  "saa-curves",
- "saa-custom",
  "saa-schema",
  "scale-info",
  "schemars",

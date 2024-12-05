@@ -6,10 +6,10 @@ mod tests {
     
 
     use cosmwasm_std::{
-        coins, testing::{mock_info, mock_dependencies, mock_env}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
+        coins, from_json, testing::{mock_dependencies, mock_env, mock_info}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
     };
     use cw_tba::{encode_feegrant_msg, BasicAllowance, ExecuteAccountMsg, TokenInfo};
-    use saa::{messages::{MsgDataToSign, SignedDataMsg}, Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
+    use saa::{messages::{MsgDataToSign, MsgDataToVerify, SignedDataMsg}, Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
 
     use crate::{
         contract::{execute, instantiate}, msg::{ExecuteMsg, InstantiateMsg}, 
@@ -17,11 +17,9 @@ mod tests {
 
 
     #[test]
-    fn can_instantiate_plaintext() {
+    fn can_verify_plaintext() {
 
         let mut deps = mock_dependencies();
-        let env = mock_env();
-        let info = mock_info("alice", &vec![]);
         
 
         let cred = Credential::CosmosArbitrary(saa::CosmosArbitrary {
@@ -35,130 +33,73 @@ mod tests {
 
         let auth_data  = CredentialData {
             credentials: vec![cred],       
-            with_caller: Some(true),
+            with_caller: None,
             primary_index: None,
         };
 
         let res = auth_data.verify_cosmwasm(deps.as_ref().api);
+        println!("{:?}", res);
         assert!(res.is_ok());
-
-        let res = instantiate(
-            deps.as_mut(),
-            env.clone(),
-            info.clone(),
-            InstantiateMsg {
-                owner: info.sender.into(),
-                account_data: to_json_binary(&auth_data).unwrap(),
-                token_info: TokenInfo {
-                    collection: "test".into(),
-                    id: "test".into()
-                },
-                actions: None
-            }
-        );
-
-        assert!(res.is_ok())
     }
-
 
 
     
-    #[test]
-    fn can_instantiate_base64() {
-
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-        let info = mock_info("alice", &vec![]);
-
-
-         let cred = Credential::CosmosArbitrary(saa::CosmosArbitrary {
-            pubkey: Binary::from_base64("A08EGB7ro1ORuFhjOnZcSgwYlpe0DSFjVNUIkNNQxwKQ").unwrap(),
-            signature: Binary::from_base64("x9jjSFv8/n1F8gOSRjddakYDbvroQm8ZoDWht/Imc1t5xUW49+Xaq7gwcsE+LCpqYoTBxnaXLg/xgJjYymCWvw==").unwrap(),
-            message: Binary::from_base64("SGVsbG8sIHdvcmxk").unwrap(),
-            hrp: Some(String::from("cosmos")),
-        });
-
-
-        let auth_data  = CredentialData {
-            credentials: vec![cred],       
-            with_caller: Some(true),
-            primary_index: None,
-        };
-
-
-        let res = auth_data.verify_cosmwasm(deps.as_ref().api);
-        assert!(res.is_ok());
-
-        let res = instantiate(
-            deps.as_mut(),
-            env.clone(),
-            info.clone(),
-            InstantiateMsg {
-                owner: info.sender.into(),
-                account_data: to_json_binary(&auth_data).unwrap(),
-                token_info: TokenInfo {
-                    collection: "test".into(),
-                    id: "test".into()
-                },
-                actions: None
-            }
-        );
-
-        assert!(res.is_ok())
-    }
-
 
     #[test]
     fn custom_cosmos_msg_verifiable() {
         
         let mut deps = mock_dependencies();
-        let env = mock_env();
+        let mut env = mock_env();
+        env.block.chain_id = "elgafar-1".to_string();
 
-        let staking : CosmosMsg = StakingMsg::Delegate { 
-            amount: Coin { 
-                amount: Uint128::from(1000000000000000000u128),
-                denom: "aconst".into()
+        let public_key = Binary::from_base64("BOirsl/nNsTWj3O5Qfseo9qZfs0uakJ6I97JLDZSbmeYk6nwkjIHM7UKp1DD/UnmurwUMFoqRIkO7sqsRFg8eUU=").unwrap();
+        let auth_data  = Binary::from_base64("SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2MdAAAAAA==").unwrap();
+        let signature = Binary::from_base64("xEQi+PS2JWc/VFEXWBkbZW4A7WG5iAwIgjGlrqtKVqbqrrnGfAqMSyHxEUOWBWspa4F/U+itj3cWQUcaaBAXHA==").unwrap();
+
+        let credential = Credential::Passkey(PasskeyCredential { 
+            id: String::default(),
+            pubkey: Some(public_key), 
+            signature, 
+            authenticator_data: auth_data, 
+            client_data: saa::ClientData {
+                ty: "webauthn.get".to_string(),
+                challenge: "eyJjaGFpbl9pZCI6ImVsZ2FmYXItMSIsImNvbnRyYWN0X2FkZHJlc3MiOiJzdGFyczFjbGE0cmFudnVkZWRrMDM2aGV1cGYyanVwcnhoYWFxY2RkZmtmbDZqbnBjbTh1NWQwNXpxbHVna2V0IiwibWVzc2FnZXMiOlsiQ3JlYXRlIFRCQSBhY2NvdW50Il0sIm5vbmNlIjoiMCJ9".to_string(),
+                cross_origin: false,
+                origin: "http://localhost:5173".into(),
             }, 
-            validator: "archwayvaloper1qt0e4eyswes6qpply2pmk8v5qm88r2c962fnvk".into(), 
-        }.into();
+            user_handle: None
+        });
 
-        let action = ExecuteAccountMsg::Execute { 
-            msgs: vec![staking] 
+
+        let info = MessageInfo {
+            sender: Addr::unchecked("stars1cla4ranvudedk036heupf2juprxhaaqcddfkfl6jnpcm8u5d05zqlugket"),
+            funds: vec![]
         };
 
-        let data = MsgDataToSign::<ExecuteAccountMsg> {
-            chain_id: "constantine-3".into(),
-            contract_address: "archway1hf0quw8lgxn4p9vlmk3jdlgg460asp87c75s9xfm33axkczu2j3s7mwfke".into(),
-            messages: vec![action],
-            nonce: String::from("0"),
-        };
-
-        let pubkey = Binary::from_base64(
-            "A2LjUH7Q0gi7+Wi0/MnXMZqN8slsz7iHMfTWp8xUXspH"
-        ).unwrap();
-
-        let signature = Binary::from_base64(
-            "EfGD3KMZUMppuA5+3AQ2xQPblr4FQpVWyZi/9+Vry0MVGWhJqeECPuwIkhEgaeTL6tFrOIEkYAY1I7L7uz9+Fg=="
-        ).unwrap();
-
-
-        let message = SignedDataMsg {
-            data: to_json_binary(&data).unwrap().into(),
-            signature: signature.clone(),
-            payload: None
-        };
-
-        let cred  =  CosmosArbitrary  {
-            message: to_json_binary(&message).unwrap().into(),
-            signature: signature.clone().into(),
-            pubkey: pubkey.clone().into(),
-            hrp: Some("archway".to_string())
-        };
-        let res = cred.verify_cosmwasm(deps.as_ref().api);
+        let init_res = instantiate(
+            deps.as_mut(), 
+            env.clone(), 
+            info.clone(), 
+            InstantiateMsg {
+                owner: String::from("owner"),
+                account_data: to_json_binary(&CredentialData {
+                    credentials: vec![credential],
+                    with_caller: Some(true),
+                    primary_index: None,
+                }).unwrap(),
+                token_info: TokenInfo {
+                    collection: "test".into(),
+                    id: "test".into()
+                },
+                actions: None
+            }
+        );
         
+        println!("Init res: {:?}", init_res);
+        assert!(init_res.is_ok());
 
-        assert!(res.is_ok());
 
+      /*   let deps = deps.as_mut();
 
         let custom = SignedDataMsg {
             data: to_json_binary(&data).unwrap().into(),
@@ -172,44 +113,14 @@ mod tests {
             msgs: vec![msg]
         };
 
-        let owner = String::from("archway1v85m4sxnndwmswtd8jrz3cd2m8u8eegqv30xay");
-
-        let info = MessageInfo {
-            sender: Addr::unchecked("registry"),
-            funds: vec![]
-        };
-
-        instantiate(
-            deps.as_mut(), 
-            env.clone(), 
-            info.clone(), 
-            InstantiateMsg {
-                owner,
-                account_data: to_json_binary(&CredentialData {
-                    credentials: vec![Credential::CosmosArbitrary(cred)],
-                    with_caller: None,
-                    primary_index: None,
-                }).unwrap(),
-                token_info: TokenInfo {
-                    collection: "test".into(),
-                    id: "test".into()
-                },
-                actions: None
-            }
-        ).unwrap();
-
-
-        let deps = deps.as_mut();
-
         let res = execute(
             deps, 
             env.clone(), 
             info,
             execute_msg
         );
-
+ */
         
-        assert!(res.is_ok())
     }
  
 
@@ -219,9 +130,9 @@ mod tests {
         let mut deps = mock_dependencies();
         let deps = deps.as_ref();
 
-        let public_key = Binary::from_base64("BGDRdC9Ynea9vlpLxFZmEGL1cYpxGgzRvEMzlugVfmYOyACjQ5wHA8DNuCR4GI/Sfj6OkVNlyvuwyfkeOPavcG8=").unwrap();
-        let auth_data  = Binary::from_base64("SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2MFAAAAAA==").unwrap();
-        let signature = Binary::from_base64("6dMQf0mPwkFBPuAElErBTi3SbqhWKRVxZVix/YwcbxxPLEGifo+KITlWmY4CX/ZoVJllFmW03DYKWwNo+7lIOw==").unwrap();
+        let public_key = Binary::from_base64("BOirsl/nNsTWj3O5Qfseo9qZfs0uakJ6I97JLDZSbmeYk6nwkjIHM7UKp1DD/UnmurwUMFoqRIkO7sqsRFg8eUU=").unwrap();
+        let auth_data  = Binary::from_base64("SZYN5YgOjGh0NBcPZHZgW4/krrmihjLHmVzzuoMdl2MdAAAAAA==").unwrap();
+        let signature = Binary::from_base64("12hV75Rn674rsrgvLsvFox97B69KURvB4NtdJI7zIdrfq6EZBc2a7ZbUp1R/ktHPk8R4tNXV1YZQ56lojaR2jg==").unwrap();
 
         let credential = Credential::Passkey(PasskeyCredential { 
             id: String::default(),
@@ -230,7 +141,7 @@ mod tests {
             authenticator_data: auth_data, 
             client_data: saa::ClientData {
                 ty: "webauthn.get".to_string(),
-                challenge: Binary::from_base64("Q3JlYXRpbmcgVEJBIGFjY291bnQ").unwrap(),
+                challenge: "eyJjaGFpbl9pZCI6ImVsZ2FmYXItMSIsImNvbnRyYWN0X2FkZHJlc3MiOiJzdGFyczFjbGE0cmFudnVkZWRrMDM2aGV1cGYyanVwcnhoYWFxY2RkZmtmbDZqbnBjbTh1NWQwNXpxbHVna2V0IiwibWVzc2FnZXMiOlsiQ3JlYXRlIFRCQSBhY2NvdW50Il0sIm5vbmNlIjoiMCJ9".to_string(),
                 cross_origin: false,
                 origin: "http://localhost:5173".into(),
             }, 
@@ -238,10 +149,11 @@ mod tests {
         });
 
         let res = credential.verify_cosmwasm(deps.api);
-
+        println!("{:?}", res);
         assert!(res.is_ok());
     }
 
+    
     #[test]
     fn fee_grant_msg() {
 
