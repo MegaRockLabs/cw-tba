@@ -1,14 +1,17 @@
-use cosmwasm_schema::{cw_serde, schemars::JsonSchema, QueryResponses};
+use cosmwasm_schema::{cw_serde, serde::Serialize};
 use cosmwasm_std::{Addr, Binary, Coin, Empty};
+use cw82::smart_account_query_t;
 pub use cw82::{
     smart_account_query, CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse,
 };
 use cw_ownable::cw_ownable_query;
 use cw_tba::{ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo};
+use cw_auths::session_query;
 
 pub type InstantiateMsg = InstantiateAccountMsg;
 pub type MigrateMsg = MigrateAccountMsg;
-pub type ExecuteMsg = ExecuteAccountMsg;
+
+
 
 #[cw_serde]
 pub struct Status {
@@ -44,11 +47,11 @@ pub struct FullInfoResponse {
 
 pub type KnownTokensResponse = Vec<TokenInfo>;
 
-#[smart_account_query]
+
+#[smart_account_query_t]
 #[cw_ownable_query]
-#[cw_serde]
-#[derive(QueryResponses)]
-pub enum QueryMsgBase<T = Empty, Q: JsonSchema = Empty> {
+#[session_query(ExecuteAccountMsg)]
+pub enum QueryMsgBase<T : Serialize + Clone = Empty> {
     /// Public key that is used to verify signed messages
     #[returns(Binary)]
     Pubkey {},
@@ -90,10 +93,8 @@ pub enum QueryMsgBase<T = Empty, Q: JsonSchema = Empty> {
     #[returns(u128)]
     Serial {},
 
-    #[returns(())]
-    Extension { msg: Q },
 }
 
 /// [TokenInfo] is used as a to query the account info
 /// so no need to return any additional data
-pub type QueryMsg = QueryMsgBase<Empty, Empty>;
+pub type QueryMsg = QueryMsgBase<Empty>;

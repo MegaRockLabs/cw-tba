@@ -1,18 +1,19 @@
-use cosmwasm_std::{from_json, Addr, Binary, CosmosMsg, Deps, Env, Order, StdResult};
-use cw82::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
-use cw_ownable::is_owner;
 use cw_tba::TokenInfo;
-use sha2::{Digest, Sha256};
+use cw_ownable::is_owner;
+use cosmwasm_std::{ensure, from_json, Addr, Binary, Deps, Env, Order, StdError, StdResult};
+use cw82::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
+use cw_auths::saa_types::{traits::Verifiable, CosmosArbitrary, Credential};
 
 use crate::{
     msg::{AssetsResponse, FullInfoResponse},
     state::{KNOWN_TOKENS, PUBKEY, REGISTRY_ADDRESS, STATUS, TOKEN_INFO},
-    utils::{assert_status, generate_amino_transaction_string, is_ok_cosmos_msg, status_ok},
+    utils::{assert_ok_cosmos_msg, assert_status, status_ok},
 };
 
 const DEFAULT_BATCH_SIZE: u32 = 100;
 
-pub fn can_execute(deps: Deps, sender: String, msg: &CosmosMsg) -> StdResult<CanExecuteResponse> {
+
+pub fn can_execute(deps: Deps, sender: String, msg: &cosmwasm_std::CosmosMsg) -> StdResult<CanExecuteResponse> {
     let cant = CanExecuteResponse { can_execute: false };
 
     if !status_ok(deps.storage) {
@@ -30,7 +31,7 @@ pub fn can_execute(deps: Deps, sender: String, msg: &CosmosMsg) -> StdResult<Can
     };
 
     Ok(CanExecuteResponse {
-        can_execute: is_ok_cosmos_msg(msg),
+        can_execute: assert_ok_cosmos_msg(msg).is_ok(),
     })
 }
 
@@ -91,16 +92,28 @@ pub fn valid_signatures(
 pub fn verify_arbitrary(
     deps: Deps,
     account_addr: &str,
-    data: Binary,
+    message: Binary,
     signature: Binary,
     pubkey: &[u8],
 ) -> StdResult<bool> {
-    let digest = Sha256::new_with_prefix(generate_amino_transaction_string(
-        account_addr,
-        from_json::<String>(&data)?.as_str(),
-    ))
-    .finalize();
-    deps.api.secp256k1_verify(&digest, &signature, pubkey)?;
+    
+    let arb = CosmosArbitrary {
+        pubkey: pubkey.into(),
+        signature,
+        message,
+        hrp: account_addr.split("1")
+            .next()
+            .map(|s| s.to_string())
+    };
+    
+    arb.verify_cosmwasm(deps.api)
+        .map_err(|_| StdError::generic_err("Invalid signature"))?;
+
+    let arb : Credential = arb.into();
+    let cosm_addr = arb.cosmos_address(deps.api)
+        .map_err(|_| StdError::generic_err("Error converting to a cosmos address"))?;
+
+    ensure!(cosm_addr.as_str() == account_addr, StdError::generic_err("Invalid address"));
     Ok(true)
 }
 

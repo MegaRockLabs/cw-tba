@@ -1,21 +1,10 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Binary, Timestamp};
+use cosmwasm_std::Binary;
+use cw_auths::saa_types::{msgs::SignedDataMsg, Expiration};
 use crate::TokenAccount;
 
 
-pub type CreateAccountMsg<T> = cw83::CreateAccountMsg<TokenAccount<T>>;
-
-
-#[cw_serde]
-#[derive(Copy)]
-pub enum Expiration {
-    /// AtHeight will expire when `env.block.height` >= height
-    AtHeight(u64),
-    /// AtTime will expire when `env.block.time` >= time
-    AtTime(Timestamp),
-    /// Never will never expire. Used to express the empty variant
-    Never {},
-}
+pub type CreateAccountMsg = cw83::CreateAccountMsg<TokenAccount>;
 
 
 #[cw_serde]
@@ -71,3 +60,6 @@ pub struct OwnerOfResponse {
 pub struct TokensResponse {
     pub tokens: Vec<String>,
 }
+
+
+pub type CosmosMsg = cosmwasm_std::CosmosMsg<SignedDataMsg>;

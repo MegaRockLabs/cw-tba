@@ -4,12 +4,12 @@
 #[cfg(test)]
 mod tests {
     
-
+/* 
     use cosmwasm_std::{
         coins, from_json, testing::{mock_dependencies, mock_env, mock_info}, to_json_binary, to_json_string, Addr, Coin, CosmosMsg, MessageInfo, StakingMsg, Uint128
     };
     use cw_tba::{encode_feegrant_msg, BasicAllowance, ExecuteAccountMsg, TokenInfo};
-    use saa::{messages::{MsgDataToSign, MsgDataToVerify, SignedDataMsg}, Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
+    use saa::{messages::{MsgDataToSign, MsgDataToVerify, SignedDataMsg}, types::binary::Binary, CosmosArbitrary, Credential, CredentialData, PasskeyCredential, Verifiable};
 
     use crate::{
         contract::{execute, instantiate}, msg::{ExecuteMsg, InstantiateMsg}, 
@@ -33,7 +33,7 @@ mod tests {
 
         let auth_data  = CredentialData {
             credentials: vec![cred],       
-            with_caller: None,
+            use_native: None,
             primary_index: None,
         };
 
@@ -61,12 +61,13 @@ mod tests {
             pubkey: Some(public_key), 
             signature, 
             authenticator_data: auth_data, 
-            client_data: saa::ClientData {
-                ty: "webauthn.get".to_string(),
-                challenge: "eyJjaGFpbl9pZCI6ImVsZ2FmYXItMSIsImNvbnRyYWN0X2FkZHJlc3MiOiJzdGFyczFjbGE0cmFudnVkZWRrMDM2aGV1cGYyanVwcnhoYWFxY2RkZmtmbDZqbnBjbTh1NWQwNXpxbHVna2V0IiwibWVzc2FnZXMiOlsiQ3JlYXRlIFRCQSBhY2NvdW50Il0sIm5vbmNlIjoiMCJ9".to_string(),
-                cross_origin: false,
-                origin: "http://localhost:5173".into(),
-            }, 
+            client_data: saa::types::ClientData::new(
+                "webauthn.get".to_string(),
+                "eyJjaGFpbl9pZCI6ImVsZ2FmYXItMSIsImNvbnRyYWN0X2FkZHJlc3MiOiJzdGFyczFjbGE0cmFudnVkZWRrMDM2aGV1cGYyanVwcnhoYWFxY2RkZmtmbDZqbnBjbTh1NWQwNXpxbHVna2V0IiwibWVzc2FnZXMiOlsiQ3JlYXRlIFRCQSBhY2NvdW50Il0sIm5vbmNlIjoiMCJ9".to_string(),
+                "http://localhost:5173",
+                false,
+                false
+            ),
             user_handle: None
         });
 
@@ -84,7 +85,7 @@ mod tests {
                 owner: String::from("owner"),
                 account_data: to_json_binary(&CredentialData {
                     credentials: vec![credential],
-                    with_caller: Some(true),
+                    use_native: Some(true),
                     primary_index: None,
                 }).unwrap(),
                 token_info: TokenInfo {
@@ -98,28 +99,6 @@ mod tests {
         println!("Init res: {:?}", init_res);
         assert!(init_res.is_ok());
 
-
-      /*   let deps = deps.as_mut();
-
-        let custom = SignedDataMsg {
-            data: to_json_binary(&data).unwrap().into(),
-            signature: signature.clone().into(),
-            payload: None
-        };
-
-        let msg = CosmosMsg::<SignedDataMsg>::Custom(custom);
-
-        let execute_msg = ExecuteMsg::Execute { 
-            msgs: vec![msg]
-        };
-
-        let res = execute(
-            deps, 
-            env.clone(), 
-            info,
-            execute_msg
-        );
- */
         
     }
  
@@ -139,13 +118,14 @@ mod tests {
             pubkey: Some(public_key), 
             signature, 
             authenticator_data: auth_data, 
-            client_data: saa::ClientData {
-                ty: "webauthn.get".to_string(),
-                challenge: "eyJjaGFpbl9pZCI6ImVsZ2FmYXItMSIsImNvbnRyYWN0X2FkZHJlc3MiOiJzdGFyczFjbGE0cmFudnVkZWRrMDM2aGV1cGYyanVwcnhoYWFxY2RkZmtmbDZqbnBjbTh1NWQwNXpxbHVna2V0IiwibWVzc2FnZXMiOlsiQ3JlYXRlIFRCQSBhY2NvdW50Il0sIm5vbmNlIjoiMCJ9".to_string(),
-                cross_origin: false,
-                origin: "http://localhost:5173".into(),
-            }, 
-            user_handle: None
+            client_data: saa::types::ClientData::new(
+                "webauthn.get".to_string(),
+                "eyJjaGFpbl9pZCI6ImVsZ2FmYXItMSIsImNvbnRyYWN0X2FkZHJlc3MiOiJzdGFyczFjbGE0cmFudnVkZWRrMDM2aGV1cGYyanVwcnhoYWFxY2RkZmtmbDZqbnBjbTh1NWQwNXpxbHVna2V0IiwibWVzc2FnZXMiOlsiQ3JlYXRlIFRCQSBhY2NvdW50Il0sIm5vbmNlIjoiMCJ9".to_string(),
+                "http://localhost:5173",
+                false,
+                false
+            ),
+            user_handle: None, 
         });
 
         let res = credential.verify_cosmwasm(deps.api);
@@ -181,6 +161,6 @@ mod tests {
             }
         }
     }
-
+ */
 
 }

@@ -1,14 +1,13 @@
-use cosmwasm_std::{ensure, from_json, CosmosMsg, Deps, Env, Order, StdError, StdResult, Binary};
-use cw82::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
-use cw_tba::{AssetsResponse, TokenInfo};
-use saa::messages::{AccountCredentials, AuthPayload, MsgDataToSign, SignedDataMsg};
+use cosmwasm_std::{from_json, CosmosMsg, Deps, Env, Order, StdError, StdResult, Binary};
+use cw82::{CanExecuteResponse, ValidSignatureResponse};
+use cw_tba::{AssetsResponse, FullInfoResponse, TokenInfo};
+use cw_auths::{saa_types::msgs::{AuthPayload, SignedDataMsg}, verify_native, verify_signed};
 
 use crate::{
-    msg::FullInfoResponse,
     state::{KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO},
-    utils::{
-        assert_caller, status_ok
-    },
+    utils::
+        status_ok
+    ,
 };
 
 const DEFAULT_BATCH_SIZE: u32 = 100;
@@ -28,10 +27,9 @@ pub fn can_execute(
         CosmosMsg::Custom(
             signed
         ) => {
-            let data : MsgDataToSign = from_json(signed.data)?;
-            data.validate_cosmwasm(deps.storage, &env).is_ok()
+            verify_signed(deps.api, deps.storage, &env, signed).is_ok()
         },
-        _ => assert_caller(deps,  &sender).is_ok(),
+        _ => verify_native( deps.storage, sender).is_ok()
     };
 
     Ok(CanExecuteResponse { can_execute })
@@ -49,11 +47,11 @@ pub fn valid_signature(
         let payload = payload
             .map(|p| from_json::<AuthPayload>(p)).transpose()?;
 
-        saa::verify_signed_queries(
+        verify_signed(
             deps.api,
             deps.storage, 
             &env,
-            SignedDataMsg { data: data.into(), signature: signature.into(), payload },
+            SignedDataMsg { data, signature, payload },
         )
         .is_ok()
 
@@ -64,7 +62,7 @@ pub fn valid_signature(
     Ok(ValidSignatureResponse { is_valid })
 }
 
-pub fn valid_signatures(
+/* pub fn valid_signatures(
     deps: Deps,
     env: Env,
     data: Vec<Binary>,
@@ -91,13 +89,13 @@ pub fn valid_signatures(
         .enumerate()
         .map(|(index, signature)| {
             let data = data[index].clone();
-            saa::verify_signed_queries(
+            cw_auths::verify_signed(
                 deps.api,
                 deps.storage, 
                 &env,
                 SignedDataMsg { 
-                    data: data.into(), 
-                    signature: signature.into(), 
+                    data, 
+                    signature, 
                     payload: payload.clone()
                 },
             )
@@ -107,7 +105,7 @@ pub fn valid_signatures(
         .collect();
 
     Ok(ValidSignaturesResponse { are_valid })
-}
+} */
 
 
 pub fn assets(
@@ -116,12 +114,9 @@ pub fn assets(
     skip: Option<u32>,
     limit: Option<u32>,
 ) -> StdResult<AssetsResponse> {
-    let nfts = known_tokens(deps, skip, limit)?;
-    let balance = deps.querier.query_all_balances(env.contract.address)?;
-
     Ok(AssetsResponse {
-        balances: balance,
-        tokens: nfts,
+        balances: deps.querier.query_all_balances(env.contract.address)?,
+        tokens: known_tokens(deps, skip, limit)?,
     })
 }
 
@@ -153,14 +148,6 @@ pub fn known_tokens(
 
 
 
-pub fn credentials(
-    deps: Deps,
-) -> StdResult<AccountCredentials> {
-    saa::get_all_credentials(deps.storage)
-    .map_err(|_| StdError::generic_err("Error getting credentials"))
-
-}
-
 
 pub fn full_info(
     deps: Deps,
@@ -171,7 +158,8 @@ pub fn full_info(
     let tokens = known_tokens(deps, skip, limit)?;
     let balances = deps.querier.query_all_balances(env.contract.address)?;
     let ownership = cw_ownable::get_ownership(deps.storage)?;
-    let credentials = credentials(deps)?;
+    let credentials = cw_auths::get_stored_credentials(deps.storage)
+                                    .map_err(|_| StdError::generic_err("Error getting credentials"))?;
 
     Ok(FullInfoResponse {
         balances,

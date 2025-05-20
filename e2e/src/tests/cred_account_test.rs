@@ -3,12 +3,12 @@ use cosmwasm_std::testing::{mock_info, mock_dependencies, mock_env};
 use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, Empty};
 use cw82_tba_credentials::contract::instantiate;
 use cw82_tba_credentials::execute::try_executing;
-use cw_tba::{ExecuteAccountMsg, TokenInfo};
-use saa::cosmos_utils::preamble_msg_arb_036;
-use saa::messages::{MsgDataToSign, SignedDataMsg};
+use cw_tba::{ExecuteMsg, TokenInfo};
+use cw_auths::saa_types::utils::cosmos::preamble_msg_arb_036;
+use cw_auths::saa_types::msgs::{MsgDataToSign, SignedDataMsg};
 use test_context::test_context;
 
-use cw82_tba_credentials::msg::{ExecuteMsg, InstantiateMsg};
+use cw82_tba_credentials::msg::InstantiateMsg;
 
 use crate::helpers::helper::{
     get_cred_data, get_init_address, instantiate_collection, CRED_ACOUNT_NAME
@@ -40,7 +40,7 @@ fn test(chain: &mut Chain) {
     };
 
     
-    let execute_msg = ExecuteAccountMsg::MintToken {
+    let execute_msg = ExecuteMsg::MintToken {
         minter: collection.clone(),
         msg: to_json_binary(&mint_msg).unwrap(),
     };
@@ -59,11 +59,11 @@ fn test(chain: &mut Chain) {
     res.unwrap_err();
 
 
-    let actions = MsgDataToSign::<ExecuteAccountMsg> { 
+    let actions = MsgDataToSign::<ExecuteMsg> { 
         chain_id: chain.cfg.orc_cfg.chain_cfg.chain_id.clone(),
         contract_address: data.cred_token_account.clone(),
         messages: vec![execute_msg],
-        nonce: String::from("1"),
+        nonce: 1u64.into(),
     };
 
     let sk = mnemonic_to_signing_key(
@@ -101,12 +101,11 @@ fn test(chain: &mut Chain) {
 
     println!("contract address: {:?}", env.contract.address);
 
-    let cred_data = get_cred_data(chain, &user, msgs.clone());
-    println!("Cred data: {:?}", cred_data);
+    let account_data = get_cred_data(chain, &user, msgs.clone());
 
     let init_msg = InstantiateMsg {
         owner: user.account.address.clone(),
-        account_data: to_json_binary(&cred_data).unwrap(),
+        account_data,
         token_info: TokenInfo {
             collection: data.collection.clone(),
             id: data.token_id.clone()

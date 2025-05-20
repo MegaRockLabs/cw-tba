@@ -35,5 +35,5 @@ tarpaulin-report.*
 e2e/gas_reports/*
 
 
-temp
+temp*
 node_modules

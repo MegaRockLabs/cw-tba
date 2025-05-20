@@ -1,18 +1,8 @@
-use cosmwasm_std::{
-    ensure, Api, CosmosMsg, Deps, StdError, StdResult, Storage, WasmMsg
-};
-use cw_ownable::is_owner;
-use cw_tba::ExecuteAccountMsg;
-use saa::CredentialData;
+use cosmwasm_std::{ensure, ensure_eq, Api, CosmosMsg, StdError, StdResult, Storage};
+use cw_auths::saa_types::{msgs::SignedDataMsg, CredentialData};
 
 
-use crate::{
-    error::ContractError,
-    state::{
-        REGISTRY_ADDRESS, STATUS, WITH_CALLER
-    },
-};
-
+use crate::{error::ContractError, state::{REGISTRY_ADDRESS, STATUS}};
 
 
 pub fn assert_status(store: &dyn Storage) -> StdResult<()> {
@@ -41,12 +31,9 @@ pub fn query_if_registry(querier: &cosmwasm_std::QuerierWrapper, addr: cosmwasm_
 
 
 pub fn assert_registry(store: &dyn Storage, addr: &str) -> Result<(), ContractError> {
-    let res = REGISTRY_ADDRESS.load(store).map(|a| a == addr);
-    if res.is_ok() && res.unwrap() {
-        Ok(())
-    } else {
-        Err(ContractError::NotRegistry{})
-    }
+    let res = REGISTRY_ADDRESS.load(store)?;
+    ensure_eq!(res.as_str(), addr, ContractError::NotRegistry {});
+    Ok(())
 }
 
 
@@ -68,10 +55,10 @@ pub fn assert_owner_derivable(
                 return false;
             }
             let addr = c.cosmos_address(api);
-            if addr.is_err() {
-                return false;
+            if let Ok(addr) = addr {
+                return addr.to_string() == owner;
             }
-            addr.unwrap().to_string() == owner
+            false
         }), 
         ContractError::NoOwnerCred {}
     );
@@ -83,54 +70,9 @@ pub fn assert_owner_derivable(
 
 
 
-
-pub fn assert_valid_signed_action(action: &ExecuteAccountMsg) -> Result<(), ContractError> {
-    match action {
-        ExecuteAccountMsg::Extension { .. } => Err(ContractError::BadSignedAction(String::from(
-            "Nested 'Extension' is not supported",
-        ))),
-        ExecuteAccountMsg::ReceiveNft { .. } => Err(ContractError::BadSignedAction(
-            String::from("ReceiveNft can only be called by an NFT contract"),
-        )),
-        ExecuteAccountMsg::UpdateAccountData { .. } => Err(ContractError::NotRegistry {}),
-        ExecuteAccountMsg::UpdateOwnership { .. } => Err(ContractError::NotRegistry {}),
-        ExecuteAccountMsg::Purge {} => Err(ContractError::NotRegistry {}),
-        _ => Ok(()),
-    }
-}
-
-
-
-
-
-pub fn assert_caller(
-    deps: Deps,
-    sender: &str,
-) -> Result<(), ContractError> {
-    ensure!(
-        WITH_CALLER.load(deps.storage)?,
-        ContractError::NoDirectCall {}
-    );
-    ensure!(
-        is_owner(deps.storage, &deps.api.addr_validate(sender)?)?,
-        ContractError::Unauthorized("Only the owner can call directly".to_string())
-    );
-    Ok(())
-}
-
-
-
-
-pub fn assert_ok_wasm_msg(msg: &WasmMsg) -> StdResult<()> {
-    match msg {
-        _ => Err(StdError::generic_err("Not Supported")),
-    }
-}
-
-
 pub fn assert_ok_cosmos_msg(msg: &CosmosMsg) -> StdResult<()> {
     match msg {
-        CosmosMsg::Wasm(msg) => assert_ok_wasm_msg(msg),
+        CosmosMsg::Wasm(_) => Err(StdError::generic_err("Not Supported")),
         CosmosMsg::Stargate { type_url, .. }  => {
             if type_url.to_lowercase().contains("authz") {
                 Err(StdError::generic_err("Not Supported"))
@@ -141,3 +83,42 @@ pub fn assert_ok_cosmos_msg(msg: &CosmosMsg) -> StdResult<()> {
         _ => Ok(()),
     }
 }
+
+
+pub fn change_cosmos_msg(msg: CosmosMsg<SignedDataMsg>) -> Result<CosmosMsg, ContractError>{
+    Ok(match msg {
+        CosmosMsg::Bank(msg) => CosmosMsg::Bank(msg),
+        CosmosMsg::Staking(msg) => CosmosMsg::Staking(msg),
+        CosmosMsg::Distribution(msg) => CosmosMsg::Distribution(msg),
+        CosmosMsg::Stargate { type_url, value } => CosmosMsg::Stargate { type_url, value },
+        CosmosMsg::Ibc(msg) => CosmosMsg::Ibc(msg),
+        CosmosMsg::Wasm(msg) => CosmosMsg::Wasm(msg),
+        CosmosMsg::Gov(gov_msg) => CosmosMsg::Gov(gov_msg),
+        CosmosMsg::Custom(_) => {
+                        return  Err(ContractError::Generic(String::from("Nested signing notsupported")))?;
+            }
+        _ => panic!("Unsupported message type"),
+    })
+}
+
+/* pub fn chane_action(msg: ExecuteMsg) -> Result<ExecuteAccountMsg, ContractError> {
+    Ok(match msg {
+        ExecuteMsg::Execute { msgs } => ExecuteAccountMsg::Execute { msgs },
+        ExecuteMsg::UpdateOwnership { new_owner, new_account_data } => {
+            ExecuteAccountMsg::UpdateOwnership { new_owner, new_account_data }
+        },
+        ExecuteMsg::UpdateAccountData { op } => ExecuteAccountMsg::UpdateAccountData { op },
+        ExecuteMsg::ReceiveNft(msg) => ExecuteAccountMsg::ReceiveNft(msg),
+        ExecuteMsg::Purge {} => ExecuteAccountMsg::Purge {},
+        _ => panic!("Unsupported message type"),
+    })
+}
+
+
+ */
+
+
+
+
+
+

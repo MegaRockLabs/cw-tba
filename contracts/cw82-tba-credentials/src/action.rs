@@ -1,8 +1,8 @@
 use crate::{
-    error::ContractError, msg::ContractResult, state::{KNOWN_TOKENS, MINT_CACHE, STATUS, TOKEN_INFO}, utils::assert_status
+    error::ContractError, msg::ContractResult, state::{KNOWN_TOKENS, MINT_CACHE, STATUS, TOKEN_INFO}, utils::{assert_ok_cosmos_msg, assert_status}
 };
 use cosmwasm_std::{
-    to_json_binary, Binary, CosmosMsg, Env, MessageInfo, QuerierWrapper, ReplyOn, Response, StdResult, Storage, SubMsg, WasmMsg
+    to_json_binary, Binary, Env, MessageInfo, QuerierWrapper, ReplyOn, Response, StdResult, Storage, SubMsg, WasmMsg
 };
 use cw_tba::{encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance, Cw721Msg, ExecuteAccountMsg, Status};
 
@@ -18,15 +18,18 @@ pub fn execute_action(
 ) -> ContractResult {
     assert_status(storage)?;
 
-    match msg {
-        ExecuteAccountMsg::Execute { msgs } => try_executing(msgs),
+    use ExecuteAccountMsg::*
+    ;
 
-        ExecuteAccountMsg::MintToken {
+    match msg {
+        Execute { msgs } => try_executing_native(msgs),
+
+        MintToken {
             minter,
             msg,
         } => try_minting_token(storage, info, minter, msg),
 
-        ExecuteAccountMsg::TransferToken {
+        TransferToken {
             collection,
             token_id,
             recipient,
@@ -34,7 +37,7 @@ pub fn execute_action(
             try_transfering_token(storage, collection, token_id, recipient)
         }
 
-        ExecuteAccountMsg::SendToken {
+        SendToken {
             collection,
             token_id,
             contract,
@@ -47,34 +50,33 @@ pub fn execute_action(
             msg
         ),
 
-        ExecuteAccountMsg::UpdateKnownTokens {
+        UpdateKnownTokens {
             collection,
             start_after,
             limit,
         } => try_updating_known_tokens(querier, storage, env, collection, start_after, limit),
 
-        ExecuteAccountMsg::ForgetTokens {
+        ForgetTokens {
             collection,
             token_ids,
         } => try_forgeting_tokens(storage, collection, token_ids),
 
-        ExecuteAccountMsg::Freeze {} => try_freezing(storage),
+        Freeze {} => try_freezing(storage),
 
-        ExecuteAccountMsg::Unfreeze {} => try_unfreezing(querier, storage),
+        Unfreeze {} => try_unfreezing(querier, storage),
 
-        ExecuteAccountMsg::FeeGrant { 
+        FeeGrant { 
             grantee, 
             allowance 
         } => try_fee_granting(env.contract.address.as_str(), grantee.as_str(), allowance),
-
-        _ => Err(ContractError::NotSupported {}),
     }
 }
 
 
-pub fn try_executing(
-    msgs: Vec<CosmosMsg>,
+pub fn try_executing_native(
+    msgs: Vec<cosmwasm_std::CosmosMsg>,
 ) -> ContractResult {
+    msgs.iter().try_for_each(|msg| assert_ok_cosmos_msg(msg))?;
     Ok(Response::new().add_messages(msgs))
 }
 
@@ -174,7 +176,7 @@ pub fn try_transfering_token(
 
     KNOWN_TOKENS.remove(storage, (collection.as_str(), token_id.as_str()));
     
-    let msg: CosmosMsg = WasmMsg::Execute {
+    let msg: cosmwasm_std::CosmosMsg = WasmMsg::Execute {
         contract_addr: collection,
         msg: to_json_binary(&Cw721Msg::TransferNft {
             recipient,
@@ -197,7 +199,7 @@ pub fn try_sending_token(
     msg: Binary,
 ) -> ContractResult {
     KNOWN_TOKENS.remove(storage, (collection.as_str(), token_id.as_str()));
-    let msg: CosmosMsg = WasmMsg::Execute {
+    let msg: cosmwasm_std::CosmosMsg = WasmMsg::Execute {
         contract_addr: collection,
         msg: to_json_binary(&Cw721Msg::SendNft {
             contract,

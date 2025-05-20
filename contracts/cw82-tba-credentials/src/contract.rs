@@ -1,25 +1,28 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use saa::storage::ACCOUNT_NUMBER;
+use strum::IntoDiscriminant;
 #[cfg(target_arch = "wasm32")]
 use crate::utils::query_if_registry;
 
+use cw_auths::{account_number, handle_session_queries, verify_native};
+
 
 use cosmwasm_std::{
-    from_json, to_json_binary, Binary, 
+    to_json_binary, Binary, 
     Deps, DepsMut, Env, MessageInfo, Reply, Response, 
     StdError, StdResult, SubMsg
 };
 
 use cw_ownable::get_ownership;
-use cw_tba::Status;
+use cw_tba::{ExecuteMsg, Status};
+
 
 use crate::{
     action::{self, execute_action, MINT_REPLY_ID}, 
     error::ContractError, execute, 
-    msg::{ContractResult, CredQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg}, 
-    query::{assets, can_execute, credentials, full_info, known_tokens, valid_signature, valid_signatures}, 
-    state::{save_credentials, MINT_CACHE, REGISTRY_ADDRESS, STATUS, TOKEN_INFO}, utils::assert_caller
+    msg::{ContractResult, InstantiateMsg, MigrateMsg, QueryMsg}, 
+    query::{assets, can_execute, full_info, known_tokens, valid_signature, /* valid_signatures */}, 
+    state::{save_token_credentials, MINT_CACHE, REGISTRY_ADDRESS, STATUS, TOKEN_INFO}
 };
 
 
@@ -62,12 +65,12 @@ pub fn instantiate(
     REGISTRY_ADDRESS.save(deps.storage, &info.sender.to_string())?;
     STATUS.save(deps.storage, &Status { frozen: false })?;
 
-    save_credentials(
+    save_token_credentials(
         deps.api, 
         deps.storage, 
         &env, 
         info.clone(), 
-        from_json(&msg.account_data)?, 
+        msg.account_data, 
         msg.owner.clone(),
     )?;
     let actions = msg.actions.unwrap_or_default();
@@ -78,6 +81,7 @@ pub fn instantiate(
     
     let res = if actions.len() > 0 {
          let mut res = Response::new();
+         
          for action in actions {
              let action_res = execute_action(&deps.querier, deps.storage, &env, &info, action)?;
              msgs.extend(action_res.messages);
@@ -93,6 +97,7 @@ pub fn instantiate(
     } else {
         Response::default()
     };
+    
     Ok(res.add_submessages(msgs))
 }
 
@@ -103,7 +108,40 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
     if REGISTRY_ADDRESS.load(deps.storage).is_err() {
         return Err(ContractError::Deleted {});
     }
-    match msg {
+    let contract = env.contract.address.to_string();
+    let (session, msg) = cw_auths::handle_session_actions(
+        deps.api, 
+        deps.storage, 
+        &env, &info, 
+        msg, 
+        Some(contract)
+    )?;
+
+    let (msg, attrs) = if let Some(msg) = msg {
+        let attrs = match session {
+            Some(session) => vec![
+                ("action", "with_session".to_string()),
+                ("session_key", session.key()),
+                ("nonce", session.nonce.to_string()),
+            ],
+            None => vec![]
+        };
+        (msg, attrs)
+    } else {
+        return Ok(match session {
+            Some(session) => Response::new()
+                .add_attribute("action", "session_created")
+                .add_attribute("session_key", session.key().as_str())
+                .add_attribute("nonce", session.nonce.to_string().as_str()),
+
+            None => Response::new()
+                .add_attribute("action", "session_revoked"),
+        })
+    };
+
+    let name = msg.discriminant().to_string();
+
+    let res = match msg {
         ExecuteMsg::Execute { 
             msgs 
         } => execute::try_executing(deps, env, info, msgs),
@@ -113,11 +151,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
             new_account_data,
         } => execute::try_updating_ownership(deps, env, info, new_owner, new_account_data),
 
-        ExecuteMsg::UpdateAccountData { 
-            account_data,
-            operation
-        } => {
-            execute::try_updating_account_data(deps, env, info, account_data, operation)
+        ExecuteMsg::UpdateAccountData(op) => {
+            execute::try_updating_account_data(deps, env, info, op)
         }
 
         ExecuteMsg::ReceiveNft(msg) => {
@@ -128,54 +163,83 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
 
         ExecuteMsg::Freeze {} => execute::try_freezing(deps),
 
-        ExecuteMsg::Extension { .. } => Ok(Response::default()),
-
         msg => {
-            assert_caller(deps.as_ref(), info.sender.as_str())?;
-            
-            execute_action(
-                &deps.querier,
-                deps.storage, 
-                &env, 
-                &info, 
-                from_json(&to_json_binary(&msg)?)?
-            )
+            verify_native(deps.storage, info.sender.to_string())?;
+            match msg {
+                ExecuteMsg::MintToken { 
+                    minter, 
+                    msg 
+                } => action::try_minting_token(deps.storage, &info, minter, msg),
+                ExecuteMsg::SendToken { 
+                    collection, 
+                    token_id, 
+                    contract, 
+                    msg 
+                } => action::try_sending_token(deps.storage, collection, token_id, contract, msg),
+                ExecuteMsg::TransferToken { 
+                    collection, 
+                    token_id, 
+                    recipient 
+                } => action::try_transfering_token(deps.storage, collection, token_id, recipient),
+                ExecuteMsg::ForgetTokens { 
+                    collection, 
+                    token_ids 
+                } => action::try_forgeting_tokens(deps.storage, collection, token_ids),
+                ExecuteMsg::UpdateKnownTokens { 
+                    collection, 
+                    start_after, 
+                    limit 
+                } => action::try_updating_known_tokens(&deps.querier, deps.storage, &env, collection, start_after, limit),
+                ExecuteMsg::FeeGrant { 
+                    grantee, 
+                    allowance 
+                } => action::try_fee_granting(env.contract.address.as_str(), grantee.as_str(), allowance),
+                ExecuteMsg::Unfreeze {  } => action::try_unfreezing(&deps.querier, deps.storage),
+                _ => return Err(ContractError::NotSupported {}),
+            }
+
         }
-    }
+    }?;
+
+    Ok(res
+        .add_attribute("action_name", name)
+        .add_attributes(attrs))
 }
+
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     if REGISTRY_ADDRESS.load(deps.storage).is_err() {
         return Err(StdError::generic_err(ContractError::Deleted {}.to_string()));
     };
+    if let Some(res) = handle_session_queries(deps.api, deps.storage, &env, &msg)? {
+        return Ok(res);
+    }
     match msg {
         QueryMsg::Token {} => to_json_binary(&TOKEN_INFO.load(deps.storage)?),
         QueryMsg::Status {} => to_json_binary(&STATUS.load(deps.storage)?),
-        QueryMsg::AccountNumber {} => to_json_binary(&ACCOUNT_NUMBER.load(deps.storage)?),
+        QueryMsg::AccountNumber {} => to_json_binary(&account_number(deps.storage)),
         QueryMsg::Registry {} => to_json_binary(&REGISTRY_ADDRESS.load(deps.storage)?),
         QueryMsg::Ownership {} => to_json_binary(&get_ownership(deps.storage)?),
-        QueryMsg::CanExecute { sender, msg } => {
-            to_json_binary(&can_execute(deps, env, sender, msg)?)
-        }
+        QueryMsg::CanExecute { 
+            sender, 
+            msg 
+        } => to_json_binary(&can_execute(deps, env, sender, msg)?),
         QueryMsg::ValidSignature {
             signature,
             data,
             payload,
         } => to_json_binary(&valid_signature(deps, env, data, signature, payload)?),
-        QueryMsg::ValidSignatures {
+        /* QueryMsg::ValidSignatures {
             signatures,
             data,
             payload,
-        } => to_json_binary(&valid_signatures(deps, env, data, signatures, payload)?),
+        } => to_json_binary(&valid_signatures(deps, env, data, signatures, payload)?), */
         QueryMsg::KnownTokens { skip, limit } => to_json_binary(&known_tokens(deps, skip, limit)?),
         QueryMsg::Assets { skip, limit } => to_json_binary(&assets(deps, env, skip, limit)?),
-        QueryMsg::Extension { msg } => {
-            match msg {
-                CredQueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),
-                CredQueryMsg::Credentials {} => to_json_binary(&credentials(deps)?)
-            }
-        },
+        QueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),
+        QueryMsg::SessionQueries(_) => unreachable!()
     }
 }
 
@@ -206,6 +270,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult {
         _ => Err(ContractError::NotSupported {}),
     }
 }
+
 
 #[cfg(feature = "archway")]
 #[cfg_attr(not(feature = "library"), entry_point)]

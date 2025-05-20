@@ -2,14 +2,15 @@ use crate::{
     error::ContractError,
     msg::Status,
     state::{KNOWN_TOKENS, MINT_CACHE, PUBKEY, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO},
-    utils::{assert_registry, assert_status, is_ok_cosmos_msg},
+    utils::{assert_ok_cosmos_msg, assert_registry, assert_status, change_cosmos_msg, extract_pubkey},
 };
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, ReplyOn, Response,
-    StdResult, SubMsg, WasmMsg,
+    ensure, to_json_binary, Addr, Binary, Coin, Deps, DepsMut, Env, MessageInfo, ReplyOn, Response, StdResult, SubMsg, WasmMsg
 };
-use cw_ownable::{assert_owner, initialize_owner, is_owner};
-use cw_tba::{encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance, Cw721Msg};
+use cw_auths::UpdateOperation;
+use cw_ownable::{assert_owner, get_ownership, is_owner, OwnershipError};
+use cw_tba::{encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance, CosmosMsg, Cw721Msg};
+use cw_auths::saa_types::CredentialData;
 
 pub const MINT_REPLY_ID: u64 = 1;
 
@@ -20,9 +21,17 @@ pub fn try_executing(
 ) -> Result<Response, ContractError> {
     assert_owner(deps.storage, &sender)?;
     assert_status(deps.storage)?;
-    if !msgs.iter().all(is_ok_cosmos_msg) {
-        return Err(ContractError::NotSupported {});
-    }
+
+    let msgs = msgs
+        .into_iter()
+        .map(|msg| {
+            let msg = change_cosmos_msg(msg)?;
+            assert_ok_cosmos_msg(&msg)?;
+            Ok(msg)
+
+        })
+        .collect::<Result<Vec<cosmwasm_std::CosmosMsg>, ContractError>>()?;
+
     Ok(Response::new().add_messages(msgs))
 }
 
@@ -75,33 +84,66 @@ pub fn try_unfreezing(deps: DepsMut) -> Result<Response, ContractError> {
 
 pub fn try_updating_ownership(
     deps: DepsMut,
-    sender: Addr,
+    env: Env,
+    info: MessageInfo,
     new_owner: String,
-    new_pubkey: Option<Binary>,
+    new_data: Option<CredentialData>,
 ) -> Result<Response, ContractError> {
-    assert_registry(deps.storage, &sender)?;
-    initialize_owner(deps.storage, deps.api, Some(&new_owner))?;
-    if new_pubkey.is_some() {
-        PUBKEY.save(deps.storage, &new_pubkey.unwrap())?;
+    assert_registry(deps.storage, &info.sender)?;
+    let ownership = get_ownership(deps.storage)?;
+    let addr  = deps.api.addr_validate(&new_owner)?;
+
+    if let Some(data) = new_data {
+        let new_pubkey =  extract_pubkey(deps.api, data, &addr)?;
+        PUBKEY.save(deps.storage, &new_pubkey)?;
         STATUS.save(deps.storage, &Status { frozen: false })?;
+        cw_ownable::initialize_owner(deps.storage, deps.api, Some(new_owner.as_str()))?;
+    } else {
+        STATUS.save(deps.storage, &Status { frozen: true })?;
+        cw_ownable::update_ownership(deps, &env.block, &ownership.owner.unwrap(), cw_ownable::Action::TransferOwnership {
+            new_owner: new_owner.to_string(),
+            expiry: None,
+        })?;
     }
+
     Ok(Response::default()
         .add_attribute("action", "update_ownership")
         .add_attribute("new_owner", new_owner.as_str()))
 }
 
-pub fn try_changing_pubkey(
+pub fn try_changing_data(
     deps: DepsMut,
-    sender: Addr,
-    pubkey: Binary,
+    env: Env,
+    info: MessageInfo,
+    op: UpdateOperation,
 ) -> Result<Response, ContractError> {
-    assert_owner(deps.storage, &sender)?;
-    assert_status(deps.storage)?;
-    PUBKEY.save(deps.storage, &pubkey)?;
-    Ok(Response::new().add_attributes(vec![
-        ("action", "change_pubkey"),
-        ("new_pubkey", pubkey.to_base64().as_str()),
-    ]))
+     match op {
+        UpdateOperation::Add(data) => {
+            let ownershop = get_ownership(deps.storage)?;
+            let owner = ownershop.owner.unwrap();
+            let new_owner = if let Some(pending) = ownershop.pending_owner {
+                ensure!(pending == info.sender, ContractError::Unauthorized {});
+                STATUS.save(deps.storage, &Status { frozen: false })?;
+                true
+            } else {
+                ensure!(owner == info.sender, OwnershipError::NotOwner {});
+                false
+            };
+            let pubkey = extract_pubkey(deps.api, data, &info.sender)?;
+            PUBKEY.save(deps.storage, &pubkey)?;
+            if new_owner {
+                cw_ownable::update_ownership(deps, &env.block, &info.sender, cw_ownable::Action::AcceptOwnership)?;
+                /* cw_ownable::update_ownership(deps, &env.block, &info.sender, cw_ownable::Action::TransferOwnership {
+                    new_owner: info.sender.to_string(),
+                    expiry: None,
+                })?; */
+            }
+            Ok(Response::new()
+                .add_attribute("action", "change_pubkey")
+                .add_attribute("new_owner", info.sender.as_str()))
+        },
+        UpdateOperation::Remove(_) => Err(ContractError::NotSupported {}),
+    }
 }
 
 pub fn try_forgeting_tokens(
@@ -184,7 +226,7 @@ pub fn try_transfering_token(
 ) -> Result<Response, ContractError> {
     assert_status(deps.storage)?;
     KNOWN_TOKENS.remove(deps.storage, (collection.as_str(), token_id.as_str()));
-    let msg: CosmosMsg = WasmMsg::Execute {
+    let msg: cosmwasm_std::CosmosMsg = WasmMsg::Execute {
         contract_addr: collection,
         msg: to_json_binary(&Cw721Msg::TransferNft {
             recipient,
@@ -208,7 +250,7 @@ pub fn try_sending_token(
 ) -> Result<Response, ContractError> {
     assert_status(deps.storage)?;
     KNOWN_TOKENS.remove(deps.storage, (collection.as_str(), token_id.as_str()));
-    let msg: CosmosMsg = WasmMsg::Execute {
+    let msg: cosmwasm_std::CosmosMsg = WasmMsg::Execute {
         contract_addr: collection,
         msg: to_json_binary(&Cw721Msg::SendNft {
             contract,

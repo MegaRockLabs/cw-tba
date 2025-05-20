@@ -12,10 +12,13 @@ exclude = [
 ]
 
 [lib]
+name       =  "cw83_tba_registry"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-library = []
+library             = []
+ext_query           = ["cw-tba/ext_query"]
+
 
 [dependencies]
 thiserror           = { workspace = true }
@@ -25,8 +28,11 @@ cosmwasm-std        = { workspace = true }
 cw-storage-plus     = { workspace = true }
 cw-utils            = { workspace = true }
 cw2                 = { workspace = true }
-cw82                = { workspace = true }
-cw83                = { workspace = true }
 cw22                = { workspace = true }
 cw-tba              = { workspace = true }
-saa                 = { workspace = true }
+#smart-account-auth  = { workspace = true }
+cw-auths            = { workspace = true }
+
+cw82                = { workspace = true }
+cw83                = { workspace = true, features = ["multi"] }
+

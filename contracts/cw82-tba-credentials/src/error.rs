@@ -1,6 +1,6 @@
 use cosmwasm_std::StdError;
 use cw_ownable::OwnershipError;
-use saa::AuthError;
+use cw_auths::saa_types::{AuthError, StorageError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -13,6 +13,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     Auth(#[from] AuthError),
+
+    #[error("{0}")]
+    Storage(#[from] StorageError),
 
     #[error("This method can only be called from the registry contract")]
     NotRegistry {},

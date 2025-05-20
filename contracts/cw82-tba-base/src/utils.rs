@@ -2,7 +2,8 @@ use crate::{
     error::ContractError,
     state::{REGISTRY_ADDRESS, STATUS},
 };
-use cosmwasm_std::{Addr, CosmosMsg, QuerierWrapper, StdError, StdResult, Storage, WasmMsg};
+use cosmwasm_std::{ensure, Addr, Api, Binary, CosmosMsg, QuerierWrapper, StdError, StdResult, Storage, WasmMsg};
+use cw_auths::saa_types::{Credential, CredentialData};
 
 
 pub fn assert_status(store: &dyn Storage) -> StdResult<bool> {
@@ -32,6 +33,7 @@ pub fn assert_ok_cosmos_msg(msg: &CosmosMsg) -> StdResult<()> {
     }
 }
 
+
 pub fn is_ok_cosmos_msg(msg: &CosmosMsg) -> bool {
     assert_ok_cosmos_msg(msg).is_ok()
 }
@@ -52,9 +54,43 @@ pub fn is_registry(store: &dyn Storage, addr: &Addr) -> StdResult<bool> {
     REGISTRY_ADDRESS.load(store).map(|a| a == addr.to_string())
 }
 
-pub fn generate_amino_transaction_string(signer: &str, data: &str) -> String {
-    format!(
-        "{{\"account_number\":\"0\",\"chain_id\":\"\",\"fee\":{{\"amount\":[],\"gas\":\"0\"}},\"memo\":\"\",\"msgs\":[{{\"type\":\"sign/MsgSignData\",\"value\":{{\"data\":\"{}\",\"signer\":\"{}\"}}}}],\"sequence\":\"0\"}}", 
-        data, signer
-    )
+
+pub fn extract_pubkey(
+    api: &dyn Api,
+    data: CredentialData,
+    owner: &Addr,
+) -> Result<Binary, ContractError> {
+    let credentials = data.credentials;
+
+    ensure!(credentials.len() == 1, ContractError::PubkeyOnly {});
+    let cred = credentials.first().unwrap();
+    ensure!(cred.is_cosmos_derivable(), ContractError::PubkeyOnly {});
+    
+    let pubkey = if let Credential::CosmosArbitrary(cosmos_cred) = cred {
+        let addr = cred.cosmos_address(api).map_err(|_| ContractError::PubkeyOnly {})?;
+        ensure!(addr == owner, ContractError::Unauthorized {});
+        cosmos_cred.pubkey.clone()
+    } else {
+        return Err(ContractError::PubkeyOnly {});
+    };
+
+    Ok(pubkey)
+}
+
+
+
+pub fn change_cosmos_msg(msg: cw_tba::CosmosMsg) -> Result<cosmwasm_std::CosmosMsg, ContractError>{
+    Ok(match msg {
+        CosmosMsg::Bank(msg) => cosmwasm_std::CosmosMsg::Bank(msg),
+        CosmosMsg::Staking(msg) => cosmwasm_std::CosmosMsg::Staking(msg),
+        CosmosMsg::Distribution(msg) => cosmwasm_std::CosmosMsg::Distribution(msg),
+        CosmosMsg::Stargate { type_url, value } => cosmwasm_std::CosmosMsg::Stargate { type_url, value },
+        CosmosMsg::Ibc(msg) => cosmwasm_std::CosmosMsg::Ibc(msg),
+        CosmosMsg::Wasm(msg) => cosmwasm_std::CosmosMsg::Wasm(msg),
+        CosmosMsg::Gov(gov_msg) => cosmwasm_std::CosmosMsg::Gov(gov_msg),
+        CosmosMsg::Custom(_) => {
+            return  Err(ContractError::Generic(String::from("Nested signing notsupported")))?;
+        }
+        _ => panic!("Unsupported message type"),
+    })
 }

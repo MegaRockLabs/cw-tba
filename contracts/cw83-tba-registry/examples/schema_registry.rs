@@ -1,12 +1,12 @@
 use cosmwasm_schema::write_api;
-use cw82_tba_base::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use cw83_tba_registry::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 fn main() {
     write_api! {
-        name: "cw82_tba_base",
+        name: "cw83_tba_registry",
         instantiate: InstantiateMsg,
+        query: QueryMsg,
         execute: ExecuteMsg,
         migrate: MigrateMsg,
-        query: QueryMsg,
     }
 }

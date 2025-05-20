@@ -5,22 +5,32 @@ use cosmwasm_std::{
 
 use cw83::CREATE_ACCOUNT_REPLY_ID;
 use cw_tba::{
-    verify_nft_ownership, ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo,
+    verify_nft_ownership, ExecuteMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo,
 };
+use cw_auths::saa_types::CredentialData;
 
 
 use crate::{
-    error::ContractError, funds::checked_funds, registry::construct_label, state::{LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES}
+    error::ContractError, funds::checked_funds, state::{LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES}
 };
 
-pub fn create_account<T: Serialize, A: Serialize>(
+
+fn construct_label(info: &TokenInfo, serial: Option<u64>) -> String {
+    let base = format!("{}-{}-account", info.collection, info.id);
+    match serial {
+        Some(s) => format!("{}-{}", base, s),
+        None => base,
+    }
+}
+
+pub fn create_account<A: Serialize + Clone>(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     chain_id: String,
     code_id: u64,
     token_info: TokenInfo,
-    account_data: T,
+    account_data: CredentialData,
     create_for: Option<String>,
     actions: Option<Vec<A>>,
     reset: bool,
@@ -51,7 +61,7 @@ pub fn create_account<T: Serialize, A: Serialize>(
         ensure!(reset, ContractError::AccountExists {});
         msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: token_address.unwrap(),
-            msg: to_json_binary(&ExecuteAccountMsg::<T, A>::Purge {})?,
+            msg: to_json_binary(&ExecuteMsg::<A>::Purge {})?,
             funds: vec![],
         }));
         construct_label(&token_info, Some(env.block.height))
@@ -60,7 +70,7 @@ pub fn create_account<T: Serialize, A: Serialize>(
     };
 
 
-    let init_msg = InstantiateAccountMsg::<A, T> {
+    let init_msg = InstantiateAccountMsg {
         owner: info.sender.to_string(),
         token_info: token_info.clone(),
         account_data,
@@ -94,11 +104,11 @@ pub fn create_account<T: Serialize, A: Serialize>(
 }
 
 
-pub fn update_account_owner<A: Serialize>(
+pub fn update_account_owner(
     deps: DepsMut,
     sender: Addr,
     token_info: TokenInfo,
-    new_account_data: Option<A>,
+    new_account_data: Option<CredentialData>,
     funds: Vec<Coin>,
     update_for: Option<String>,
 ) -> Result<Response, ContractError> {
@@ -116,7 +126,7 @@ pub fn update_account_owner<A: Serialize>(
         deps.storage,
         (token_info.collection.as_str(), token_info.id.as_str()),
     )?;
-    let msg = ExecuteAccountMsg::<Empty, A>::UpdateOwnership {
+    let msg = ExecuteMsg::<Empty>::UpdateOwnership {
         new_owner: owner.to_string(),
         new_account_data,
     };

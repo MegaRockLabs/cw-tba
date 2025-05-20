@@ -36,10 +36,11 @@ cw81                 = { workspace = true }
 cw82                 = { workspace = true }
 cw83                 = { workspace = true }
 
+cw721                = { version = "0.18.0" }
+cw721-base           = { version = "0.18.0",  features = ["library"] }
 cw82-tba-base        = { workspace = true }
 cw82-tba-credentials = { workspace = true }
 cw83-tba-registry    = { workspace = true }
 cw-tba               = { workspace = true }
-saa                  = { workspace = true, features = ["native", "storage"] }
-cw721                = { version = "0.18.0" }
-cw721-base           = { version = "0.18.0",  features = ["library"] }
+#smart-account-auth   = { workspace = true, features = ["native", "traits", "utils"] }
+cw-auths             = { workspace = true, features = ["utils"] }

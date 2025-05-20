@@ -9,13 +9,13 @@ use cosm_tome::modules::bank::model::SendRequest;
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{from_json, to_json_binary, Binary, Coin, CosmosMsg, Empty, Timestamp};
-use saa::cosmos_utils::preamble_msg_arb_036;
-use saa::messages::MsgDataToSign;
+use cw_auths::saa_types::utils::cosmos::preamble_msg_arb_036;
+use cw_auths::saa_types::msgs::MsgDataToSign;
 use std::str::FromStr;
 
 
 use cw_tba::{CreateAccountMsg, MigrateAccountMsg, TokenInfo};
-use saa::{CosmosArbitrary, Credential, CredentialData, Verifiable};
+use cw_auths::saa_types::{CosmosArbitrary, Credential, CredentialData};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -153,6 +153,17 @@ pub fn create_simple_token_account<C: CosmosClient>(
 ) -> Result<ExecResponse, ProcessError> {
     let chain_id = chain.cfg.orc_cfg.chain_cfg.chain_id.clone();
 
+    let account_data = CredentialData {
+        credentials: vec![CosmosArbitrary { 
+            pubkey,
+            signature: Binary::default(),
+            message: Binary::default(),
+            hrp: None
+        }.into()],
+        use_native: None,
+        primary_index: None,
+    };
+
     let init_msg = cw_tba::TokenAccount {
         token_info: TokenInfo {
             collection: token_contract,
@@ -160,7 +171,7 @@ pub fn create_simple_token_account<C: CosmosClient>(
         },
         actions: None,
         create_for: None,
-        account_data: pubkey,
+        account_data,
     };
 
     let code_id = chain.orc.contract_map.code_id(SIMPLE_ACCOUNT_NAME)?;
@@ -194,7 +205,7 @@ pub fn get_cred_data<C: CosmosClient, M : Serialize>(
         chain_id: chain_id.clone(),
         contract_address: registry,
         messages,
-        nonce: String::from("0"),
+        nonce: 0u64.into(),
     };
 
     let cred = Credential::CosmosArbitrary(CosmosArbitrary {
@@ -211,7 +222,7 @@ pub fn get_cred_data<C: CosmosClient, M : Serialize>(
 
     CredentialData {
         credentials: vec![cred],
-        with_caller: None,
+        use_native: None,
         primary_index: None,
     }
 }
@@ -227,8 +238,6 @@ pub fn create_cred_token_account<C: CosmosClient>(
     //let denom = chain.cfg.orc_cfg.chain_cfg.denom.clone();
 
     let account_data = get_cred_data(chain, user, Vec::<String>::new());
-
-    account_data.verify().unwrap();
     
     let init_msg = cw_tba::TokenAccount {
         token_info: TokenInfo {
@@ -237,7 +246,7 @@ pub fn create_cred_token_account<C: CosmosClient>(
         },
         actions: None,
         create_for: None,
-        account_data: to_json_binary(&account_data).unwrap(),
+        account_data,
     };
 
     let code_id = chain.orc.contract_map.code_id(CRED_ACOUNT_NAME)?;
@@ -267,13 +276,24 @@ pub fn reset_simple_token_account<C: CosmosClient>(
 
     let chain_id = chain.cfg.orc_cfg.chain_cfg.chain_id.clone();
 
+    let account_data = CredentialData {
+        credentials: vec![CosmosArbitrary { 
+            pubkey,
+            signature: Binary::default(),
+            message: Binary::default(),
+            hrp: None
+        }.into()],
+        use_native: None,
+        primary_index: None,
+    };
+
     let init_msg = cw_tba::TokenAccount {
         token_info: TokenInfo {
             collection: token_contract,
             id: token_id,
         },
         actions: None,
-        account_data: pubkey,
+        account_data,
         create_for: None,
     };
 
@@ -302,7 +322,7 @@ pub fn migrate_simple_token_account<C: CosmosClient>(
 ) -> Result<ExecResponse, ProcessError> {
     let code_id = chain.orc.contract_map.code_id(SIMPLE_ACCOUNT_NAME)?;
 
-    let migrate_msg = cw83_tba_registry::msg::ExecuteMsg::<Binary>::MigrateAccount {
+    let migrate_msg = cw83_tba_registry::msg::ExecuteMsg::MigrateAccount {
         token_info: TokenInfo {
             collection: token_contract,
             id: token_id,

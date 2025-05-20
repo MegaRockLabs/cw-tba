@@ -1,8 +1,8 @@
-use cosmwasm_schema::write_api;
-use cw82_tba_credentials::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use cw82_tba_credentials::msg::{InstantiateMsg, MigrateMsg, QueryMsg};
+use cw_tba::ExecuteMsg;
 
 fn main() {
-    write_api! {
+    cosmwasm_schema::write_api! {
         name: "cw82_tba_credentials",
         instantiate: InstantiateMsg,
         execute: ExecuteMsg,

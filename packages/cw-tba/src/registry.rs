@@ -1,6 +1,7 @@
 use crate::{common::TokenInfo, ExecuteAccountMsg};
-use cosmwasm_schema::{cw_serde, serde::Serialize};
-use cosmwasm_std::{Binary, Coin, Empty};
+use cosmwasm_schema::{cw_serde, serde::ser::Serialize};
+use cosmwasm_std::{Coin, Empty};
+use cw_auths::saa_types::CredentialData;
 
 #[cw_serde]
 pub struct RegistryParams<T = Option<Empty>> {
@@ -12,7 +13,7 @@ pub struct RegistryParams<T = Option<Empty>> {
 
 /// An extenstion for [cw83::CreateAccountMsg]
 #[cw_serde]
-pub struct TokenAccount<D = Binary, A = ExecuteAccountMsg>
+pub struct TokenAccount<A = ExecuteAccountMsg>
 where
     A: Serialize
 {
@@ -20,7 +21,7 @@ where
     pub token_info: TokenInfo,
 
     /// Account data used for (cw81 signature verification)
-    pub account_data: D,
+    pub account_data: CredentialData,
 
     /// Actions to execute immediately on the account creation
     pub actions: Option<Vec<A>>,

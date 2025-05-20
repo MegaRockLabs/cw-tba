@@ -3,8 +3,8 @@ name = "cw82-tba-base"
 version     = { workspace = true }
 edition     = { workspace = true }
 repository  = { workspace = true }
-authors = [ "Kromsten <s@noreply.megarock.labs>" ]
 description = "Token Bound Account Base"
+authors     = [ "Kromsten <kromsten@megarock.app>" ]
 
 exclude = [
   "contract.wasm",
@@ -12,10 +12,18 @@ exclude = [
 ]
 
 [lib]
+name       =  "cw82_tba_base"
 crate-type = ["cdylib", "rlib"]
 
 [features]
+default          = ["wasm"]
 library = []
+wasm             = []
+cosmwasm         = []
+solana          = []
+substrate        = []
+std            = []
+
 
 [dependencies]
 cosmwasm-std    = { workspace = true }
@@ -29,6 +37,9 @@ cw2             = { workspace = true }
 cw22            = { workspace = true }
 cw82            = { workspace = true }
 cw83            = { workspace = true }
-cw-tba          = { workspace = true }
-sha2            = { version = "0.10.8", default-features = false }
-
+cw-tba          = { workspace = true, features = [] }
+strum           = { workspace = true }
+strum_macros    = { workspace = true }
+saa-schema      = { workspace = true  }
+#smart-account-auth  = { workspace = true, features = ["cosmwasm_1", "cosmos", "session"] }
+cw-auths            = { workspace = true }

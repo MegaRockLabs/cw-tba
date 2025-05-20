@@ -12,12 +12,13 @@ exclude = [
 ]
 
 [lib]
+name       =  "cw82_tba_credentials"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["archway"]
 archway = []
 library = []
+
 
 [dependencies]
 semver          = { workspace = true }
@@ -29,11 +30,13 @@ cw-storage-plus = { workspace = true }
 cw-ownable      = { workspace = true }
 cw2             = { workspace = true }
 cw22            = { workspace = true }
-cw82            = { workspace = true }
-cw-tba          = { workspace = true }
-saa             = { workspace = true }
-
+cw-tba          = { workspace = true, features = ["full_info"] }
 anybuf          = { workspace = true }
+strum = { workspace = true }
+cw-auths = { workspace = true }
+
+cw82            = { workspace = true }
+
 
 [dev-dependencies]
 p256   = { version = "0.13.2" }
