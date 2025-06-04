@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    ensure, ensure_eq, to_json_binary, Addr, Coin, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg
+    ensure, ensure_eq, to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg
 };
 
 use cw83::CREATE_ACCOUNT_REPLY_ID;
@@ -15,6 +15,7 @@ use crate::{
 
 
 const CREATE_MSG : &str = "Create TBA account";
+const UPDATE_MSG : &str = "Update TBA account ownership";
 
 
 fn construct_label(info: &TokenInfo, serial: Option<u64>) -> String {
@@ -71,7 +72,7 @@ pub fn create_account(
         construct_label(&token_info, None)
     };
 
-    let verified = account_data.verify(
+    let account_data = account_data.verify(
         deps.as_ref(), &env, &info, vec![CREATE_MSG.to_string()]
     )?;
 
@@ -111,26 +112,42 @@ pub fn create_account(
 
 pub fn update_account_owner(
     deps: DepsMut,
-    sender: Addr,
+    env: Env,
+    mut info: MessageInfo,
     token_info: TokenInfo,
     new_account_data: Option<CredentialData>,
-    funds: Vec<Coin>,
     update_for: Option<String>,
 ) -> Result<Response, ContractError> {
+
     let is_manager = REGISTRY_PARAMS
         .load(deps.storage)?
         .managers
-        .contains(&sender.to_string());
-    let owner = update_for.unwrap_or(sender.to_string());
+        .contains(&info.sender.to_string());
+
+    let owner = update_for.unwrap_or(info.sender.to_string());
     // only admin can update ownership but only if the new address is the token owner
-    if owner != sender.to_string() && !is_manager {
+
+    if owner != info.sender.to_string() && !is_manager {
         return Err(ContractError::Unauthorized {});
     }
     verify_nft_ownership(&deps.querier, owner.as_str(), token_info.clone())?;
+
     let contract_addr = TOKEN_ADDRESSES.load(
         deps.storage,
         (token_info.collection.as_str(), token_info.id.as_str()),
     )?;
+
+    info.sender = deps.api.addr_validate(&contract_addr)?;
+
+    ensure!(new_account_data.is_some() || owner != info.sender.to_string(), ContractError::Generic(String::from(
+        "New owner must be different from the current owner",
+    )));
+
+    let new_account_data = new_account_data.map(|data| {
+        data.verify(deps.as_ref(), &env, &info, vec![UPDATE_MSG.to_string()])
+    }).transpose()?;
+
+
     let msg = ExecuteMsg::UpdateOwnership {
         new_owner: owner.to_string(),
         new_account_data,
@@ -138,7 +155,7 @@ pub fn update_account_owner(
     let msg = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr,
         msg: to_json_binary(&msg)?,
-        funds,
+        funds: info.funds,
     });
     Ok(Response::default().add_message(msg).add_attributes(vec![
         ("action", "update_account_owner"),

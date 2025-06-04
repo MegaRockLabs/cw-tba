@@ -9,7 +9,8 @@ use cw22::SUPPORTED_INTERFACES;
 use cw_ownable::get_ownership;
 use cw_tba::{verify_nft_ownership, ExecuteAccountMsg, Status};
 use saa_wasm::{ 
-    add_credentials, remove_credentials, saa_types::{msgs::SignedDataMsg, CredentialData}, verify_signed_actions, UpdateOperation
+    add_credentials, remove_credentials, saa_types::{msgs::SignedDataMsg, VerifiedData}, 
+    verify_signed_actions, UpdateOperation
 };
 
 
@@ -51,7 +52,7 @@ pub fn try_executing_actions(
 pub fn try_updating_account_data(
     mut deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     op: UpdateOperation
 ) -> ContractResult {
     let ownership = cw_ownable::get_ownership(deps.storage)?;
@@ -82,7 +83,7 @@ pub fn try_updating_ownership(
     env: Env,
     info: MessageInfo,
     new_owner: String,
-    new_account_data: Option<CredentialData>,
+    new_account_data: Option<VerifiedData>,
 ) -> ContractResult {
     assert_registry(deps.storage, info.sender.as_str())?;
     let owner = get_ownership(deps.storage)?.owner.unwrap();

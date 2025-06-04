@@ -5,7 +5,7 @@ use cw84::{signed_query, signed_execute};
 use saa_wasm::saa_types::msgs::AuthPayload;
 use saa_wasm::{session_action, session_query, UpdateOperation};
 use cw_ownable::{cw_ownable_query};
-use saa_wasm::saa_types::{msgs::SignedDataMsg, CredentialData};
+use saa_wasm::saa_types::{msgs::SignedDataMsg, VerifiedData};
 use saa_schema::saa_derivable;
 
 use crate::common::TokenInfo;
@@ -15,7 +15,7 @@ use crate::{Cw721ReceiveMsg};
 #[cw_serde]
 pub struct InstantiateAccountMsg<A = ExecuteAccountMsg> {
     /// Customiable payload specififc for account implementation
-    pub account_data: CredentialData,
+    pub account_data: VerifiedData,
     /// Actions to execute immediately on the account creation
     pub actions: Option<Vec<A>>,
     /// Token info
@@ -138,7 +138,7 @@ pub enum ExecuteMsg {
         /// New NFT holder
         new_owner: String,
         /// New account data
-        new_account_data: Option<CredentialData>,
+        new_account_data: Option<VerifiedData>,
     },
 
     /// Owner only method to update account data

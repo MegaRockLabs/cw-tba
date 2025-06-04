@@ -1,4 +1,6 @@
-Token Bound Accounts (TBA) revolutionizes how users interact with their digital assets by enabling the creation of smart contract-based accounts linked to any non-fungible token (NFT). This innovative toolset provides unparalleled flexibility and functionality, ensuring backward compatibility with all existing NFT collections.
+# Token Bound Accounts: CosmWasm contracts
+ 
+Token Bound Accounts (TBAs) revolutionizes how users interact with their digital assets by enabling the creation of smart contract-based accounts linked to any non-fungible token (NFT). This innovative toolset provides unparalleled flexibility and functionality, ensuring backward compatibility with all existing NFT collections.
 
 Our newly developed account contracts introduce customizable credentials, allowing users to integrate popular wallets like Metamask directly into their NFT accounts. This feature simplifies the process of authorizing future actions, enhancing the user experience and security.
 

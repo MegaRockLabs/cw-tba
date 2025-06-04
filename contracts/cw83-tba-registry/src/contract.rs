@@ -84,10 +84,10 @@ pub fn execute(
             update_for,
         } => update_account_owner(
             deps,
-            info.sender,
+            env,
+            info,
             token_info,
             new_account_data,
-            info.funds,
             update_for,
         ),
     }

@@ -1,5 +1,5 @@
 use cosmwasm_std::{ensure, ensure_eq, CosmosMsg, StdError, StdResult, Storage};
-use saa_wasm::saa_types::CredentialRecord;
+use saa_wasm::saa_types::{CredentialRecord, VerifiedData};
 
 
 use crate::{error::ContractError, state::{REGISTRY_ADDRESS, STATUS}};
@@ -37,14 +37,26 @@ pub fn assert_registry(store: &dyn Storage, addr: &str) -> Result<(), ContractEr
 }
 
 
+pub fn assert_data_owner_derivable(
+    data: &VerifiedData,
+    owner: String,
+) -> Result<(), ContractError> {
+    ensure!(
+        data.addresses.iter().any(|addr| *addr == owner),
+        ContractError::NoOwnerCred {}
+    );
+    Ok(())
+}
+
+
+
 pub fn assert_owner_derivable(
     records: Vec<CredentialRecord>,
     owner: String,
 ) -> Result<(), ContractError> {
-    ensure!(records
-        .into_iter()
-        .any(|(_, info)| {
-            if let Some(addr) = info.address {
+    ensure!(
+        records.iter().any(|record| {
+            if let Some(addr) = record.1.address.clone() {
                 addr == owner
             } else {
                 false
@@ -54,6 +66,7 @@ pub fn assert_owner_derivable(
     );
     Ok(())
 }
+
 
 
 

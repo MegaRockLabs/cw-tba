@@ -38,11 +38,21 @@ pub enum ContractError {
     #[error("Account for the given token already exists. Use `reset_account` to overwrite it and `migrate_account` to update it to a newer version")]
     AccountExists {},
 
+    #[error("Generic error: {0}")]
+    Generic(String),
+
     #[error("Semver parsing error: {0}")]
     SemVer(String),
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
 }
+
+impl ContractError {
+    pub fn generic(msg: String) -> Self {
+        Self::Generic(msg)
+    }
+}
+
 
 impl From<semver::Error> for ContractError {
     fn from(err: semver::Error) -> Self {
