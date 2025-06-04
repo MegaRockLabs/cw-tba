@@ -1,12 +1,12 @@
-use cosmwasm_std::{from_json, CosmosMsg, Deps, Env, Order, StdError, StdResult, Binary};
-use cw82::{CanExecuteResponse, ValidSignatureResponse};
-use cw_tba::{AssetsResponse, FullInfoResponse, TokenInfo};
-use cw_auths::{saa_types::msgs::{AuthPayload, SignedDataMsg}, verify_native, verify_signed};
+use cosmwasm_std::{ensure, Binary, CosmosMsg, Deps, Env, Order, StdError, StdResult};
+use cw84::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
+use cw_tba::{AssetsResponse, ExecuteAccountMsg, FullInfoResponse, TokenInfo};
+use saa_wasm::{saa_types::msgs::{AuthPayload, SignedDataMsg}, verify_data, verify_native, verify_signed};
 
 use crate::{
     state::{KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO},
-    utils::
-        status_ok
+    utils::{assert_ok_cosmos_msg, 
+        status_ok}
     ,
 };
 
@@ -15,59 +15,58 @@ const DEFAULT_BATCH_SIZE: u32 = 100;
 
 pub fn can_execute(
     deps: Deps,
-    env: Env,
     sender: String,
-    msg: CosmosMsg<SignedDataMsg>,
+    msg: CosmosMsg,
 ) -> StdResult<CanExecuteResponse> {
-    if !status_ok(deps.storage) {
-        return Ok(CanExecuteResponse { can_execute: false });
-    };
 
-    let can_execute = match msg {
-        CosmosMsg::Custom(
-            signed
-        ) => {
-            verify_signed(deps.api, deps.storage, &env, signed).is_ok()
-        },
-        _ => verify_native( deps.storage, sender).is_ok()
-    };
-
-    Ok(CanExecuteResponse { can_execute })
+    Ok(CanExecuteResponse { 
+        can_execute: status_ok(deps.storage) && 
+                      verify_native( deps.storage, sender).is_ok() &&
+                      assert_ok_cosmos_msg(&msg).is_ok()
+    })
 }
+
+
+pub fn can_execute_signed(
+    deps: Deps,
+    env: Env,
+    msgs: Vec<ExecuteAccountMsg>,
+    signed: SignedDataMsg,
+) -> StdResult<CanExecuteResponse> {
+    Ok(CanExecuteResponse { 
+        can_execute: status_ok(deps.storage) && verify_signed(
+            deps, 
+            &env, 
+            msgs, 
+            signed
+        ).is_ok()
+    })
+}
+
 
 pub fn valid_signature(
     deps: Deps,
-    env: Env,
+    _env: Env,
     data: Binary,
     signature: Binary,
-    payload: Option<Binary>,
+    payload: Option<AuthPayload>,
 ) -> StdResult<ValidSignatureResponse> {
-    let is_valid = if status_ok(deps.storage) {
 
-        let payload = payload
-            .map(|p| from_json::<AuthPayload>(p)).transpose()?;
-
-        verify_signed(
-            deps.api,
-            deps.storage, 
-            &env,
-            SignedDataMsg { data, signature, payload },
-        )
-        .is_ok()
-
-    } else {
-        false
-    };
-
-    Ok(ValidSignatureResponse { is_valid })
+    Ok(ValidSignatureResponse { 
+        is_valid: status_ok(deps.storage) && verify_data(
+            deps, 
+            SignedDataMsg { data, signature, payload }
+        ).is_ok()
+    })
 }
 
-/* pub fn valid_signatures(
+
+pub fn valid_signatures(
     deps: Deps,
-    env: Env,
+    _env: Env,
     data: Vec<Binary>,
     signatures: Vec<Binary>,
-    payload: Option<Binary>,
+    payload: Option<AuthPayload>,
 ) -> StdResult<ValidSignaturesResponse> {
     if !status_ok(deps.storage) {
         return Ok(ValidSignaturesResponse {
@@ -80,24 +79,14 @@ pub fn valid_signature(
         StdError::generic_err("Data and signatures must be of equal length")
     );
 
-    let payload = payload
-            .map(|p| from_json::<AuthPayload>(p)).transpose()?;
-    
-
     let are_valid: Vec<bool> = signatures
         .into_iter()
         .enumerate()
         .map(|(index, signature)| {
             let data = data[index].clone();
-            cw_auths::verify_signed(
-                deps.api,
-                deps.storage, 
-                &env,
-                SignedDataMsg { 
-                    data, 
-                    signature, 
-                    payload: payload.clone()
-                },
+            verify_data(
+                deps,
+                SignedDataMsg { data, signature, payload: payload.clone()},
             )
             .is_ok()
          
@@ -105,7 +94,8 @@ pub fn valid_signature(
         .collect();
 
     Ok(ValidSignaturesResponse { are_valid })
-} */
+} 
+
 
 
 pub fn assets(
@@ -158,7 +148,7 @@ pub fn full_info(
     let tokens = known_tokens(deps, skip, limit)?;
     let balances = deps.querier.query_all_balances(env.contract.address)?;
     let ownership = cw_ownable::get_ownership(deps.storage)?;
-    let credentials = cw_auths::get_stored_credentials(deps.storage)
+    let credentials = saa_wasm::get_stored_credentials(deps.storage)
                                     .map_err(|_| StdError::generic_err("Error getting credentials"))?;
 
     Ok(FullInfoResponse {

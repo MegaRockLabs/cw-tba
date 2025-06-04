@@ -18,11 +18,13 @@ cosmwasm-std    = { workspace = true }
 cosmwasm-schema = { workspace = true }
 schemars        = { workspace = true }
 cw83            = { workspace = true }
-cw82            = { workspace = true }
+cw84            = { workspace = true }
 cw-ownable      = { workspace = true }
 anybuf          = { workspace = true }
 
 saa-schema      = { workspace = true }
+strum           = { workspace = true }
+strum_macros    = { workspace = true }
 
 #saa-schema          = { version = "0.24.5", features = ["cosmwasm", "session"], path = "../../../contract-auth/packages/schema" }
-cw-auths            = { workspace = true }
+saa-wasm            = { workspace = true }

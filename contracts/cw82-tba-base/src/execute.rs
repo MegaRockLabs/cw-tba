@@ -7,10 +7,10 @@ use crate::{
 use cosmwasm_std::{
     ensure, to_json_binary, Addr, Binary, Coin, Deps, DepsMut, Env, MessageInfo, ReplyOn, Response, StdResult, SubMsg, WasmMsg
 };
-use cw_auths::UpdateOperation;
+use saa_wasm::UpdateOperation;
 use cw_ownable::{assert_owner, get_ownership, is_owner, OwnershipError};
 use cw_tba::{encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance, CosmosMsg, Cw721Msg};
-use cw_auths::saa_types::CredentialData;
+use saa_wasm::saa_types::CredentialData;
 
 pub const MINT_REPLY_ID: u64 = 1;
 

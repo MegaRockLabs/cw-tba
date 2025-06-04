@@ -7,7 +7,7 @@ use cw_ownable::{get_ownership, initialize_owner};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cw_tba::ExecuteMsg;
-use cw_auths::handle_session_actions;
+use saa_wasm::handle_session_actions;
 use strum::IntoDiscriminant;
 
 use crate::{
@@ -171,7 +171,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     if REGISTRY_ADDRESS.load(deps.storage).is_err() {
         return Err(StdError::generic_err(ContractError::Deleted {}.to_string()));
     };
-    if let Some(res) = cw_auths::handle_session_queries(deps.api, deps.storage, &env, &msg)? {
+    if let Some(res) = saa_wasm::handle_session_queries(deps.api, deps.storage, &env, &msg)? {
         return Ok(res);
     }
     match msg {

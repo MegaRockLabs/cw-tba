@@ -1,14 +1,16 @@
 use anybuf::Anybuf;
-use cosmwasm_schema::serde::Serialize;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Binary, Coin, CosmosMsg, StdResult, Timestamp};
-use cw82::account_query;
-use cw_auths::{session_action, session_query, UpdateOperation};
+use cw84::{signed_query, signed_execute};
+use saa_wasm::saa_types::msgs::AuthPayload;
+use saa_wasm::{session_action, session_query, UpdateOperation};
 use cw_ownable::{cw_ownable_query};
-use cw_auths::saa_types::{msgs::SignedDataMsg, CredentialData};
+use saa_wasm::saa_types::{msgs::SignedDataMsg, CredentialData};
+use saa_schema::saa_derivable;
 
 use crate::common::TokenInfo;
 use crate::{Cw721ReceiveMsg};
+
 
 #[cw_serde]
 pub struct InstantiateAccountMsg<A = ExecuteAccountMsg> {
@@ -43,7 +45,7 @@ pub struct BasicAllowance {
 }
 
 
-#[cw_serde]
+#[saa_derivable]
 pub enum ExecuteAccountMsg {
     /// Proxy method for executing cosmos messages
     /// Wasm and Stargate messages aren't supported
@@ -112,61 +114,24 @@ pub enum ExecuteAccountMsg {
 }
 
 
+/* 
+impl Into<ExecuteAccountMsg> for ExecuteMsg {
+    fn into(self) -> ExecuteAccountMsg {
+        match self {
+            ExecuteMsg::Execute { msgs } => ExecuteAccountMsg::Execute { msgs },
+            ExecuteMsg::Freeze {} => ExecuteAccountMsg::Freeze {},
+            _ => panic!("Unsupported message type"),
+            
+        }
+    }
+}
+ */
 
-#[session_action]
-pub enum ExecuteMsg<T : Serialize + Clone  = SignedDataMsg> {
-    /// Proxy method for executing cosmos messages
-    /// Wasm and Stargate messages aren't supported
-    /// Only the current holder can execute this method
-    Execute { msgs: Vec<CosmosMsg<T>> },
 
-    /// Mint NFTs directly from token account
-    MintToken {
-        /// Contract address of the minter
-        minter: String,
-        // Mint message to pass a minter contract
-        msg: Binary,
-    },
-
-    /// Send NFT to a contract
-    SendToken {
-        /// Contract address of the collection
-        collection: String,
-        /// Token id
-        token_id: String,
-        /// Recipient contract address
-        contract: String,
-        /// Send message to pass a recipient contract
-        msg: Binary,
-    },
-
-    /// Simple NFT transfer
-    TransferToken {
-        /// Contract address of the collection
-        collection: String,
-        /// Token id
-        token_id: String,
-        /// Recipient address
-        recipient: String,
-    },
-    
-    /// Owner only method to make the account forget about certain tokens
-    ForgetTokens {
-        /// Contract address of the collection
-        collection: String,
-        /// Optional list of token ids to forget. If not provided, all tokens will be forgotten
-        token_ids: Vec<String>,
-    },
-
-    /// Owner only method that make the account aware of certain tokens to simplify the future queries
-    UpdateKnownTokens {
-        /// Contract address of the collection
-        collection: String,
-        /// Token id to start after
-        start_after: Option<String>,
-        /// Limit of the tokens to return
-        limit: Option<u32>,
-    },
+#[session_action(ExecuteAccountMsg)]
+#[signed_execute(ExecuteAccountMsg, SignedDataMsg)]
+#[saa_derivable]
+pub enum ExecuteMsg {
 
     /// Registry only method to update the owner to the current NFT holder
     UpdateOwnership {
@@ -182,16 +147,8 @@ pub enum ExecuteMsg<T : Serialize + Clone  = SignedDataMsg> {
     /// Registering a token as known on receiving
     ReceiveNft(Cw721ReceiveMsg),
 
-    FeeGrant {
-        grantee     :   String,
-        allowance   :   Option<BasicAllowance>
-    },
-
-    /// Registry only method to call when a token is moved to escrow
+    /// A method callable by anybody to freeze the account if the owner has changed
     Freeze {},
-
-    /// Registry only method to call after the token is released from escrow
-    Unfreeze {},
 
     /// Remove all the data from the contract and make it unsuable
     Purge {},
@@ -211,13 +168,11 @@ pub struct AssetsResponse {
 }
 
 
-#[account_query]
 #[cw_ownable_query]
-#[session_query(ExecuteMsg)]
-pub enum QueryMsg<T = SignedDataMsg> 
-    where 
-        T: Serialize + Clone,
-{   
+#[signed_query(ExecuteAccountMsg, SignedDataMsg, AuthPayload)]
+#[session_query(ExecuteAccountMsg)]
+#[saa_derivable]
+pub enum QueryMsg {   
     /// Status of the account telling whether it iz frozen
     #[returns(Status)]
     Status {},

@@ -1,18 +1,20 @@
-use cosmwasm_schema::serde::Serialize;
 use cosmwasm_std::{
-    ensure, ensure_eq, to_json_binary, Addr, Coin, CosmosMsg, DepsMut, Empty, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg
+    ensure, ensure_eq, to_json_binary, Addr, Coin, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg
 };
 
 use cw83::CREATE_ACCOUNT_REPLY_ID;
 use cw_tba::{
-    verify_nft_ownership, ExecuteMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo,
+    verify_nft_ownership, ExecuteAccountMsg, ExecuteMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo
 };
-use cw_auths::saa_types::CredentialData;
+use saa_wasm::saa_types::{CredentialData, CredentialsWrapper};
 
 
 use crate::{
     error::ContractError, funds::checked_funds, state::{LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES}
 };
+
+
+const CREATE_MSG : &str = "Create TBA account";
 
 
 fn construct_label(info: &TokenInfo, serial: Option<u64>) -> String {
@@ -23,7 +25,7 @@ fn construct_label(info: &TokenInfo, serial: Option<u64>) -> String {
     }
 }
 
-pub fn create_account<A: Serialize + Clone>(
+pub fn create_account(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -32,7 +34,7 @@ pub fn create_account<A: Serialize + Clone>(
     token_info: TokenInfo,
     account_data: CredentialData,
     create_for: Option<String>,
-    actions: Option<Vec<A>>,
+    actions: Option<Vec<ExecuteAccountMsg>>,
     reset: bool,
 ) -> Result<Response, ContractError> {
     ensure_eq!(env.block.chain_id, chain_id, ContractError::InvalidChainId {});
@@ -61,7 +63,7 @@ pub fn create_account<A: Serialize + Clone>(
         ensure!(reset, ContractError::AccountExists {});
         msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: token_address.unwrap(),
-            msg: to_json_binary(&ExecuteMsg::<A>::Purge {})?,
+            msg: to_json_binary(&ExecuteMsg::Purge {})?,
             funds: vec![],
         }));
         construct_label(&token_info, Some(env.block.height))
@@ -69,6 +71,9 @@ pub fn create_account<A: Serialize + Clone>(
         construct_label(&token_info, None)
     };
 
+    let verified = account_data.verify(
+        deps.as_ref(), &env, &info, vec![CREATE_MSG.to_string()]
+    )?;
 
     let init_msg = InstantiateAccountMsg {
         owner: info.sender.to_string(),
@@ -126,7 +131,7 @@ pub fn update_account_owner(
         deps.storage,
         (token_info.collection.as_str(), token_info.id.as_str()),
     )?;
-    let msg = ExecuteMsg::<Empty>::UpdateOwnership {
+    let msg = ExecuteMsg::UpdateOwnership {
         new_owner: owner.to_string(),
         new_account_data,
     };

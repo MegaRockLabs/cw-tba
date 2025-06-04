@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdError, StdResult};
-use cw_auths::StoredCredentials;
+use saa_wasm::StoredCredentials;
 use crate::{msgs::*, Status};
 
 #[cw_serde]

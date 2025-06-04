@@ -1,7 +1,7 @@
 use crate::{common::TokenInfo, ExecuteAccountMsg};
 use cosmwasm_schema::{cw_serde, serde::ser::Serialize};
 use cosmwasm_std::{Coin, Empty};
-use cw_auths::saa_types::CredentialData;
+use saa_wasm::saa_types::CredentialData;
 
 #[cw_serde]
 pub struct RegistryParams<T = Option<Empty>> {

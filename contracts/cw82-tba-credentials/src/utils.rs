@@ -1,5 +1,5 @@
-use cosmwasm_std::{ensure, ensure_eq, Api, CosmosMsg, StdError, StdResult, Storage};
-use cw_auths::saa_types::{msgs::SignedDataMsg, CredentialData};
+use cosmwasm_std::{ensure, ensure_eq, CosmosMsg, StdError, StdResult, Storage};
+use saa_wasm::saa_types::CredentialRecord;
 
 
 use crate::{error::ContractError, state::{REGISTRY_ADDRESS, STATUS}};
@@ -38,31 +38,20 @@ pub fn assert_registry(store: &dyn Storage, addr: &str) -> Result<(), ContractEr
 
 
 pub fn assert_owner_derivable(
-    api: &dyn Api,
-    storage: &mut dyn Storage,
-    data: &CredentialData,
-    owner: Option<String>
+    records: Vec<CredentialRecord>,
+    owner: String,
 ) -> Result<(), ContractError> {
-    let owner = owner.unwrap_or(
-        cw_ownable::get_ownership(storage)?.owner.unwrap().to_string()
-    );
-
-    ensure!(data
-        .credentials
-        .iter()
-        .any(|c| {
-            if !c.is_cosmos_derivable() {
-                return false;
+    ensure!(records
+        .into_iter()
+        .any(|(_, info)| {
+            if let Some(addr) = info.address {
+                addr == owner
+            } else {
+                false
             }
-            let addr = c.cosmos_address(api);
-            if let Ok(addr) = addr {
-                return addr.to_string() == owner;
-            }
-            false
-        }), 
+        }),
         ContractError::NoOwnerCred {}
     );
-
     Ok(())
 }
 
@@ -83,42 +72,3 @@ pub fn assert_ok_cosmos_msg(msg: &CosmosMsg) -> StdResult<()> {
         _ => Ok(()),
     }
 }
-
-
-pub fn change_cosmos_msg(msg: CosmosMsg<SignedDataMsg>) -> Result<CosmosMsg, ContractError>{
-    Ok(match msg {
-        CosmosMsg::Bank(msg) => CosmosMsg::Bank(msg),
-        CosmosMsg::Staking(msg) => CosmosMsg::Staking(msg),
-        CosmosMsg::Distribution(msg) => CosmosMsg::Distribution(msg),
-        CosmosMsg::Stargate { type_url, value } => CosmosMsg::Stargate { type_url, value },
-        CosmosMsg::Ibc(msg) => CosmosMsg::Ibc(msg),
-        CosmosMsg::Wasm(msg) => CosmosMsg::Wasm(msg),
-        CosmosMsg::Gov(gov_msg) => CosmosMsg::Gov(gov_msg),
-        CosmosMsg::Custom(_) => {
-                        return  Err(ContractError::Generic(String::from("Nested signing notsupported")))?;
-            }
-        _ => panic!("Unsupported message type"),
-    })
-}
-
-/* pub fn chane_action(msg: ExecuteMsg) -> Result<ExecuteAccountMsg, ContractError> {
-    Ok(match msg {
-        ExecuteMsg::Execute { msgs } => ExecuteAccountMsg::Execute { msgs },
-        ExecuteMsg::UpdateOwnership { new_owner, new_account_data } => {
-            ExecuteAccountMsg::UpdateOwnership { new_owner, new_account_data }
-        },
-        ExecuteMsg::UpdateAccountData { op } => ExecuteAccountMsg::UpdateAccountData { op },
-        ExecuteMsg::ReceiveNft(msg) => ExecuteAccountMsg::ReceiveNft(msg),
-        ExecuteMsg::Purge {} => ExecuteAccountMsg::Purge {},
-        _ => panic!("Unsupported message type"),
-    })
-}
-
-
- */
-
-
-
-
-
-

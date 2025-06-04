@@ -2,7 +2,7 @@ use cw_tba::TokenInfo;
 use cw_ownable::is_owner;
 use cosmwasm_std::{ensure, from_json, Addr, Binary, Deps, Env, Order, StdError, StdResult};
 use cw82::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
-use cw_auths::saa_types::{traits::Verifiable, CosmosArbitrary, Credential};
+use saa_wasm::saa_types::{traits::Verifiable, CosmosArbitrary, Credential};
 
 use crate::{
     msg::{AssetsResponse, FullInfoResponse},

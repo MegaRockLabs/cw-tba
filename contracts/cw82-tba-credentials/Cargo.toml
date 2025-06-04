@@ -33,9 +33,10 @@ cw22            = { workspace = true }
 cw-tba          = { workspace = true, features = ["full_info"] }
 anybuf          = { workspace = true }
 strum = { workspace = true }
-cw-auths = { workspace = true }
+saa-wasm = { workspace = true }
 
 cw82            = { workspace = true }
+cw84            = { workspace = true }
 
 
 [dev-dependencies]

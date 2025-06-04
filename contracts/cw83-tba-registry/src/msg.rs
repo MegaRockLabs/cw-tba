@@ -4,7 +4,7 @@ use cw83::{
 };
 
 use cw_tba::{CreateAccountMsg, MigrateAccountMsg, RegistryParams, TokenInfo, TokenAccount};
-use cw_auths::saa_types::CredentialData;
+use saa_wasm::saa_types::CredentialData;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -24,20 +24,15 @@ pub type AccountOpt     = AccountResponse<Option<TokenInfo>>;
 pub type Accounts       = AccountsResponse<Option<TokenInfo>>;
 
 type OptAccountsQuery   = Option<AccountsQueryMsg>;
+#[allow(dead_code, unused)]
 type OptTokenInfo       = Option<TokenInfo>;
 
 
 
-#[allow(dead_code)]
-// AccountInfo(TokenInfo)
-// AccountResponse(TokenInfo)
-// Accounts { query: Option<AccountsQueryMsg> }
-// AccountsResponse(Option<TokenInfo>)
 #[registry_query(TokenInfo, TokenInfo, OptAccountsQuery, OptTokenInfo)]
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-
     /// Query params of the registry
     #[returns(RegistryParams)]
     RegistryParams {},

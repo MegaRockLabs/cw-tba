@@ -4,8 +4,8 @@ use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, Empty};
 use cw82_tba_credentials::contract::instantiate;
 use cw82_tba_credentials::execute::try_executing;
 use cw_tba::{ExecuteMsg, TokenInfo};
-use cw_auths::saa_types::utils::cosmos::preamble_msg_arb_036;
-use cw_auths::saa_types::msgs::{MsgDataToSign, SignedDataMsg};
+use saa_wasm::saa_types::utils::cosmos::preamble_msg_arb_036;
+use saa_wasm::saa_types::msgs::{MsgDataToSign, SignedDataMsg};
 use test_context::test_context;
 
 use cw82_tba_credentials::msg::InstantiateMsg;

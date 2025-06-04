@@ -42,4 +42,4 @@ strum           = { workspace = true }
 strum_macros    = { workspace = true }
 saa-schema      = { workspace = true  }
 #smart-account-auth  = { workspace = true, features = ["cosmwasm_1", "cosmos", "session"] }
-cw-auths            = { workspace = true }
+saa-wasm            = { workspace = true }

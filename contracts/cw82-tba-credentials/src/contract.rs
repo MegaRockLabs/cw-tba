@@ -4,13 +4,13 @@ use strum::IntoDiscriminant;
 #[cfg(target_arch = "wasm32")]
 use crate::utils::query_if_registry;
 
-use cw_auths::{account_number, handle_session_queries, verify_native};
+use saa_wasm::{account_number, handle_session_action, handle_session_query, verify_native};
 
 
 use cosmwasm_std::{
     to_json_binary, Binary, 
     Deps, DepsMut, Env, MessageInfo, Reply, Response, 
-    StdError, StdResult, SubMsg
+    StdError, StdResult
 };
 
 use cw_ownable::get_ownership;
@@ -21,7 +21,7 @@ use crate::{
     action::{self, execute_action, MINT_REPLY_ID}, 
     error::ContractError, execute, 
     msg::{ContractResult, InstantiateMsg, MigrateMsg, QueryMsg}, 
-    query::{assets, can_execute, full_info, known_tokens, valid_signature, /* valid_signatures */}, 
+    query::{assets, can_execute, can_execute_signed, full_info, known_tokens, valid_signature, valid_signatures /* valid_signatures */}, 
     state::{save_token_credentials, MINT_CACHE, REGISTRY_ADDRESS, STATUS, TOKEN_INFO}
 };
 
@@ -33,7 +33,7 @@ pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -66,39 +66,22 @@ pub fn instantiate(
     STATUS.save(deps.storage, &Status { frozen: false })?;
 
     save_token_credentials(
-        deps.api, 
-        deps.storage, 
+        &mut deps,
         &env, 
         info.clone(), 
         msg.account_data, 
         msg.owner.clone(),
     )?;
     let actions = msg.actions.unwrap_or_default();
-    let mut msgs: Vec<SubMsg> = Vec::with_capacity(actions.len() + 1);
 
+    
+    let res = execute::try_executing_actions(deps, &env, info, actions.clone())?;
     #[cfg(feature = "archway")]
-    msgs.push(SubMsg::new(crate::grants::register_granter_msg(&env)?));
-    
-    let res = if actions.len() > 0 {
-         let mut res = Response::new();
-         
-         for action in actions {
-             let action_res = execute_action(&deps.querier, deps.storage, &env, &info, action)?;
-             msgs.extend(action_res.messages);
+    let res = res.add_submessage(
+        cosmwasm_std::SubMsg::new(crate::grants::register_granter_msg(&env)?)
+    );
+    Ok(res)
 
-             res = res.add_events(action_res.events)
-                    .add_attributes(action_res.attributes);
-
-            if res.data.is_none() && action_res.data.is_some() {
-                res = res.set_data(action_res.data.unwrap());
-            }
-         }
-        res
-    } else {
-        Response::default()
-    };
-    
-    Ok(res.add_submessages(msgs))
 }
 
 
@@ -109,42 +92,17 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
         return Err(ContractError::Deleted {});
     }
     let contract = env.contract.address.to_string();
-    let (session, msg) = cw_auths::handle_session_actions(
-        deps.api, 
-        deps.storage, 
-        &env, &info, 
-        msg, 
-        Some(contract)
-    )?;
-
-    let (msg, attrs) = if let Some(msg) = msg {
-        let attrs = match session {
-            Some(session) => vec![
-                ("action", "with_session".to_string()),
-                ("session_key", session.key()),
-                ("nonce", session.nonce.to_string()),
-            ],
-            None => vec![]
-        };
-        (msg, attrs)
-    } else {
-        return Ok(match session {
-            Some(session) => Response::new()
-                .add_attribute("action", "session_created")
-                .add_attribute("session_key", session.key().as_str())
-                .add_attribute("nonce", session.nonce.to_string().as_str()),
-
-            None => Response::new()
-                .add_attribute("action", "session_revoked"),
-        })
-    };
-
-    let name = msg.discriminant().to_string();
+    let action_name = msg.discriminant().to_string();
 
     let res = match msg {
-        ExecuteMsg::Execute { 
+        ExecuteMsg::ExecuteSigned { 
+            msgs, 
+            signed 
+        } => execute::try_executing_signed(deps, &env, info, msgs, signed),
+
+        ExecuteMsg::ExecuteNative { 
             msgs 
-        } => execute::try_executing(deps, env, info, msgs),
+        } => execute::try_executing_actions(deps, &env, info, msgs),
 
         ExecuteMsg::UpdateOwnership {
             new_owner,
@@ -159,51 +117,29 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
             execute::try_updating_known_on_receive(deps, info.sender.to_string(), msg.token_id)
         }
 
-        ExecuteMsg::Purge {} => execute::try_purging(deps.api, deps.storage, info.sender.as_str()),
+        ExecuteMsg::SessionActions(
+            session_action_msg
+        ) => handle_session_action(
+                deps, 
+                &env, 
+                &info, 
+                session_action_msg, 
+                Some(contract),
+                execute_action
+        ),
 
-        ExecuteMsg::Freeze {} => execute::try_freezing(deps),
-
-        msg => {
+        ExecuteMsg::Execute { msgs } => {
             verify_native(deps.storage, info.sender.to_string())?;
-            match msg {
-                ExecuteMsg::MintToken { 
-                    minter, 
-                    msg 
-                } => action::try_minting_token(deps.storage, &info, minter, msg),
-                ExecuteMsg::SendToken { 
-                    collection, 
-                    token_id, 
-                    contract, 
-                    msg 
-                } => action::try_sending_token(deps.storage, collection, token_id, contract, msg),
-                ExecuteMsg::TransferToken { 
-                    collection, 
-                    token_id, 
-                    recipient 
-                } => action::try_transfering_token(deps.storage, collection, token_id, recipient),
-                ExecuteMsg::ForgetTokens { 
-                    collection, 
-                    token_ids 
-                } => action::try_forgeting_tokens(deps.storage, collection, token_ids),
-                ExecuteMsg::UpdateKnownTokens { 
-                    collection, 
-                    start_after, 
-                    limit 
-                } => action::try_updating_known_tokens(&deps.querier, deps.storage, &env, collection, start_after, limit),
-                ExecuteMsg::FeeGrant { 
-                    grantee, 
-                    allowance 
-                } => action::try_fee_granting(env.contract.address.as_str(), grantee.as_str(), allowance),
-                ExecuteMsg::Unfreeze {  } => action::try_unfreezing(&deps.querier, deps.storage),
-                _ => return Err(ContractError::NotSupported {}),
-            }
-
-        }
+            action::try_executing(msgs)
+        },
+        ExecuteMsg::Purge {} => execute::try_purging(deps.api, deps.storage, info.sender.as_str()),
+        ExecuteMsg::Freeze {} => execute::try_freezing(deps),
+        
     }?;
 
     Ok(res
-        .add_attribute("action_name", name)
-        .add_attributes(attrs))
+        .add_attribute("action_name", action_name)
+    )
 }
 
 
@@ -213,9 +149,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     if REGISTRY_ADDRESS.load(deps.storage).is_err() {
         return Err(StdError::generic_err(ContractError::Deleted {}.to_string()));
     };
-    if let Some(res) = handle_session_queries(deps.api, deps.storage, &env, &msg)? {
-        return Ok(res);
-    }
     match msg {
         QueryMsg::Token {} => to_json_binary(&TOKEN_INFO.load(deps.storage)?),
         QueryMsg::Status {} => to_json_binary(&STATUS.load(deps.storage)?),
@@ -225,21 +158,27 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::CanExecute { 
             sender, 
             msg 
-        } => to_json_binary(&can_execute(deps, env, sender, msg)?),
+        } => to_json_binary(&can_execute(deps, sender, msg)?),
+
+        QueryMsg::CanExecuteSigned { 
+            msgs, 
+            signed 
+        } => to_json_binary(&can_execute_signed(deps, env,  msgs, signed)?),
+
         QueryMsg::ValidSignature {
             signature,
             data,
             payload,
         } => to_json_binary(&valid_signature(deps, env, data, signature, payload)?),
-        /* QueryMsg::ValidSignatures {
+        QueryMsg::ValidSignatures {
             signatures,
             data,
             payload,
-        } => to_json_binary(&valid_signatures(deps, env, data, signatures, payload)?), */
+        } => to_json_binary(&valid_signatures(deps, env, data, signatures, payload)?), 
         QueryMsg::KnownTokens { skip, limit } => to_json_binary(&known_tokens(deps, skip, limit)?),
         QueryMsg::Assets { skip, limit } => to_json_binary(&assets(deps, env, skip, limit)?),
         QueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),
-        QueryMsg::SessionQueries(_) => unreachable!()
+        QueryMsg::SessionQueries(q) => handle_session_query(deps.api, deps.storage, &env, q),
     }
 }
 

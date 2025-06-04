@@ -43,4 +43,4 @@ cw82-tba-credentials = { workspace = true }
 cw83-tba-registry    = { workspace = true }
 cw-tba               = { workspace = true }
 #smart-account-auth   = { workspace = true, features = ["native", "traits", "utils"] }
-cw-auths             = { workspace = true, features = ["utils"] }
+saa-wasm             = { workspace = true, features = ["utils"] }

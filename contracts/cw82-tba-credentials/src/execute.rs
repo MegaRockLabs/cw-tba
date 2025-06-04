@@ -1,110 +1,75 @@
 use crate::{
     action::execute_action, error::ContractError, msg::ContractResult, state::{
         save_token_credentials, KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO
-    }, utils::{assert_ok_cosmos_msg, assert_owner_derivable, assert_registry, assert_status, change_cosmos_msg}
+    }, utils::{assert_owner_derivable, assert_registry, assert_status}
 };
-use cosmwasm_std::{ensure, Api, CosmosMsg, DepsMut, Env, MessageInfo, Response, Storage};
+use cosmwasm_std::{ensure, Api, DepsMut, Env, MessageInfo, Response, Storage};
 use cw2::CONTRACT;
 use cw22::SUPPORTED_INTERFACES;
 use cw_ownable::get_ownership;
 use cw_tba::{verify_nft_ownership, ExecuteAccountMsg, Status};
-use cw_auths::{ 
-    add_credentials, has_natives, remove_credentials, UpdateOperation, 
-    saa_types::{CredentialData, msgs::SignedDataMsg}
+use saa_wasm::{ 
+    add_credentials, remove_credentials, saa_types::{msgs::SignedDataMsg, CredentialData}, verify_signed_actions, UpdateOperation
 };
 
 
-
-pub fn try_executing(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msgs: Vec<CosmosMsg<SignedDataMsg>>,
+pub fn try_executing_signed(
+    mut deps :  DepsMut,
+    env      :   &Env,
+    info     :   MessageInfo,
+    msgs     :   Vec<ExecuteAccountMsg>,
+    signed   :   SignedDataMsg,
 ) -> ContractResult {
     assert_status(deps.storage)?;
+    verify_signed_actions(&mut deps, &env, msgs.clone(), signed)?;
+    try_executing_actions(deps, env, info, msgs)
+}
+
+
+pub fn try_executing_actions(
+    mut deps  :   DepsMut,
+    env       :   &Env,
+    info      :   MessageInfo,
+    actions   :   Vec<ExecuteAccountMsg>,
+) -> ContractResult {
     let mut res = Response::new();
-
-    for msg in msgs {
-
-        if let CosmosMsg::Custom(signed) = msg.clone() {
-
-            let actions : Vec<ExecuteAccountMsg> = cw_auths::verify_signed_actions(
-                deps.api,
-                deps.storage, 
-                &env,
-                signed.clone()
-            )?;
-
-            for action in actions {
-                // assert_valid_signed_action(&action)?;
-                let action_res = execute_action(&deps.querier, deps.storage, &env, &info, action)?;
-                res = res
-                    .add_submessages(action_res.messages)
-                    .add_events(action_res.events)
-                    .add_attributes(action_res.attributes);
-                if let Some(data) = action_res.data {
-                    res = res.set_data(data);
-                }
-            }
-        } else {
-            cw_auths::verify_native( deps.storage,  info.sender.to_string())?;
-            let msg = change_cosmos_msg(msg)?;
-            assert_ok_cosmos_msg(&msg)?;
-            res = res.add_message(msg);
+    for act in actions {
+        let action_res = execute_action(&mut deps, &env, &info, act)?;
+        res = res
+            .add_submessages(action_res.messages)
+            .add_events(action_res.events)
+            .add_attributes(action_res.attributes);
+        if let Some(data) = action_res.data {
+            res = res.set_data(data);
         }
     }
-    
     Ok(res)
 }
 
 
 
 pub fn try_updating_account_data(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     op: UpdateOperation
 ) -> ContractResult {
-    let had_natives = has_natives(deps.storage);
     let ownership = cw_ownable::get_ownership(deps.storage)?;
     let owner = ownership.owner.unwrap();
 
     match op {
-        UpdateOperation::Add(cred_data) => {
-            let data = cred_data.with_native(&info);
-            add_credentials(deps.api, deps.storage, data.clone(), had_natives)?;  
+        UpdateOperation::Add(data) => {
+            // let data = data.with_native(&info);
+            let added = add_credentials(&mut deps, &env, data)?;  
             if let Some(pending) = ownership.pending_owner {
-                assert_owner_derivable(deps.api, deps.storage, &data, Some(pending.to_string()))?;
                 STATUS.save(deps.storage, &Status { frozen: false })?;
+                assert_owner_derivable(added, pending.to_string())?;
                 cw_ownable::update_ownership(deps, &env.block, &pending, cw_ownable::Action::AcceptOwnership)?; 
             }
         },
         UpdateOperation::Remove(idx) => {
-            let rest = remove_credentials(deps.storage, idx, had_natives)?;
-            let derivable_found = rest
-                    .into_iter()
-                    .find_map(|(id, info)| {
-                        if info.hrp.is_none() {
-                            return None;
-                        }
-                        let addr = info.cosmos_address(deps.api, id);
-                        if let Ok(addr) = addr {
-                            if addr == owner {
-                                return Some(addr);
-                            }
-                        }
-                        None
-            });
-            match derivable_found {
-                Some(addr) => {
-                    if addr != owner {
-                        return Err(ContractError::Generic(
-                            "Cannot remove credentials that derive to the current owner".into(),
-                        ));
-                    }
-                },
-                None => return Err(ContractError::NoOwnerCred {})
-            }
+            let rest = remove_credentials(deps.storage, idx)?;
+            assert_owner_derivable(rest, owner.to_string())?;
         },        
     }
     Ok(Response::new().add_attributes(vec![("action", "update_account_data")]))
@@ -113,7 +78,7 @@ pub fn try_updating_account_data(
 
 
 pub fn try_updating_ownership(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     new_owner: String,
@@ -126,11 +91,11 @@ pub fn try_updating_ownership(
         "New owner must be different from the current owner",
     )));
 
-    cw_auths::reset_credentials(deps.storage, false, true)?;
+    saa_wasm::reset_credentials(deps.storage, false, true)?;
 
     if let Some(data) = new_account_data {
         STATUS.save(deps.storage, &Status { frozen: false })?;
-        save_token_credentials(deps.api, deps.storage, &env, info, data, new_owner.clone())?;
+        save_token_credentials(&mut deps, &env, info, data, new_owner.clone())?;
         cw_ownable::initialize_owner(deps.storage, deps.api, Some(new_owner.as_str()))?;
     } else {
         STATUS.save(deps.storage, &Status { frozen: true })?;
@@ -144,6 +109,7 @@ pub fn try_updating_ownership(
         .add_attribute("action", "update_ownership")
         .add_attribute("new_owner", new_owner.as_str()))
 }
+
 
 
 pub fn try_updating_known_on_receive(
@@ -183,7 +149,7 @@ pub fn try_freezing(deps: DepsMut) -> ContractResult {
 pub fn try_purging(api: &dyn Api, store: &mut dyn Storage, sender: &str) -> ContractResult {
     assert_registry(store, sender)?;
     cw_ownable::initialize_owner(store, api, None)?;
-    cw_auths::reset_credentials(store, true, true)?;
+    saa_wasm::reset_credentials(store, true, true)?;
     SUPPORTED_INTERFACES.clear(store);
     CONTRACT.remove(store);
     REGISTRY_ADDRESS.remove(store);

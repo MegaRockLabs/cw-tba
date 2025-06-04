@@ -2,7 +2,7 @@ use crate::{
     error::ContractError, msg::ContractResult, state::{KNOWN_TOKENS, MINT_CACHE, STATUS, TOKEN_INFO}, utils::{assert_ok_cosmos_msg, assert_status}
 };
 use cosmwasm_std::{
-    to_json_binary, Binary, Env, MessageInfo, QuerierWrapper, ReplyOn, Response, StdResult, Storage, SubMsg, WasmMsg
+    to_json_binary, Binary, DepsMut, Env, MessageInfo, QuerierWrapper, ReplyOn, Response, StdResult, Storage, SubMsg, WasmMsg
 };
 use cw_tba::{encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance, Cw721Msg, ExecuteAccountMsg, Status};
 
@@ -10,31 +10,29 @@ pub const MINT_REPLY_ID: u64 = 1;
 
 
 pub fn execute_action(
-    querier: &QuerierWrapper,
-    storage: &mut dyn Storage,
+    deps: &mut DepsMut,
     env: &Env,
     info: &MessageInfo,
     msg: ExecuteAccountMsg,
 ) -> ContractResult {
-    assert_status(storage)?;
+    assert_status(deps.storage)?;
 
-    use ExecuteAccountMsg::*
-    ;
+    use ExecuteAccountMsg::*;
 
     match msg {
-        Execute { msgs } => try_executing_native(msgs),
+        Execute { msgs } => try_executing(msgs),
 
         MintToken {
             minter,
             msg,
-        } => try_minting_token(storage, info, minter, msg),
+        } => try_minting_token(deps.storage, info, minter, msg),
 
         TransferToken {
             collection,
             token_id,
             recipient,
         } => {
-            try_transfering_token(storage, collection, token_id, recipient)
+            try_transfering_token(deps.storage, collection, token_id, recipient)
         }
 
         SendToken {
@@ -43,7 +41,7 @@ pub fn execute_action(
             contract,
             msg,
         } => try_sending_token(
-            storage,
+            deps.storage,
             collection,
             token_id,
             contract,
@@ -54,16 +52,16 @@ pub fn execute_action(
             collection,
             start_after,
             limit,
-        } => try_updating_known_tokens(querier, storage, env, collection, start_after, limit),
+        } => try_updating_known_tokens(&deps.querier, deps.storage, env, collection, start_after, limit),
 
         ForgetTokens {
             collection,
             token_ids,
-        } => try_forgeting_tokens(storage, collection, token_ids),
+        } => try_forgeting_tokens(deps.storage, collection, token_ids),
 
-        Freeze {} => try_freezing(storage),
+        Freeze {} => try_freezing(deps.storage),
 
-        Unfreeze {} => try_unfreezing(querier, storage),
+        Unfreeze {} => try_unfreezing(&deps.querier, deps.storage),
 
         FeeGrant { 
             grantee, 
@@ -73,7 +71,7 @@ pub fn execute_action(
 }
 
 
-pub fn try_executing_native(
+pub fn try_executing(
     msgs: Vec<cosmwasm_std::CosmosMsg>,
 ) -> ContractResult {
     msgs.iter().try_for_each(|msg| assert_ok_cosmos_msg(msg))?;

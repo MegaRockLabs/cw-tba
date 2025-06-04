@@ -3,7 +3,7 @@ use crate::{
     state::{REGISTRY_ADDRESS, STATUS},
 };
 use cosmwasm_std::{ensure, Addr, Api, Binary, CosmosMsg, QuerierWrapper, StdError, StdResult, Storage, WasmMsg};
-use cw_auths::saa_types::{Credential, CredentialData};
+use saa_wasm::saa_types::{Credential, CredentialData};
 
 
 pub fn assert_status(store: &dyn Storage) -> StdResult<bool> {

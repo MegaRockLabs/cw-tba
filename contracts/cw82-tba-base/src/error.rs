@@ -1,7 +1,7 @@
 use cosmwasm_std::StdError;
 use cw_ownable::OwnershipError;
 use cw_utils::ParseReplyError;
-use cw_auths::saa_types::{AuthError, SessionError};
+use saa_wasm::saa_types::{AuthError, SessionError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]

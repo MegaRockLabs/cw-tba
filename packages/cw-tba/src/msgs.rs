@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Binary;
-use cw_auths::saa_types::{msgs::SignedDataMsg, Expiration};
+use saa_wasm::saa_types::{msgs::SignedDataMsg, Expiration};
 use crate::TokenAccount;
 
 

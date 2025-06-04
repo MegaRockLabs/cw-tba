@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Binary, Coin, CosmosMsg, DepsMut, Env, Response};
-use cw_auths::has_natives;
+use saa_wasm::has_natives;
 
 use crate::{error::ContractError};
 

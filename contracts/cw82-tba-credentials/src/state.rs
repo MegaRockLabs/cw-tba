@@ -1,9 +1,9 @@
 use crate::{error::ContractError, utils::assert_owner_derivable};
-use cosmwasm_std::{Api, ContractInfo, Env, MessageInfo, Storage};
+use cosmwasm_std::{ContractInfo, DepsMut, Env, MessageInfo};
 use cw_ownable::initialize_owner;
 use cw_storage_plus::{Item, Map};
 use cw_tba::{Status, TokenInfo};
-use cw_auths::{save_credentials, saa_types::CredentialData};
+use saa_wasm::{save_credentials, saa_types::CredentialData};
 
 
 
@@ -15,8 +15,7 @@ pub static KNOWN_TOKENS: Map<(&str, &str), bool> = Map::new("k");
 
 
 pub fn save_token_credentials(
-    api: &dyn Api,
-    storage: &mut dyn Storage,
+    deps: &mut DepsMut,
     env: &Env,
     mut info: MessageInfo,
     data: CredentialData,
@@ -31,16 +30,15 @@ pub fn save_token_credentials(
     };
 
     // save the owner adderss to the storage
-    info.sender = api.addr_validate(&owner)?;
-    initialize_owner(storage, api, Some(owner.as_str()))?;
+    info.sender = deps.api.addr_validate(&owner)?;
+    initialize_owner(deps.storage, deps.api, Some(owner.as_str()))?;
 
-    let data = save_credentials(
-        api,
-        storage,
+    let saved = save_credentials(
+        deps,
         &registry_env,
         &info,
         &data,
     )?;
 
-    assert_owner_derivable(api, storage, &data, Some(owner))
+    assert_owner_derivable(saved, owner)
 }

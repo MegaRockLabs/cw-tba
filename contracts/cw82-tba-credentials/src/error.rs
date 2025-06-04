@@ -1,7 +1,8 @@
-use cosmwasm_std::StdError;
+use saa_wasm::saa_types::{AuthError, SessionError, errors::StorageError};
 use cw_ownable::OwnershipError;
-use cw_auths::saa_types::{AuthError, StorageError};
+use cosmwasm_std::StdError;
 use thiserror::Error;
+
 
 #[derive(Error, Debug)]
 pub enum ContractError {
@@ -13,6 +14,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     Auth(#[from] AuthError),
+
+    #[error("{0}")]
+    Session(#[from] SessionError),
 
     #[error("{0}")]
     Storage(#[from] StorageError),

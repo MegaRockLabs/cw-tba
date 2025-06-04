@@ -31,7 +31,7 @@ cw2                 = { workspace = true }
 cw22                = { workspace = true }
 cw-tba              = { workspace = true }
 #smart-account-auth  = { workspace = true }
-cw-auths            = { workspace = true }
+saa-wasm            = { workspace = true }
 
 cw82                = { workspace = true }
 cw83                = { workspace = true, features = ["multi"] }

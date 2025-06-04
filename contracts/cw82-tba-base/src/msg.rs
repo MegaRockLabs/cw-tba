@@ -6,7 +6,7 @@ pub use cw82::{
 };
 use cw_ownable::cw_ownable_query;
 use cw_tba::{ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo};
-use cw_auths::session_query;
+use saa_wasm::session_query;
 
 pub type InstantiateMsg = InstantiateAccountMsg;
 pub type MigrateMsg = MigrateAccountMsg;

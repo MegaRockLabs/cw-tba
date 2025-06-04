@@ -9,13 +9,13 @@ use cosm_tome::modules::bank::model::SendRequest;
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{from_json, to_json_binary, Binary, Coin, CosmosMsg, Empty, Timestamp};
-use cw_auths::saa_types::utils::cosmos::preamble_msg_arb_036;
-use cw_auths::saa_types::msgs::MsgDataToSign;
+use saa_wasm::saa_types::utils::cosmos::preamble_msg_arb_036;
+use saa_wasm::saa_types::msgs::MsgDataToSign;
 use std::str::FromStr;
 
 
 use cw_tba::{CreateAccountMsg, MigrateAccountMsg, TokenInfo};
-use cw_auths::saa_types::{CosmosArbitrary, Credential, CredentialData};
+use saa_wasm::saa_types::{CosmosArbitrary, Credential, CredentialData};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
