@@ -11,9 +11,11 @@ pub fn assert_status(store: &dyn Storage) -> StdResult<()> {
     Ok(())
 }
 
+
 pub fn status_ok(store: &dyn Storage) -> bool {
     assert_status(store).is_ok()
 }
+
 
 #[cfg(target_arch = "wasm32")]
 pub fn query_if_registry(querier: &cosmwasm_std::QuerierWrapper, addr: cosmwasm_std::Addr) -> StdResult<bool> {
@@ -39,10 +41,10 @@ pub fn assert_registry(store: &dyn Storage, addr: &str) -> Result<(), ContractEr
 
 pub fn assert_data_owner_derivable(
     data: &VerifiedData,
-    owner: String,
+    owner: &str,
 ) -> Result<(), ContractError> {
     ensure!(
-        data.addresses.iter().any(|addr| *addr == owner),
+        data.addresses.iter().any(|addr| addr.as_str() == owner),
         ContractError::NoOwnerCred {}
     );
     Ok(())

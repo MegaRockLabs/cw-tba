@@ -8,7 +8,7 @@ use cw83::CREATE_ACCOUNT_REPLY_ID;
 
 use crate::{
     error::ContractError,
-    execute::{create_account, migrate_account, update_account_owner},
+    execute::{create_account, migrate_account, update_account_data, update_account_owner},
     msg::{AccountsQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query::{account_info, accounts, collection_accounts, collections},
     state::{COL_TOKEN_COUNTS, LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES},
@@ -90,6 +90,13 @@ pub fn execute(
             new_account_data,
             update_for,
         ),
+
+
+        ExecuteMsg::UpdateAccountData { 
+            token_info, 
+            update_op, 
+            signed 
+        } => update_account_data(deps, env, info, token_info, update_op, signed),
     }
 }
 

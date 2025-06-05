@@ -3,10 +3,11 @@ use cosmwasm_std::{
 };
 
 use cw83::CREATE_ACCOUNT_REPLY_ID;
+use cw84::ValidSignatureResponse;
 use cw_tba::{
-    verify_nft_ownership, ExecuteAccountMsg, ExecuteMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo
+    verify_nft_ownership, ExecuteAccountMsg, ExecuteMsg, InstantiateAccountMsg, MigrateAccountMsg, QueryMsg, TokenInfo
 };
-use saa_wasm::saa_types::{CredentialData, CredentialsWrapper};
+use saa_wasm::{saa_types::{msgs::SignedDataMsg, CredentialData, CredentialsWrapper, VerifiedData}, UpdateOperation};
 
 
 use crate::{
@@ -164,6 +165,65 @@ pub fn update_account_owner(
         ("new_owner", owner.to_string().as_str()),
     ]))
 }
+
+
+
+pub fn update_account_data(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    token_info: TokenInfo,
+    op: UpdateOperation,
+    signed: Option<SignedDataMsg>
+) -> Result<Response, ContractError> {
+
+    let contract_addr = TOKEN_ADDRESSES.load(
+        deps.storage,
+        (token_info.collection.as_str(), token_info.id.as_str()),
+    )?;
+
+
+    match signed {
+        Some(signed) => {
+            let query = QueryMsg::ValidSignature { 
+                data: signed.data, 
+                signature: signed.signature, 
+                payload: signed.payload 
+            };
+            let res : ValidSignatureResponse = deps.querier.query_wasm_smart(
+                contract_addr.clone(), 
+                &query
+            )?;
+            ensure!(res.is_valid, ContractError::Unauthorized {});
+        },
+        None => {
+            verify_nft_ownership(&deps.querier, info.sender.as_str(), token_info.clone())?;
+        }
+    }
+
+    let op : UpdateOperation::<VerifiedData> = match op {
+        UpdateOperation::Remove(ids) => UpdateOperation::<VerifiedData>::Remove(ids),
+        UpdateOperation::Add(data) => {
+            let data = data.verify(deps.as_ref(), &env, &info, vec![UPDATE_MSG.to_string()])?;
+            UpdateOperation::Add(data)
+        },
+    };
+
+    let msg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr,
+        msg: to_json_binary(&ExecuteMsg::UpdateAccountData(op))?,
+        funds: info.funds,
+    });
+
+    Ok(Response::default().add_message(msg).add_attributes(vec![
+        ("action", "update_account_data"),
+        ("token_contract", token_info.collection.as_str()),
+        ("token_id", token_info.id.as_str()),
+    ]))
+}
+
+
+
 
 
 pub fn migrate_account(

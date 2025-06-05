@@ -21,6 +21,9 @@ pub enum ContractError {
     #[error("{0}")]
     Storage(#[from] StorageError),
 
+    #[error("The provided address is already the owner")]
+    SameOwner {},
+
     #[error("This method can only be called from the registry contract")]
     NotRegistry {},
 

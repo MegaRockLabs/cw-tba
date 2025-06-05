@@ -34,5 +34,6 @@ cw-tba              = { workspace = true }
 saa-wasm            = { workspace = true }
 
 cw82                = { workspace = true }
+cw84                = { workspace = true }
 cw83                = { workspace = true, features = ["multi"] }
 

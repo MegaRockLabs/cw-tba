@@ -4,7 +4,7 @@ use cw83::{
 };
 
 use cw_tba::{CreateAccountMsg, MigrateAccountMsg, RegistryParams, TokenInfo, TokenAccount};
-use saa_wasm::saa_types::CredentialData;
+use saa_wasm::{saa_types::{msgs::SignedDataMsg, CredentialData}, UpdateOperation};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -18,14 +18,15 @@ pub enum AccountsQueryMsg {
 }
 
 
+
+#[allow(dead_code, unused)]
+type OptTokenInfo       = Option<TokenInfo>;
+type OptAccountsQuery   = Option<AccountsQueryMsg>;
+
 /// An full account stored in the registry
 pub type Account        = AccountResponse<TokenInfo>;
 pub type AccountOpt     = AccountResponse<Option<TokenInfo>>;
 pub type Accounts       = AccountsResponse<Option<TokenInfo>>;
-
-type OptAccountsQuery   = Option<AccountsQueryMsg>;
-#[allow(dead_code, unused)]
-type OptTokenInfo       = Option<TokenInfo>;
 
 
 
@@ -53,6 +54,15 @@ pub enum ExecuteMsg {
         new_account_data: Option<CredentialData>,
         /// Admin only parameter to update the account on behalf of another user that holds the token
         update_for: Option<String>,
+    },
+
+    UpdateAccountData {
+        /// Non-Fungible Token Info that the existing account is linked to
+        token_info: TokenInfo,
+        /// New data on the account
+        update_op: UpdateOperation,
+        /// Signed information to update the account
+        signed: Option<SignedDataMsg>,
     },
 
     /// Create a new token-bound account. Access the old one will be forever lost

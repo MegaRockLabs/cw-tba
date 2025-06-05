@@ -567,6 +567,7 @@ dependencies = [
  "cw22",
  "cw82",
  "cw83",
+ "cw84",
  "saa-wasm",
  "semver",
  "thiserror 2.0.12",

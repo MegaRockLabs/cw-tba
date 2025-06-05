@@ -1,30 +1,30 @@
 use crate::{
     action::execute_action, error::ContractError, msg::ContractResult, state::{
         save_token_credentials, KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO
-    }, utils::{assert_owner_derivable, assert_registry, assert_status}
+    }, utils::{assert_data_owner_derivable, assert_owner_derivable, assert_registry, assert_status}
 };
 use cosmwasm_std::{ensure, Api, DepsMut, Env, MessageInfo, Response, Storage};
 use cw2::CONTRACT;
 use cw22::SUPPORTED_INTERFACES;
-use cw_ownable::get_ownership;
+use cw_ownable::{get_ownership, Action};
 use cw_tba::{verify_nft_ownership, ExecuteAccountMsg, Status};
 use saa_wasm::{ 
-    add_credentials, remove_credentials, saa_types::{msgs::SignedDataMsg, VerifiedData}, 
-    verify_signed_actions, UpdateOperation
+    add_verified, remove_credentials, saa_types::{msgs::SignedDataMsg, VerifiedData}, verify_signed_actions, UpdateOperation
 };
 
 
 pub fn try_executing_signed(
     mut deps :  DepsMut,
-    env      :   &Env,
+    env      :   Env,
     info     :   MessageInfo,
     msgs     :   Vec<ExecuteAccountMsg>,
     signed   :   SignedDataMsg,
 ) -> ContractResult {
     assert_status(deps.storage)?;
     verify_signed_actions(&mut deps, &env, msgs.clone(), signed)?;
-    try_executing_actions(deps, env, info, msgs)
+    try_executing_actions(deps, &env, info, msgs)
 }
+
 
 
 pub fn try_executing_actions(
@@ -50,22 +50,25 @@ pub fn try_executing_actions(
 
 
 pub fn try_updating_account_data(
-    mut deps: DepsMut,
+    deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
-    op: UpdateOperation
+    info: MessageInfo,
+    op: UpdateOperation<VerifiedData>
 ) -> ContractResult {
+    assert_registry(deps.storage, info.sender.as_str())?;
+
     let ownership = cw_ownable::get_ownership(deps.storage)?;
     let owner = ownership.owner.unwrap();
 
     match op {
         UpdateOperation::Add(data) => {
             // let data = data.with_native(&info);
-            let added = add_credentials(&mut deps, &env, data)?;  
+            add_verified(deps.storage, &data)?;
+            //let added = add_credentials(&mut deps, &env, data)?;  
             if let Some(pending) = ownership.pending_owner {
+                assert_data_owner_derivable(&data, pending.as_str())?;
                 STATUS.save(deps.storage, &Status { frozen: false })?;
-                assert_owner_derivable(added, pending.to_string())?;
-                cw_ownable::update_ownership(deps, &env.block, &pending, cw_ownable::Action::AcceptOwnership)?; 
+                cw_ownable::update_ownership(deps, &env.block, &pending, Action::AcceptOwnership)?; 
             }
         },
         UpdateOperation::Remove(idx) => {
@@ -79,7 +82,7 @@ pub fn try_updating_account_data(
 
 
 pub fn try_updating_ownership(
-    mut deps: DepsMut,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     new_owner: String,
@@ -87,20 +90,20 @@ pub fn try_updating_ownership(
 ) -> ContractResult {
     assert_registry(deps.storage, info.sender.as_str())?;
     let owner = get_ownership(deps.storage)?.owner.unwrap();
+    let owner_str = owner.as_str();
 
-    ensure!(new_owner != owner.to_string(), ContractError::Generic(String::from(
-        "New owner must be different from the current owner",
-    )));
+    ensure!(new_owner != owner_str, ContractError::SameOwner {});
 
+    // de
     saa_wasm::reset_credentials(deps.storage, false, true)?;
 
     if let Some(data) = new_account_data {
         STATUS.save(deps.storage, &Status { frozen: false })?;
-        save_token_credentials(&mut deps, &env, info, data, new_owner.clone())?;
-        cw_ownable::initialize_owner(deps.storage, deps.api, Some(new_owner.as_str()))?;
+        save_token_credentials(deps.api, deps.storage, data, owner_str)?;
+        cw_ownable::initialize_owner(deps.storage, deps.api, Some(owner_str))?;
     } else {
         STATUS.save(deps.storage, &Status { frozen: true })?;
-        cw_ownable::update_ownership(deps,&env.block, &owner, cw_ownable::Action::TransferOwnership { 
+        cw_ownable::update_ownership(deps,&env.block, &owner, Action::TransferOwnership { 
             new_owner: new_owner.clone(),
             expiry: None,
         })?;

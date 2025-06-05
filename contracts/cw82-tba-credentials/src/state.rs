@@ -1,5 +1,4 @@
 use crate::{error::ContractError, utils::assert_data_owner_derivable};
-use cosmwasm_std::{DepsMut, Env, MessageInfo};
 use cw_ownable::initialize_owner;
 use cw_storage_plus::{Item, Map};
 use cw_tba::{Status, TokenInfo};
@@ -14,23 +13,16 @@ pub static MINT_CACHE: Item<String> = Item::new("m");
 pub static KNOWN_TOKENS: Map<(&str, &str), bool> = Map::new("k");
 
 
+
 pub fn save_token_credentials(
-    deps: &mut DepsMut,
-    _env: &Env,
-    mut info: MessageInfo,
+    api: &dyn cosmwasm_std::Api,
+    storage: &mut dyn cosmwasm_std::Storage,
     data: VerifiedData,
-    owner: String,
+    owner: &str,
 ) -> Result<(), ContractError> {
-
-    // save the owner adderss to the storage
-    info.sender = deps.api.addr_validate(&owner)?;
-    initialize_owner(deps.storage, deps.api, Some(owner.as_str()))?;
-
-
     assert_data_owner_derivable(&data, owner)?;
-
-    save_verified(deps.storage, data);
- 
+    initialize_owner(storage, api, Some(owner))?;
+    save_verified(storage, data)?;
     Ok(())
 
 }

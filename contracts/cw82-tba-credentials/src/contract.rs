@@ -1,10 +1,11 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use strum::IntoDiscriminant;
 #[cfg(target_arch = "wasm32")]
 use crate::utils::query_if_registry;
-
+#[cfg(feature = "archway")]
+use {cosmwasm_std::SubMsg, crate::grants::register_granter_msg};
 use saa_wasm::{account_number, handle_session_action, handle_session_query, verify_native};
+use strum::IntoDiscriminant;
 
 
 use cosmwasm_std::{
@@ -19,7 +20,7 @@ use cw_tba::{ExecuteMsg, Status};
 
 use crate::{
     action::{self, execute_action, MINT_REPLY_ID}, 
-    error::ContractError, execute, 
+    error::ContractError, execute::{self, try_executing_actions}, 
     msg::{ContractResult, InstantiateMsg, MigrateMsg, QueryMsg}, 
     query::{assets, can_execute, can_execute_signed, full_info, known_tokens, valid_signature, valid_signatures /* valid_signatures */}, 
     state::{save_token_credentials, MINT_CACHE, REGISTRY_ADDRESS, STATUS, TOKEN_INFO}
@@ -33,17 +34,25 @@ pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    mut deps: DepsMut,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult {
+    #[cfg(target_arch = "wasm32")]
+    if !query_if_registry(&deps.querier, info.sender.clone())? {
+        return Err(ContractError::NotRegistry {});
+    };
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     cw22::set_contract_supported_interface(
         deps.storage,
         &[
             cw22::ContractSupportedInterface {
-                supported_interface: cw82::INTERFACE_NAME.into(),
+                supported_interface: "crates:cw84".into(),
+                version: CONTRACT_VERSION.into(),
+            },
+            cw22::ContractSupportedInterface {
+                supported_interface: "crates:cw82".into(),
                 version: CONTRACT_VERSION.into(),
             },
             cw22::ContractSupportedInterface {
@@ -52,34 +61,20 @@ pub fn instantiate(
             },
             cw22::ContractSupportedInterface {
                 supported_interface: "crates:cw1".into(),
-                version: "1.1.1".into(),
+                version: CONTRACT_VERSION.into(),
             },
         ],
     )?;
-    #[cfg(target_arch = "wasm32")]
-    if !query_if_registry(&deps.querier, info.sender.clone())? {
-        return Err(ContractError::NotRegistry {});
-    };
-    
     TOKEN_INFO.save(deps.storage, &msg.token_info)?;
     REGISTRY_ADDRESS.save(deps.storage, &info.sender.to_string())?;
     STATUS.save(deps.storage, &Status { frozen: false })?;
 
-    save_token_credentials(
-        &mut deps,
-        &env, 
-        info.clone(), 
-        msg.account_data, 
-        msg.owner.clone(),
-    )?;
+    save_token_credentials(deps.api, deps.storage, msg.account_data, msg.owner.as_str())?;
     let actions = msg.actions.unwrap_or_default();
+    let res = try_executing_actions(deps, &env, info, actions)?;
 
-    
-    let res = execute::try_executing_actions(deps, &env, info, actions.clone())?;
     #[cfg(feature = "archway")]
-    let res = res.add_submessage(
-        cosmwasm_std::SubMsg::new(crate::grants::register_granter_msg(&env)?)
-    );
+    let res = res.add_submessage(SubMsg::new(register_granter_msg(&env)?));
     Ok(res)
 
 }
@@ -95,10 +90,11 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
     let action_name = msg.discriminant().to_string();
 
     let res = match msg {
+
         ExecuteMsg::ExecuteSigned { 
             msgs, 
             signed 
-        } => execute::try_executing_signed(deps, &env, info, msgs, signed),
+        } => execute::try_executing_signed(deps, env, info, msgs, signed),
 
         ExecuteMsg::ExecuteNative { 
             msgs 
@@ -132,14 +128,13 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
             verify_native(deps.storage, info.sender.to_string())?;
             action::try_executing(msgs)
         },
+
         ExecuteMsg::Purge {} => execute::try_purging(deps.api, deps.storage, info.sender.as_str()),
+
         ExecuteMsg::Freeze {} => execute::try_freezing(deps),
-        
     }?;
 
-    Ok(res
-        .add_attribute("action_name", action_name)
-    )
+    Ok(res.add_attribute("action_name", action_name))
 }
 
 
@@ -155,16 +150,18 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::AccountNumber {} => to_json_binary(&account_number(deps.storage)),
         QueryMsg::Registry {} => to_json_binary(&REGISTRY_ADDRESS.load(deps.storage)?),
         QueryMsg::Ownership {} => to_json_binary(&get_ownership(deps.storage)?),
+        QueryMsg::KnownTokens { skip, limit } => to_json_binary(&known_tokens(deps, skip, limit)?),
+        QueryMsg::Assets { skip, limit } => to_json_binary(&assets(deps, env, skip, limit)?),
+        QueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),
+        QueryMsg::SessionQueries(q) => handle_session_query(deps.api, deps.storage, &env, q),
         QueryMsg::CanExecute { 
             sender, 
             msg 
         } => to_json_binary(&can_execute(deps, sender, msg)?),
-
         QueryMsg::CanExecuteSigned { 
             msgs, 
             signed 
         } => to_json_binary(&can_execute_signed(deps, env,  msgs, signed)?),
-
         QueryMsg::ValidSignature {
             signature,
             data,
@@ -175,10 +172,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             data,
             payload,
         } => to_json_binary(&valid_signatures(deps, env, data, signatures, payload)?), 
-        QueryMsg::KnownTokens { skip, limit } => to_json_binary(&known_tokens(deps, skip, limit)?),
-        QueryMsg::Assets { skip, limit } => to_json_binary(&assets(deps, env, skip, limit)?),
-        QueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),
-        QueryMsg::SessionQueries(q) => handle_session_query(deps.api, deps.storage, &env, q),
     }
 }
 

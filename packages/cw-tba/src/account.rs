@@ -142,7 +142,7 @@ pub enum ExecuteMsg {
     },
 
     /// Owner only method to update account data
-    UpdateAccountData(UpdateOperation),
+    UpdateAccountData(UpdateOperation<VerifiedData>),
 
     /// Registering a token as known on receiving
     ReceiveNft(Cw721ReceiveMsg),
