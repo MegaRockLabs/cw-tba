@@ -1,12 +1,11 @@
 use cosmwasm_schema::{cw_serde, serde::Serialize};
 use cosmwasm_std::{Addr, Binary, Coin, Empty};
-use cw82::smart_account_query_t;
 pub use cw82::{
-    smart_account_query, CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse,
+    account_query, CanExecuteResponse
 };
 use cw_ownable::cw_ownable_query;
-use cw_tba::{ExecuteAccountMsg, InstantiateAccountMsg, MigrateAccountMsg, TokenInfo};
-use saa_wasm::session_query;
+use cw_tba::{InstantiateAccountMsg, MigrateAccountMsg, TokenInfo};
+use saa_schema::QueryResponses;
 
 pub type InstantiateMsg = InstantiateAccountMsg;
 pub type MigrateMsg = MigrateAccountMsg;
@@ -48,9 +47,10 @@ pub struct FullInfoResponse {
 pub type KnownTokensResponse = Vec<TokenInfo>;
 
 
-#[smart_account_query_t]
+#[account_query]
 #[cw_ownable_query]
-#[session_query(ExecuteAccountMsg)]
+#[derive(QueryResponses)]
+#[cw_serde]
 pub enum QueryMsgBase<T : Serialize + Clone = Empty> {
     /// Public key that is used to verify signed messages
     #[returns(Binary)]

@@ -36,10 +36,11 @@ cw-utils        = { workspace = true }
 cw2             = { workspace = true }
 cw22            = { workspace = true }
 cw82            = { workspace = true }
+cw84            = { workspace = true }
 cw83            = { workspace = true }
 cw-tba          = { workspace = true, features = [] }
 strum           = { workspace = true }
 strum_macros    = { workspace = true }
 saa-schema      = { workspace = true  }
-#smart-account-auth  = { workspace = true, features = ["cosmwasm_1", "cosmos", "session"] }
+smart-account-auth  = { workspace = true, features = ["cosmos_arb_addr"] }
 saa-wasm            = { workspace = true }

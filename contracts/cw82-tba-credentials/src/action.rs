@@ -16,7 +16,6 @@ pub fn execute_action(
     msg: ExecuteAccountMsg,
 ) -> ContractResult {
     assert_status(deps.storage)?;
-
     use ExecuteAccountMsg::*;
 
     match msg {
@@ -96,7 +95,8 @@ pub fn try_minting_token(
         .into(),
         reply_on: ReplyOn::Success,
         id: MINT_REPLY_ID,
-        gas_limit: None
+        gas_limit: None,
+        // payload: Binary::default(),
     }))
 }
 

@@ -29,11 +29,11 @@ hex            = "0.4.3"
 cosmwasm-schema      = { workspace = true }
 cosmwasm-std         = { workspace = true }
 cw-ownable           = { workspace = true }
-cw1                  = { workspace = true }
+# cw1                  = { workspace = true }
 cw2                  = { workspace = true }
 cw22                 = { workspace = true }
 cw81                 = { workspace = true }
-cw82                 = { workspace = true }
+cw84                 = { workspace = true }
 cw83                 = { workspace = true }
 
 cw721                = { version = "0.18.0" }
@@ -42,5 +42,5 @@ cw82-tba-base        = { workspace = true }
 cw82-tba-credentials = { workspace = true }
 cw83-tba-registry    = { workspace = true }
 cw-tba               = { workspace = true }
-#smart-account-auth   = { workspace = true, features = ["native", "traits", "utils"] }
+smart-account-auth   = { workspace = true, features = ["traits", "utils"] }
 saa-wasm             = { workspace = true, features = ["utils"] }

@@ -8,9 +8,9 @@ use cosm_tome::clients::client::CosmosClient;
 use cosm_tome::modules::bank::model::SendRequest;
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{from_json, to_json_binary, Binary, Coin, CosmosMsg, Empty, Timestamp};
-use saa_wasm::saa_types::utils::cosmos::preamble_msg_arb_036;
+use cosmwasm_std::{from_json, to_json_binary, to_json_string, Binary, Coin, CosmosMsg, Empty, Timestamp};
 use saa_wasm::saa_types::msgs::MsgDataToSign;
+use std::fmt::Display;
 use std::str::FromStr;
 
 
@@ -20,7 +20,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 
-use cw1::CanExecuteResponse;
+use cw84::CanExecuteResponse;
 use cw82_tba_base::msg::QueryMsg;
 
 
@@ -158,10 +158,13 @@ pub fn create_simple_token_account<C: CosmosClient>(
             pubkey,
             signature: Binary::default(),
             message: Binary::default(),
-            hrp: None
+            address: String::default(),
         }.into()],
         use_native: None,
         primary_index: None,
+        pre_validate: None,
+        override_primary: None,
+        nonce: None,
     };
 
     let init_msg = cw_tba::TokenAccount {
@@ -182,7 +185,7 @@ pub fn create_simple_token_account<C: CosmosClient>(
         &cw83_tba_registry::msg::ExecuteMsg::CreateAccount(CreateAccountMsg {
             code_id,
             chain_id,
-            msg: init_msg,
+            account_data: init_msg,
         }),
         key,
         creation_fee(&chain),
@@ -191,39 +194,44 @@ pub fn create_simple_token_account<C: CosmosClient>(
 
 
 
-pub fn get_cred_data<C: CosmosClient, M : Serialize>(
+pub fn get_cred_data<C: CosmosClient, M : Serialize + Display>(
     chain: &mut Chain<C>,
     user: &SigningAccount,
     messages: Vec<M>,
 ) -> CredentialData {
     let chain_id = chain.cfg.orc_cfg.chain_cfg.chain_id.clone();
-    let hrp = chain.cfg.orc_cfg.chain_cfg.prefix.clone();
+    let _hrp = chain.cfg.orc_cfg.chain_cfg.prefix.clone();
     let sk = mnemonic_to_signing_key(&user.account.mnemonic, &user.key.derivation_path).unwrap();
     let registry = chain.orc.contract_map.address(BASE_REGISTRY_NAME).unwrap();
     
     let message = MsgDataToSign {
         chain_id: chain_id.clone(),
         contract_address: registry,
-        messages,
+        messages: messages.into_iter().map(|m| {
+            to_json_string(&m).unwrap()
+        }).collect(),
         nonce: 0u64.into(),
     };
 
     let cred = Credential::CosmosArbitrary(CosmosArbitrary {
         pubkey: sk.public_key().to_bytes().into(),
         signature: sk.sign(
-            &preamble_msg_arb_036(
+            &smart_account_auth::utils::cosmos::wrap_msg_arb_036(
                 &user.account.address, 
                 &to_json_binary(&message).unwrap().to_base64()
             ).as_bytes()
         ).unwrap().to_vec().into(),
         message: to_json_binary(&message).unwrap().into(),
-        hrp: Some(hrp.into()),
+        address: String::default()
     });
 
     CredentialData {
         credentials: vec![cred],
         use_native: None,
         primary_index: None,
+        pre_validate: None,
+        override_primary: None,
+        nonce: None,
     }
 }
 
@@ -258,7 +266,7 @@ pub fn create_cred_token_account<C: CosmosClient>(
             CreateAccountMsg {
                 code_id,
                 chain_id,
-                msg: init_msg
+                account_data: init_msg,
             }),
         &user.key,
         creation_fee(&chain),
@@ -281,10 +289,13 @@ pub fn reset_simple_token_account<C: CosmosClient>(
             pubkey,
             signature: Binary::default(),
             message: Binary::default(),
-            hrp: None
+            address: String::default(),
         }.into()],
         use_native: None,
         primary_index: None,
+        pre_validate: None,
+        override_primary: None,
+        nonce: None,
     };
 
     let init_msg = cw_tba::TokenAccount {
@@ -305,7 +316,7 @@ pub fn reset_simple_token_account<C: CosmosClient>(
         &cw83_tba_registry::msg::ExecuteMsg::ResetAccount(CreateAccountMsg {
             code_id,
             chain_id,
-            msg: init_msg,
+            account_data: init_msg,
         }),
         key,
         creation_fee(&chain),

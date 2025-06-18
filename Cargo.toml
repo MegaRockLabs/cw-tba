@@ -4,7 +4,7 @@ members = [
     "contracts/cw82-tba-credentials",
     "contracts/cw83-tba-registry",
     "packages/cw-tba",
-    #"e2e"
+    "e2e"
 ]
 
 resolver = "2"
@@ -25,7 +25,7 @@ serde                = { version = "1.0.219", features = ["derive"] }
 anybuf               = { version = "0.5.2" }
 
 semver                  = "1.0.26"
-schemars                = "0.9.0"
+schemars                = "0.8.22"
 thiserror               = "2.0.12"
 
 cw-ownable              = "0.5.1"
@@ -36,7 +36,7 @@ cw2                     = "1.1.2"
 
 cw22                    = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1"] }
 cw81                    = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1"] }
-cw82                    = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1"] }
+cw82                    = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1", "multi"] }
 cw83                    = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1", "multi"] }
 cw84                    = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1", "multi"] }
 
@@ -44,9 +44,10 @@ cw84                    = { version = "2.0.0", default-features = false, feature
 saa-wasm                = { version = "0.1.0", path = "../saa-wasm/packages/bundle", features = ["types"]}
 saa-schema              = { version = "0.26.0", path = "../contract-auth/packages/schema", features = ["cosmwasm"] }
 
+smart-account-auth      = { version = "0.26.0", path = "../contract-auth/packages/bundle" }
 
 cw-tba                  = { path = "packages/cw-tba" }
-#cw82-tba-base           = { path = "contracts/cw82-tba-base", features = ["library"] }
+cw82-tba-base           = { path = "contracts/cw82-tba-base", features = ["library"] }
 cw82-tba-credentials    = { path = "contracts/cw82-tba-credentials", features = ["library"] }
 cw83-tba-registry       = { path = "contracts/cw83-tba-registry", features = ["library"] }
 
@@ -62,3 +63,4 @@ overflow-checks  = true
 debug            = false
 debug-assertions = false
 opt-level        = 3
+

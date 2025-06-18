@@ -3,7 +3,7 @@ use cosm_tome::chain::coin::Coin;
 use cosm_tome::{chain::request::TxOptions, modules::bank::model::SendRequest};
 use cosmwasm_std::{from_json, to_json_binary, BankMsg, Binary, CosmosMsg, Empty, WasmMsg};
 use cw_ownable::Ownership;
-use cw_tba::{ExecuteMsg, TokenInfo};
+use cw_tba::{ExecuteAccountMsg, TokenInfo};
 use test_context::test_context;
 
 use cw82_tba_base::msg::{
@@ -334,10 +334,10 @@ fn tokens_receving(chain: &mut Chain) {
 
     chain
         .orc
-        .execute::<&str, ExecuteMsg>(
+        .execute::<&str, ExecuteAccountMsg>(
             SIMPLE_ACCOUNT_NAME,
             "acc_tokens_ack",
-            &ExecuteMsg::UpdateKnownTokens {
+            &ExecuteAccountMsg::UpdateKnownTokens {
                 collection: data.collection.clone(),
                 start_after: None,
                 limit: None,
@@ -376,10 +376,10 @@ fn tokens_acknowlegement(chain: &mut Chain) {
     // making the account aware of the tokens it owns
     chain
         .orc
-        .execute::<&str, ExecuteMsg>(
+        .execute::<&str, ExecuteAccountMsg>(
             SIMPLE_ACCOUNT_NAME,
             "acc_tokens_ack",
-            &ExecuteMsg::UpdateKnownTokens {
+            &ExecuteAccountMsg::UpdateKnownTokens {
                 collection: data.collection.clone(),
                 start_after: None,
                 limit: None,
@@ -394,10 +394,10 @@ fn tokens_acknowlegement(chain: &mut Chain) {
     // Transfering to EOA after which there are only 2 left
     chain
         .orc
-        .execute::<&str, ExecuteMsg>(
+        .execute::<&str, ExecuteAccountMsg>(
             SIMPLE_ACCOUNT_NAME,
             "acc_token_acc",
-            &ExecuteMsg::TransferToken {
+            &ExecuteAccountMsg::TransferToken {
                 collection: data.collection.clone(),
                 token_id: "12".into(),
                 recipient: user.account.address.clone(),
@@ -423,10 +423,10 @@ fn tokens_acknowlegement(chain: &mut Chain) {
     // sending to itself should be fine but not change anything
     chain
         .orc
-        .execute::<&str, ExecuteMsg>(
+        .execute::<&str, ExecuteAccountMsg>(
             SIMPLE_ACCOUNT_NAME,
             "acc_token_acc",
-            &ExecuteMsg::SendToken {
+            &ExecuteAccountMsg::SendToken {
                 collection: data.collection.clone(),
                 token_id: "13".into(),
                 contract: data.token_account.clone(),
@@ -465,10 +465,10 @@ fn tokens_acknowlegement(chain: &mut Chain) {
     // sending to an nft to second token account
     chain
         .orc
-        .execute::<&str, ExecuteMsg>(
+        .execute::<&str, ExecuteAccountMsg>(
             SIMPLE_ACCOUNT_NAME,
             "acc_token_acc",
-            &ExecuteMsg::SendToken {
+            &ExecuteAccountMsg::SendToken {
                 collection: data.collection.clone(),
                 token_id: "13".into(),
                 contract: second_ta.clone(),
@@ -510,10 +510,10 @@ fn tokens_acknowlegement(chain: &mut Chain) {
     // making the token account forget about the tokens it owns
     chain
         .orc
-        .execute::<&str, ExecuteMsg>(
+        .execute::<&str, ExecuteAccountMsg>(
             SIMPLE_ACCOUNT_NAME,
             "acc_token_acc",
-            &ExecuteMsg::ForgetTokens {
+            &ExecuteAccountMsg::ForgetTokens {
                 collection: data.collection.clone(),
                 token_ids: vec!["14".to_string()],
             },
@@ -536,10 +536,10 @@ fn tokens_acknowlegement(chain: &mut Chain) {
     // forget about the whole collection
     chain
         .orc
-        .execute::<&str, ExecuteMsg>(
+        .execute::<&str, ExecuteAccountMsg>(
             SIMPLE_ACCOUNT_NAME,
             "acc_token_acc",
-            &ExecuteMsg::ForgetTokens {
+            &ExecuteAccountMsg::ForgetTokens {
                 collection: data.collection.clone(),
                 token_ids: vec![],
             },
@@ -624,14 +624,14 @@ fn direct_mint(chain: &mut Chain) {
         extension: None,
     };
 
-    let account_msg = ExecuteMsg::MintToken {
+    let account_msg = ExecuteAccountMsg::MintToken {
         minter: collection.clone(),
         msg: to_json_binary(&mint_msg).unwrap(),
     };
 
     chain
         .orc
-        .execute::<&str, ExecuteMsg>(
+        .execute::<&str, ExecuteAccountMsg>(
             SIMPLE_ACCOUNT_NAME,
             "acc_tokens_mint",
             &account_msg,

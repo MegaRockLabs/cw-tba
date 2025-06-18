@@ -4,15 +4,9 @@ use cosmwasm_std::{
 
 use cw83::CREATE_ACCOUNT_REPLY_ID;
 use cw84::ValidSignatureResponse;
-use cw_tba::{
-    verify_nft_ownership, ExecuteAccountMsg, ExecuteMsg, InstantiateAccountMsg, MigrateAccountMsg, QueryMsg, TokenInfo
-};
-use saa_wasm::{saa_types::{msgs::SignedDataMsg, CredentialData, CredentialsWrapper, VerifiedData}, UpdateOperation};
-
-
-use crate::{
-    error::ContractError, funds::checked_funds, state::{LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES}
-};
+use cw_tba::{verify_nft_ownership, ExecuteAccountMsg, ExecuteMsg, InstantiateAccountMsg, MigrateAccountMsg, QueryMsg, TokenInfo};
+use saa_wasm::{saa_types::{msgs::SignedDataMsg, CheckOption, CredentialData, CredentialsWrapper, ReplayParams, VerifiedData}, UpdateOperation};
+use crate::{error::ContractError, funds::checked_funds, state::{LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES}};
 
 
 const CREATE_MSG : &str = "Create TBA account";
@@ -58,7 +52,7 @@ pub fn create_account(
 
     let token_address = TOKEN_ADDRESSES.may_load(
         deps.storage,
-        (token_info.collection.as_str(), token_info.id.as_str()),
+        token_info.key(),
     )?;
 
     let label = if token_address.is_some() {
@@ -74,7 +68,7 @@ pub fn create_account(
     };
 
     let account_data = account_data.verify(
-        deps.as_ref(), &env, &info, vec![CREATE_MSG.to_string()]
+        deps.as_ref(), &env, &info, ReplayParams::new(0, CheckOption::Text(CREATE_MSG.to_string()))
     )?;
 
     let init_msg = InstantiateAccountMsg {
@@ -98,6 +92,7 @@ pub fn create_account(
             }),
             reply_on: ReplyOn::Success,
             gas_limit: None,
+            // payload: Binary::default(),
         })
         .add_attributes(vec![
             ("action", if reset { "reset_account"} else { "create_account" }),
@@ -135,7 +130,7 @@ pub fn update_account_owner(
 
     let contract_addr = TOKEN_ADDRESSES.load(
         deps.storage,
-        (token_info.collection.as_str(), token_info.id.as_str()),
+        token_info.key(),
     )?;
 
     info.sender = deps.api.addr_validate(&contract_addr)?;
@@ -144,8 +139,18 @@ pub fn update_account_owner(
         "New owner must be different from the current owner",
     )));
 
+    let n = deps.querier.query_wasm_smart::<u64>(
+        contract_addr.clone(),
+        &QueryMsg::AccountNumber {},
+    )?;
+    
+
     let new_account_data = new_account_data.map(|data| {
-        data.verify(deps.as_ref(), &env, &info, vec![UPDATE_MSG.to_string()])
+        data.verify(
+            deps.as_ref(), 
+            &env, 
+            &info, 
+            ReplayParams::new(n, CheckOption::Text(UPDATE_MSG.to_string())))
     }).transpose()?;
 
 
@@ -179,7 +184,7 @@ pub fn update_account_data(
 
     let contract_addr = TOKEN_ADDRESSES.load(
         deps.storage,
-        (token_info.collection.as_str(), token_info.id.as_str()),
+        token_info.key(),
     )?;
 
 
@@ -204,7 +209,15 @@ pub fn update_account_data(
     let op : UpdateOperation::<VerifiedData> = match op {
         UpdateOperation::Remove(ids) => UpdateOperation::<VerifiedData>::Remove(ids),
         UpdateOperation::Add(data) => {
-            let data = data.verify(deps.as_ref(), &env, &info, vec![UPDATE_MSG.to_string()])?;
+            let n = deps.querier.query_wasm_smart::<u64>(
+                contract_addr.clone(),
+                &QueryMsg::AccountNumber {},
+            )?;
+            let data = data.verify(
+                deps.as_ref(), 
+                &env, &info, 
+                ReplayParams::new(n, CheckOption::Text(UPDATE_MSG.to_string())
+            ))?;
             UpdateOperation::Add(data)
         },
     };
@@ -243,7 +256,7 @@ pub fn migrate_account(
     verify_nft_ownership(&deps.querier, sender.as_str(), token_info.clone())?;
     let contract_addr = TOKEN_ADDRESSES.load(
         deps.storage,
-        (token_info.collection.as_str(), token_info.id.as_str()),
+        token_info.key(),
     )?;
     let msg = CosmosMsg::Wasm(WasmMsg::Migrate {
         contract_addr,

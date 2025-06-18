@@ -11,6 +11,12 @@ pub struct TokenInfo {
     pub id: String,
 }
 
+impl TokenInfo {
+    pub fn key(&self) -> (&str, &str) {
+        (self.collection.as_str(), self.id.as_str())
+    }
+}
+
 
 #[cw_serde]
 pub struct FullInfoResponse {

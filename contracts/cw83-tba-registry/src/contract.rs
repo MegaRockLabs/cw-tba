@@ -1,10 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult
-};
+use cosmwasm_std::{to_json_binary, DepsMut, Env, MessageInfo, Response, StdResult, SubMsgResult};
 
-use cw83::CREATE_ACCOUNT_REPLY_ID;
 
 use crate::{
     error::ContractError,
@@ -26,6 +23,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    cw2::get_contract_version(deps.storage)?;
     cw22::set_contract_supported_interface(
         deps.storage,
         &[cw22::ContractSupportedInterface {
@@ -101,47 +99,63 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, _: Env, msg: Reply) -> Result<Response, ContractError> {
-    if msg.id == CREATE_ACCOUNT_REPLY_ID {
-        let res = cw_utils::parse_reply_instantiate_data(msg)?;
+pub fn reply(deps: DepsMut, _: Env, msg: cosmwasm_std::Reply) -> Result<Response, ContractError> {
 
-        let addr = res.contract_address;
-
-        cw22::query_supported_interface_version(
-            &deps.querier, 
-            addr.as_str(), 
-            cw82::INTERFACE_NAME
-        )?;
-
-        let stored = LAST_ATTEMPTING.load(deps.storage)?;
-        LAST_ATTEMPTING.remove(deps.storage);
-
-        COL_TOKEN_COUNTS.update(
-            deps.storage,
-            stored.collection.as_str(),
-            |count| -> StdResult<u32> {
-                match count {
-                    Some(c) => Ok(c + 1),
-                    None => Ok(1),
-                }
-            },
-        )?;
-
-        TOKEN_ADDRESSES.save(
-            deps.storage,
-            (stored.collection.as_str(), stored.id.as_str()),
-            &addr,
-        )?;
-
-        Ok(Response::default())
-    } else {
-        Err(ContractError::Unauthorized {})
+    if msg.id != cw83::CREATE_ACCOUNT_REPLY_ID {
+        return Err(ContractError::Unauthorized {});
     }
+
+    // let res = cw_utils::parse_reply_instantiate_data(msg)?;
+    let res = if let SubMsgResult::Ok(res) = msg.result {
+        #[allow(deprecated)]
+        if let Some(bin) = res.data {
+            cw_utils::parse_instantiate_response_data(&bin)?
+        } else {
+            return Err(ContractError::Unauthorized {});
+        }
+    } else {
+        return Err(ContractError::Unauthorized {});
+    };
+
+    if let None = cw22::query_supported_interface_version(
+        &deps.querier, 
+        res.contract_address.as_str(), 
+        cw82::INTERFACE_NAME
+    )? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let stored = LAST_ATTEMPTING.load(deps.storage)?;
+    LAST_ATTEMPTING.remove(deps.storage);
+
+    COL_TOKEN_COUNTS.update(
+        deps.storage,
+        stored.collection.as_str(),
+        |count| -> StdResult<u32> {
+            match count {
+                Some(c) => Ok(c + 1),
+                None => Ok(1),
+            }
+        },
+    )?;
+
+    TOKEN_ADDRESSES.save(
+        deps.storage,
+        stored.key(), 
+        &res.contract_address
+    )?;
+
+    Ok(Response::default())
+
 }
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(
+    deps: cosmwasm_std::Deps, 
+    _: Env, 
+    msg: QueryMsg
+) -> StdResult<cosmwasm_std::Binary> {
     match msg {
         QueryMsg::AccountInfo(acc_query) => to_json_binary(&account_info(deps, acc_query)?),
         QueryMsg::Accounts { 

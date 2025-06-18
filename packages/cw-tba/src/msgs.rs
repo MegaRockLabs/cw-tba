@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Binary;
-use saa_wasm::saa_types::{msgs::SignedDataMsg, Expiration};
+use saa_wasm::saa_types::Expiration;
 use crate::TokenAccount;
 
 
@@ -12,6 +12,7 @@ pub struct Approval {
     pub spender: String,
     pub expires: Expiration,
 }
+
 
 #[cw_serde]
 pub enum Cw721Msg {
@@ -61,5 +62,3 @@ pub struct TokensResponse {
     pub tokens: Vec<String>,
 }
 
-
-pub type CosmosMsg = cosmwasm_std::CosmosMsg<SignedDataMsg>;

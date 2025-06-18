@@ -1,17 +1,18 @@
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
 use cosmwasm_std::testing::{mock_info, mock_dependencies, mock_env};
-use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, Empty};
+use cosmwasm_std::{to_json_binary, Addr, Empty};
 use cw82_tba_credentials::contract::instantiate;
-use cw82_tba_credentials::execute::try_executing;
-use cw_tba::{ExecuteMsg, TokenInfo};
-use saa_wasm::saa_types::utils::cosmos::preamble_msg_arb_036;
+use cw82_tba_credentials::execute::try_executing_signed;
+use cw_tba::{ExecuteAccountMsg, ExecuteMsg, TokenInfo};
+use saa_wasm::saa_types::utils::cosmos::wrap_msg_arb_036;
 use saa_wasm::saa_types::msgs::{MsgDataToSign, SignedDataMsg};
+use smart_account_auth::{DerivableMsg, VerifiedData};
 use test_context::test_context;
 
 use cw82_tba_credentials::msg::InstantiateMsg;
 
 use crate::helpers::helper::{
-    get_cred_data, get_init_address, instantiate_collection, CRED_ACOUNT_NAME
+    get_init_address, instantiate_collection, CRED_ACOUNT_NAME
 };
 
 use crate::helpers::{
@@ -40,7 +41,7 @@ fn test(chain: &mut Chain) {
     };
 
     
-    let execute_msg = ExecuteMsg::MintToken {
+    let execute_msg = ExecuteAccountMsg::MintToken {
         minter: collection.clone(),
         msg: to_json_binary(&mint_msg).unwrap(),
     };
@@ -59,10 +60,10 @@ fn test(chain: &mut Chain) {
     res.unwrap_err();
 
 
-    let actions = MsgDataToSign::<ExecuteMsg> { 
+    let actions = MsgDataToSign { 
         chain_id: chain.cfg.orc_cfg.chain_cfg.chain_id.clone(),
         contract_address: data.cred_token_account.clone(),
-        messages: vec![execute_msg],
+        messages: vec![execute_msg.to_json_string().unwrap()],
         nonce: 1u64.into(),
     };
 
@@ -73,7 +74,7 @@ fn test(chain: &mut Chain) {
 
 
     let signature = sk.sign(
-        &preamble_msg_arb_036(
+        &wrap_msg_arb_036(
             &user.account.address, 
             &to_json_binary(&actions).unwrap().to_base64()
         ).as_bytes()
@@ -86,10 +87,10 @@ fn test(chain: &mut Chain) {
         payload: None
     };
 
-    let msgs = vec![CosmosMsg::Custom(signed)];
 
-    let msg = ExecuteMsg::Execute { 
-        msgs: msgs.clone()
+    let msg = ExecuteMsg::ExecuteSigned { 
+        msgs: vec![execute_msg.clone()], 
+        signed: signed.clone()
     };
 
     let mut deps = mock_dependencies();
@@ -101,7 +102,15 @@ fn test(chain: &mut Chain) {
 
     println!("contract address: {:?}", env.contract.address);
 
-    let account_data = get_cred_data(chain, &user, msgs.clone());
+    let account_data = VerifiedData { 
+        credentials: vec![],
+        addresses: vec![], 
+        primary_id: String::from(""),
+        override_primary: false,
+        has_natives: true,
+        has_extensions: false,
+        nonce: 0
+    };
 
     let init_msg = InstantiateMsg {
         owner: user.account.address.clone(),
@@ -110,7 +119,7 @@ fn test(chain: &mut Chain) {
             collection: data.collection.clone(),
             id: data.token_id.clone()
         },
-        actions: None
+        actions: Some(vec![execute_msg.clone()])
     };
 
     println!("Registry: {:?}", data.registry);
@@ -129,11 +138,12 @@ fn test(chain: &mut Chain) {
     init_res.unwrap();
 
 
-    let exec_res = try_executing(
+    let exec_res = try_executing_signed(
         deps.as_mut(),
         env.clone(),
         info,
-        msgs,
+        vec![execute_msg],
+        signed
     );
     assert!(exec_res.is_ok());
 

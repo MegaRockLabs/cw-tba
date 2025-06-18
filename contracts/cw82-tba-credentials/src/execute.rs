@@ -1,16 +1,14 @@
 use crate::{
-    action::execute_action, error::ContractError, msg::ContractResult, state::{
-        save_token_credentials, KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO
-    }, utils::{assert_data_owner_derivable, assert_owner_derivable, assert_registry, assert_status}
+    action::execute_action, error::ContractError, msg::ContractResult, 
+    state::{save_token_credentials, KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO}, 
+    utils::{assert_owner_derivable, assert_registry, assert_status}
 };
+use saa_wasm::{ add_credentials, remove_credentials, verify_signed_actions, UpdateOperation, saa_types::{msgs::SignedDataMsg, VerifiedData}};
 use cosmwasm_std::{ensure, Api, DepsMut, Env, MessageInfo, Response, Storage};
-use cw2::CONTRACT;
-use cw22::SUPPORTED_INTERFACES;
-use cw_ownable::{get_ownership, Action};
 use cw_tba::{verify_nft_ownership, ExecuteAccountMsg, Status};
-use saa_wasm::{ 
-    add_verified, remove_credentials, saa_types::{msgs::SignedDataMsg, VerifiedData}, verify_signed_actions, UpdateOperation
-};
+use cw_ownable::{get_ownership, Action};
+use cw22::SUPPORTED_INTERFACES;
+use cw2::CONTRACT;
 
 
 pub fn try_executing_signed(
@@ -62,18 +60,18 @@ pub fn try_updating_account_data(
 
     match op {
         UpdateOperation::Add(data) => {
-            // let data = data.with_native(&info);
-            add_verified(deps.storage, &data)?;
-            //let added = add_credentials(&mut deps, &env, data)?;  
+            
+            add_credentials(deps.storage, &data)?;
+
             if let Some(pending) = ownership.pending_owner {
-                assert_data_owner_derivable(&data, pending.as_str())?;
+                assert_owner_derivable(&data.credentials, pending.as_str())?;
                 STATUS.save(deps.storage, &Status { frozen: false })?;
                 cw_ownable::update_ownership(deps, &env.block, &pending, Action::AcceptOwnership)?; 
             }
         },
         UpdateOperation::Remove(idx) => {
-            let rest = remove_credentials(deps.storage, idx)?;
-            assert_owner_derivable(rest, owner.to_string())?;
+            let rest = remove_credentials(deps.storage, &idx)?;
+            assert_owner_derivable(&rest, owner.as_str())?;
         },        
     }
     Ok(Response::new().add_attributes(vec![("action", "update_account_data")]))

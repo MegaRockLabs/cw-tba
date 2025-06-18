@@ -1,8 +1,8 @@
 use cw_tba::TokenInfo;
 use cw_ownable::is_owner;
-use cosmwasm_std::{ensure, from_json, Addr, Binary, Deps, Env, Order, StdError, StdResult};
-use cw82::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
-use saa_wasm::saa_types::{traits::Verifiable, CosmosArbitrary, Credential};
+use cosmwasm_std::{Addr, Binary, Deps, Env, Order, StdError, StdResult};
+use cw82::{CanExecuteResponse, ValidSignatureResponse};
+use smart_account_auth::{msgs::AuthPayload, CosmosArbitrary, Verifiable};
 
 use crate::{
     msg::{AssetsResponse, FullInfoResponse},
@@ -39,53 +39,19 @@ pub fn valid_signature(
     deps: Deps,
     data: Binary,
     signature: Binary,
-    payload: &Option<Binary>,
+    _payload: &Option<AuthPayload>,
 ) -> StdResult<ValidSignatureResponse> {
     let pk: Binary = PUBKEY.load(deps.storage)?;
     let owner = cw_ownable::get_ownership(deps.storage)?;
 
-    let address = match payload {
-        Some(payload) => from_json(payload)?,
-        None => owner.owner.unwrap_or(Addr::unchecked("")).to_string(),
-    };
+    let address = owner.owner.unwrap_or(Addr::unchecked(""));
 
     Ok(ValidSignatureResponse {
         is_valid: match assert_status(deps.storage)? {
-            true => verify_arbitrary(deps, &address, data, signature, &pk)?,
+            true => verify_arbitrary(deps, address.as_str(), data, signature, &pk)?,
             false => false,
         },
     })
-}
-
-pub fn valid_signatures(
-    deps: Deps,
-    data: Vec<Binary>,
-    signatures: Vec<Binary>,
-    payload: &Option<Binary>,
-) -> StdResult<ValidSignaturesResponse> {
-    let status_ok = assert_status(deps.storage)?;
-
-    let pk: Binary = PUBKEY.load(deps.storage)?;
-    let owner = cw_ownable::get_ownership(deps.storage)?;
-
-    let address = match payload {
-        Some(payload) => from_json(payload)?,
-        None => owner.owner.unwrap_or(Addr::unchecked("")).to_string(),
-    };
-
-    let are_valid: Vec<bool> = signatures
-        .into_iter()
-        .enumerate()
-        .map(|(i, signature)| {
-            if !status_ok {
-                return false;
-            };
-            let data = data.get(i).unwrap().clone();
-            verify_arbitrary(deps, &address, data, signature, &pk).unwrap_or(false)
-        })
-        .collect();
-
-    Ok(ValidSignaturesResponse { are_valid })
 }
 
 
@@ -97,23 +63,17 @@ pub fn verify_arbitrary(
     pubkey: &[u8],
 ) -> StdResult<bool> {
     
+
     let arb = CosmosArbitrary {
         pubkey: pubkey.into(),
         signature,
         message,
-        hrp: account_addr.split("1")
-            .next()
-            .map(|s| s.to_string())
+        address: account_addr.to_string(),
     };
     
-    arb.verify_cosmwasm(deps.api)
+    arb.verify(deps)
         .map_err(|_| StdError::generic_err("Invalid signature"))?;
 
-    let arb : Credential = arb.into();
-    let cosm_addr = arb.cosmos_address(deps.api)
-        .map_err(|_| StdError::generic_err("Error converting to a cosmos address"))?;
-
-    ensure!(cosm_addr.as_str() == account_addr, StdError::generic_err("Invalid address"));
     Ok(true)
 }
 

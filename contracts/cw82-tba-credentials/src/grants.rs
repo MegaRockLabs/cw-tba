@@ -1,7 +1,5 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Binary, Coin, CosmosMsg, DepsMut, Env, Response};
-use saa_wasm::has_natives;
-
 use crate::{error::ContractError};
 
 
@@ -22,7 +20,6 @@ pub struct CwGrantMessage {
 
 
 pub fn cwfee_grant(deps: DepsMut, env: Env, msg: CwGrant) -> Result<Response, ContractError> {
-    let with_caller = has_natives(deps.storage);
     
     let owner = cw_ownable::get_ownership(deps.storage)?
         .owner
@@ -31,7 +28,7 @@ pub fn cwfee_grant(deps: DepsMut, env: Env, msg: CwGrant) -> Result<Response, Co
     let owner = owner.as_str();
 
     for m in &msg.msgs {
-        if with_caller && owner == m.sender.as_str() {
+        if owner == m.sender.as_str() {
             continue;
         }
         if m.type_url == "cosmwasm.wasm.v1.MsgExecuteContract" {
@@ -54,7 +51,7 @@ pub fn register_granter_msg(env: &Env) -> Result<CosmosMsg, ContractError> {
 
     let register_stargate_msg = CosmosMsg::Stargate {
         type_url: "/archway.cwfees.v1.MsgRegisterAsGranter".to_string(),
-        value: Binary(
+        value: Binary::from(
             anybuf::Anybuf::new().
             append_string(1, env.contract.address.to_string())
             .into_vec(),

@@ -3,11 +3,10 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Binary, Coin, CosmosMsg, StdResult, Timestamp};
 use cw84::{signed_query, signed_execute};
 use saa_wasm::saa_types::msgs::AuthPayload;
-use saa_wasm::{session_action, session_query, UpdateOperation};
+use saa_wasm::UpdateOperation;
 use cw_ownable::{cw_ownable_query};
 use saa_wasm::saa_types::{msgs::SignedDataMsg, VerifiedData};
-use saa_schema::saa_derivable;
-
+use saa_schema::{saa_derivable, saa_type, QueryResponses};
 use crate::common::TokenInfo;
 use crate::{Cw721ReceiveMsg};
 
@@ -128,9 +127,13 @@ impl Into<ExecuteAccountMsg> for ExecuteMsg {
  */
 
 
-#[session_action(ExecuteAccountMsg)]
-#[signed_execute(ExecuteAccountMsg, SignedDataMsg)]
+/* #[session_action(ExecuteAccountMsg)]
 #[saa_derivable]
+
+*/
+
+#[signed_execute(ExecuteAccountMsg, SignedDataMsg)]
+#[saa_type]
 pub enum ExecuteMsg {
 
     /// Registry only method to update the owner to the current NFT holder
@@ -168,10 +171,13 @@ pub struct AssetsResponse {
 }
 
 
+// #[saa_derivable]
+// #[session_query(ExecuteAccountMsg)]
+
 #[cw_ownable_query]
 #[signed_query(ExecuteAccountMsg, SignedDataMsg, AuthPayload)]
-#[session_query(ExecuteAccountMsg)]
-#[saa_derivable]
+#[derive(QueryResponses)]
+#[saa_type]
 pub enum QueryMsg {   
     /// Status of the account telling whether it iz frozen
     #[returns(Status)]
@@ -200,7 +206,7 @@ pub enum QueryMsg {
     },
 
     /// Incremental number telling wether a direct interaction with the account has occured
-    #[returns(u128)]
+    #[returns(u64)]
     AccountNumber {},
 
 

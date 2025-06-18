@@ -1,5 +1,5 @@
 use cosmwasm_std::from_json;
-use cw83_tba_registry::msg::{self as RegistryMsg};
+use cw83_tba_registry::msg::{self as RegistryMsg, AccountsQueryMsg};
 use cw_tba::TokenInfo;
 use test_context::test_context;
 use RegistryMsg::QueryMsg as RegistryQuery;
@@ -21,23 +21,26 @@ fn test_queries(chain: &mut Chain) {
         &RegistryQuery::Accounts {
             skip: None,
             limit: None,
+            query: None,
+            start_after: None,
         },
     )
     .unwrap();
 
-    let acc_res = from_json::<RegistryMsg::AccountsResponse>(&res.res.data.unwrap()).unwrap();
+    let acc_res = from_json::<cw83::AccountsResponse>(&res.res.data.unwrap()).unwrap();
 
     let res = wasm_query(
         chain,
         &data.registry,
-        &RegistryQuery::CollectionAccounts {
-            collection: data.collection.clone(),
+        &RegistryQuery::Accounts {
+            query: Some(AccountsQueryMsg::Collection(data.collection.clone())),
+            start_after: None,
             skip: None,
             limit: None,
         },
     );
     let col_res =
-        from_json::<RegistryMsg::CollectionAccountsResponse>(&res.unwrap().res.data.unwrap())
+        from_json::<RegistryMsg::Accounts>(&res.unwrap().res.data.unwrap())
             .unwrap();
 
     // 2 accounts should be registered
@@ -47,40 +50,40 @@ fn test_queries(chain: &mut Chain) {
     assert_eq!(col_res.accounts.len(), 2);
 
     let first_account = acc_res.accounts.first().clone().unwrap();
+    
     let firt_col_account = col_res.accounts.first().clone().unwrap();
     assert_eq!(first_account.address, firt_col_account.address);
-    assert_eq!(first_account.token_info.id, firt_col_account.token_id);
 
     let res = wasm_query(
         chain,
         &data.registry,
-        &RegistryQuery::AccountInfo(RegistryMsg::AccountQuery {
-            query: TokenInfo {
+        &RegistryQuery::AccountInfo(TokenInfo {
                 collection: data.collection.clone(),
-                id: data.token_id.clone(),
-            },
+            id: data.token_id.clone(),
         }),
     )
     .unwrap();
 
-    let info: cw83::AccountInfoResponse = from_json::<RegistryMsg::AccountInfoResponse>(&res.res.data.unwrap()).unwrap();
+    let info = from_json::<cw83::AccountResponse>(&res.res.data.unwrap()).unwrap();
     assert_eq!(info.address, data.token_account);
 
     let res = wasm_query(
         chain,
         &data.registry,
-        &RegistryQuery::Collections {
+        &RegistryQuery::Accounts {
+            query: Some(AccountsQueryMsg::Collections {}),
             skip: None,
             limit: None,
+            start_after: None,
         },
     );
 
     let res =
-        from_json::<RegistryMsg::CollectionsResponse>(&res.unwrap().res.data.unwrap()).unwrap();
+        from_json::<RegistryMsg::Accounts>(&res.unwrap().res.data.unwrap()).unwrap();
 
-    assert_eq!(res.collections.len(), 1);
-    let first = res.collections[0].clone();
-    assert_eq!(first, data.collection);
+    assert_eq!(res.accounts.len(), 1);
+    let first = res.accounts[0].clone();
+    assert_eq!(first.address, data.token_account);
 }
 
 #[test_context(Chain)]

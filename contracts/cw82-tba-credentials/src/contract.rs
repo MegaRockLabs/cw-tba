@@ -4,8 +4,7 @@ use cosmwasm_std::entry_point;
 use crate::utils::query_if_registry;
 #[cfg(feature = "archway")]
 use {cosmwasm_std::SubMsg, crate::grants::register_granter_msg};
-use saa_wasm::{account_number, handle_session_action, handle_session_query, verify_native};
-use strum::IntoDiscriminant;
+use saa_wasm::{account_number, verify_native};
 
 
 use cosmwasm_std::{
@@ -19,10 +18,12 @@ use cw_tba::{ExecuteMsg, Status};
 
 
 use crate::{
-    action::{self, execute_action, MINT_REPLY_ID}, 
+    action::{self, MINT_REPLY_ID}, 
     error::ContractError, execute::{self, try_executing_actions}, 
     msg::{ContractResult, InstantiateMsg, MigrateMsg, QueryMsg}, 
-    query::{assets, can_execute, can_execute_signed, full_info, known_tokens, valid_signature, valid_signatures /* valid_signatures */}, 
+    query::{assets, can_execute, can_execute_signed, full_info, known_tokens, 
+        valid_signature, valid_signatures /* valid_signatures */
+    }, 
     state::{save_token_credentials, MINT_CACHE, REGISTRY_ADDRESS, STATUS, TOKEN_INFO}
 };
 
@@ -86,8 +87,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
     if REGISTRY_ADDRESS.load(deps.storage).is_err() {
         return Err(ContractError::Deleted {});
     }
-    let contract = env.contract.address.to_string();
-    let action_name = msg.discriminant().to_string();
+    // let contract = env.contract.address.to_string();
+    // let action_name = msg.discriminant().to_string();
 
     let res = match msg {
 
@@ -113,7 +114,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
             execute::try_updating_known_on_receive(deps, info.sender.to_string(), msg.token_id)
         }
 
-        ExecuteMsg::SessionActions(
+   /*      ExecuteMsg::SessionActions(
             session_action_msg
         ) => handle_session_action(
                 deps, 
@@ -122,7 +123,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
                 session_action_msg, 
                 Some(contract),
                 execute_action
-        ),
+        ), */
 
         ExecuteMsg::Execute { msgs } => {
             verify_native(deps.storage, info.sender.to_string())?;
@@ -134,7 +135,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
         ExecuteMsg::Freeze {} => execute::try_freezing(deps),
     }?;
 
-    Ok(res.add_attribute("action_name", action_name))
+    Ok(res
+    //    .add_attribute("action_name", action_name)
+    )
 }
 
 
@@ -153,7 +156,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::KnownTokens { skip, limit } => to_json_binary(&known_tokens(deps, skip, limit)?),
         QueryMsg::Assets { skip, limit } => to_json_binary(&assets(deps, env, skip, limit)?),
         QueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),
-        QueryMsg::SessionQueries(q) => handle_session_query(deps.api, deps.storage, &env, q),
+        // QueryMsg::SessionQueries(q) => handle_session_query(deps.api, deps.storage, &env, q),
         QueryMsg::CanExecute { 
             sender, 
             msg 
