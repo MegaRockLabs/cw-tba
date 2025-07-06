@@ -1,8 +1,8 @@
-use cw_tba::TokenInfo;
-use cw_ownable::is_owner;
 use cosmwasm_std::{Addr, Binary, Deps, Env, Order, StdError, StdResult};
 use cw82::{CanExecuteResponse, ValidSignatureResponse};
-use smart_account_auth::{msgs::AuthPayload, CosmosArbitrary, Verifiable};
+use cw_ownable::is_owner;
+use cw_tba::TokenInfo;
+use smart_account_auth::{CosmosArbitrary, Credential, Verifiable};
 
 use crate::{
     msg::{AssetsResponse, FullInfoResponse},
@@ -12,8 +12,11 @@ use crate::{
 
 const DEFAULT_BATCH_SIZE: u32 = 100;
 
-
-pub fn can_execute(deps: Deps, sender: String, msg: &cosmwasm_std::CosmosMsg) -> StdResult<CanExecuteResponse> {
+pub fn can_execute(
+    deps: Deps,
+    sender: String,
+    msg: &cosmwasm_std::CosmosMsg,
+) -> StdResult<CanExecuteResponse> {
     let cant = CanExecuteResponse { can_execute: false };
 
     if !status_ok(deps.storage) {
@@ -39,7 +42,7 @@ pub fn valid_signature(
     deps: Deps,
     data: Binary,
     signature: Binary,
-    _payload: &Option<AuthPayload>,
+    _payload: &Option<Credential>,
 ) -> StdResult<ValidSignatureResponse> {
     let pk: Binary = PUBKEY.load(deps.storage)?;
     let owner = cw_ownable::get_ownership(deps.storage)?;
@@ -54,7 +57,6 @@ pub fn valid_signature(
     })
 }
 
-
 pub fn verify_arbitrary(
     deps: Deps,
     account_addr: &str,
@@ -62,21 +64,18 @@ pub fn verify_arbitrary(
     signature: Binary,
     pubkey: &[u8],
 ) -> StdResult<bool> {
-    
-
     let arb = CosmosArbitrary {
         pubkey: pubkey.into(),
         signature,
         message,
         address: account_addr.to_string(),
     };
-    
+
     arb.verify(deps)
         .map_err(|_| StdError::generic_err("Invalid signature"))?;
 
     Ok(true)
 }
-
 
 pub fn assets(
     deps: Deps,

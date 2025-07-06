@@ -44,7 +44,6 @@ where
     pub orc: CosmOrc<C>,
 }
 
-
 impl TestContext for Chain<CosmosgRPC> {
     fn setup() -> Self {
         let cfg = CONFIG.get_or_init(|| {
@@ -159,8 +158,7 @@ fn save_gas_report<C: CosmosClient>(orc: &CosmOrc<C>, gas_report_dir: &str) {
     if !p.exists() {
         fs::create_dir(p).unwrap();
     }
-
     let mut rng = rand::thread_rng();
-    let file_name = format!("test-{}.json", rng.gen::<u32>());
+    let file_name = format!("test-{}.json", rng.r#gen::<u32>());
     fs::write(p.join(file_name), j.to_string()).unwrap();
 }

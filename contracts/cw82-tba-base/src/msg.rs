@@ -1,24 +1,22 @@
 use cosmwasm_schema::{cw_serde, serde::Serialize};
 use cosmwasm_std::{Addr, Binary, Coin, Empty};
-pub use cw82::{
-    account_query, CanExecuteResponse
-};
+pub use cw82::{account_query, CanExecuteResponse};
 use cw_ownable::cw_ownable_query;
-use cw_tba::{InstantiateAccountMsg, MigrateAccountMsg, TokenInfo};
+use cw_tba::{InstantiateAccountMsg, TokenInfo};
 use saa_schema::QueryResponses;
+use schemars::JsonSchema;
+use serde::Deserialize;
 
 pub type InstantiateMsg = InstantiateAccountMsg;
-pub type MigrateMsg = MigrateAccountMsg;
+pub type MigrateMsg = Binary;
 
-
-
-#[cw_serde]
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub struct Status {
     /// Whether the account is frozen
     pub frozen: bool,
 }
 
-#[cw_serde]
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub struct AssetsResponse {
     /// Native fungible tokens held by an account
     pub balances: Vec<Coin>,
@@ -26,7 +24,7 @@ pub struct AssetsResponse {
     pub tokens: Vec<TokenInfo>,
 }
 
-#[cw_serde]
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub struct FullInfoResponse {
     /// Current owner of the token account that is ideally a holder of an NFT
     pub ownership: cw_ownable::Ownership<Addr>,
@@ -46,12 +44,11 @@ pub struct FullInfoResponse {
 
 pub type KnownTokensResponse = Vec<TokenInfo>;
 
-
 #[account_query]
 #[cw_ownable_query]
 #[derive(QueryResponses)]
 #[cw_serde]
-pub enum QueryMsgBase<T : Serialize + Clone = Empty> {
+pub enum QueryMsgBase<T: Serialize + Clone = Empty> {
     /// Public key that is used to verify signed messages
     #[returns(Binary)]
     Pubkey {},
@@ -92,7 +89,6 @@ pub enum QueryMsgBase<T : Serialize + Clone = Empty> {
     /// Incremental number telling wether a direct interaction with the account has occured
     #[returns(u128)]
     Serial {},
-
 }
 
 /// [TokenInfo] is used as a to query the account info

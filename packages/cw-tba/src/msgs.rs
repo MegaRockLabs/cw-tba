@@ -1,7 +1,7 @@
+use crate::TokenAccount;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Binary;
-use saa_wasm::saa_types::Expiration;
-use crate::TokenAccount;
+use saa_wasm::{saa_types::{types::exp::Expiration, VerifiedData}, UpdateOperation};
 
 
 pub type CreateAccountMsg = cw83::CreateAccountMsg<TokenAccount>;
@@ -11,17 +11,16 @@ pub type CreateAccountMsg = cw83::CreateAccountMsg<TokenAccount>;
 pub struct Approval {
     pub spender: String,
     pub expires: Expiration,
-}
 
+}
 
 #[cw_serde]
 pub enum Cw721Msg {
-    
-    TransferNft { 
-        recipient: String, 
-        token_id: String 
+    TransferNft {
+        recipient: String,
+        token_id: String,
     },
- 
+
     SendNft {
         contract: String,
         token_id: String,
@@ -37,9 +36,8 @@ pub enum Cw721Msg {
         owner: String,
         start_after: Option<String>,
         limit: Option<u32>,
-    }
-} 
-
+    },
+}
 
 #[cw_serde]
 pub struct Cw721ReceiveMsg {
@@ -49,16 +47,16 @@ pub struct Cw721ReceiveMsg {
 }
 
 
-
 #[cw_serde]
 pub struct OwnerOfResponse {
     pub owner: String,
     pub approvals: Vec<Approval>,
 }
 
-
 #[cw_serde]
 pub struct TokensResponse {
     pub tokens: Vec<String>,
 }
 
+
+pub type UpdateAccountOp = UpdateOperation<VerifiedData>;

@@ -1,30 +1,29 @@
 [package]
-name            = "cw-tba"
-authors         = [ "Kromsten <s@noreply.megarock.labs>" ]
-edition         = { workspace = true }
-version         = { workspace = true }
-repository      = { workspace = true }
-description     = "Definition and types for Token-Bound Accounts"
-
+name = "cw-tba"
+version = { workspace = true }
+authors = ["Kromsten <s@noreply.megarock.labs>"]
+edition = { workspace = true }
+repository = { workspace = true }
+description = "Definition and types for Token-Bound Accounts"
 
 [features]
-default          = []
-ext_query        = []
-full_info        = []
-
+default = []
+ext_query = []
+full_info = []
 
 [dependencies]
-cosmwasm-std    = { workspace = true }
+anybuf = { workspace = true }
 cosmwasm-schema = { workspace = true }
-schemars        = { workspace = true }
-cw83            = { workspace = true }
-cw84            = { workspace = true }
-cw-ownable      = { workspace = true }
-anybuf          = { workspace = true }
+cosmwasm-std = { workspace = true }
+cw-ownable = { workspace = true }
+cw83 = { workspace = true }
+cw84 = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
 
-saa-schema      = { workspace = true }
-strum           = { workspace = true }
-strum_macros    = { workspace = true }
+saa-schema = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
 
-#saa-schema          = { version = "0.24.5", features = ["cosmwasm", "session"], path = "../../../contract-auth/packages/schema" }
-saa-wasm            = { workspace = true }
+# saa-schema          = { version = "0.24.5", features = ["cosmwasm", "session"], path = "../../../contract-auth/packages/schema" }
+saa-wasm = { workspace = true }

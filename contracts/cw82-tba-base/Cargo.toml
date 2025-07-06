@@ -1,10 +1,10 @@
 [package]
 name = "cw82-tba-base"
-version     = { workspace = true }
-edition     = { workspace = true }
-repository  = { workspace = true }
+version = { workspace = true }
+authors = ["Kromsten <kromsten@megarock.app>"]
+edition = { workspace = true }
+repository = { workspace = true }
 description = "Token Bound Account Base"
-authors     = [ "Kromsten <kromsten@megarock.app>" ]
 
 exclude = [
   "contract.wasm",
@@ -12,35 +12,36 @@ exclude = [
 ]
 
 [lib]
-name       =  "cw82_tba_base"
+name = "cw82_tba_base"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default          = ["wasm"]
+default = ["wasm"]
 library = []
-wasm             = []
-cosmwasm         = []
-solana          = []
-substrate        = []
-std            = []
-
+wasm = []
+cosmwasm = []
+solana = []
+substrate = []
+std = []
 
 [dependencies]
-cosmwasm-std    = { workspace = true }
-semver          = { workspace = true }
-thiserror       = { workspace = true }
 cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
+cw-ownable = { workspace = true }
 cw-storage-plus = { workspace = true }
-cw-ownable      = { workspace = true }
-cw-utils        = { workspace = true }
-cw2             = { workspace = true }
-cw22            = { workspace = true }
-cw82            = { workspace = true }
-cw84            = { workspace = true }
-cw83            = { workspace = true }
-cw-tba          = { workspace = true, features = [] }
-strum           = { workspace = true }
-strum_macros    = { workspace = true }
-saa-schema      = { workspace = true  }
-smart-account-auth  = { workspace = true, features = ["cosmos_arb_addr"] }
-saa-wasm            = { workspace = true }
+cw-tba = { workspace = true, features = ["full_info"] }
+cw-utils = { workspace = true }
+cw2 = { workspace = true }
+cw22 = { workspace = true }
+cw82 = { workspace = true }
+cw83 = { workspace = true }
+cw84 = { workspace = true }
+saa-schema = { workspace = true }
+saa-wasm = { workspace = true }
+schemars = { workspace = true }
+semver = { workspace = true }
+serde = { workspace = true }
+smart-account-auth = { workspace = true, features = ["cosmos_arb_addr"] }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+thiserror = { workspace = true }

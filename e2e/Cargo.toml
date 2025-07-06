@@ -1,46 +1,41 @@
 [package]
-name       = "e2e"
-version    = { workspace = true }
-edition    = { workspace = true }
+name = "e2e"
+version = { workspace = true }
+edition = { workspace = true }
 repository = { workspace = true }
 
-
-
-
-
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-cosm-orc       = { git = "https://github.com/kromsten/cosm-orc", version="4.1.0" }
-cosm-tome      = { git = "https://github.com/kromsten/cosm-tome" }
-cosmrs         = { version = "0.16.0", features = ["rpc", "cosmwasm", "grpc", "bip32"] }
+cosm-orc = { git = "https://github.com/kromsten/cosm-orc", version = "4.1.0" }
+cosm-tome = { git = "https://github.com/kromsten/cosm-tome" }
+cosmrs = { version = "0.16.0", features = ["rpc", "cosmwasm", "grpc", "bip32"] }
 
-serde          = { version = "1.0", default-features = false, features = ["derive"] }
+serde = { version = "1.0", default-features = false, features = ["derive"] }
 assert_matches = "1.5"
-serde_json     = "1.0"
-env_logger     = "0.11.3"
-test-context   = "0.3.0"
-once_cell      = "1.19.0"
-rand           = "0.8.5"
-async-trait    = "0.1.8"
-tokio          = "1.37.0"
+serde_json = "1.0"
+env_logger = "0.11.3"
+test-context = "0.3.0"
+once_cell = "1.19.0"
+rand = "0.8.5"
+async-trait = "0.1.8"
+tokio = "1.37.0"
 
+hex = "0.4.3"
 
-hex            = "0.4.3"
-
-cosmwasm-schema      = { workspace = true }
-cosmwasm-std         = { workspace = true }
-cw-ownable           = { workspace = true }
+cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
+cw-ownable = { workspace = true }
 # cw1                  = { workspace = true }
-cw2                  = { workspace = true }
-cw22                 = { workspace = true }
-cw81                 = { workspace = true }
-cw84                 = { workspace = true }
-cw83                 = { workspace = true }
+cw2 = { workspace = true }
+cw22 = { workspace = true }
+cw81 = { workspace = true }
+cw84 = { workspace = true }
+cw83 = { workspace = true }
 
-cw721                = { version = "0.18.0" }
-cw721-base           = { version = "0.18.0",  features = ["library"] }
-cw82-tba-base        = { workspace = true }
+cw721 = { version = "0.18.0" }
+cw721-base = { version = "0.18.0", features = ["library"] }
+cw82-tba-base = { workspace = true }
 cw82-tba-credentials = { workspace = true }
-cw83-tba-registry    = { workspace = true }
-cw-tba               = { workspace = true }
-smart-account-auth   = { workspace = true, features = ["traits", "utils"] }
-saa-wasm             = { workspace = true, features = ["utils"] }
+cw83-tba-registry = { workspace = true }
+cw-tba = { workspace = true }
+smart-account-auth = { version = "=0.26.2", features = ["utils"] }
+saa-wasm = { workspace = true, features = ["utils"] }

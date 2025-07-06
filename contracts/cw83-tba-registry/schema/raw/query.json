@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryMsg",
+  "oneOf": [
+    {
+      "description": "Query params of the registry",
+      "type": "object",
+      "required": ["registry_params"],
+      "properties": {
+        "registry_params": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": ["account_info"],
+      "properties": {
+        "account_info": {
+          "$ref": "#/definitions/TokenInfo"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": ["accounts"],
+      "properties": {
+        "accounts": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": ["integer", "null"],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "query": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/AccountsQueryMsg"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "skip": {
+              "type": ["integer", "null"],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": ["string", "null"]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "AccountsQueryMsg": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["collection"],
+          "properties": {
+            "collection": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["collections"],
+          "properties": {
+            "collections": {
+              "type": "object",
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "TokenInfo": {
+      "type": "object",
+      "required": ["collection", "id"],
+      "properties": {
+        "collection": {
+          "description": "Contract address of the collection",
+          "type": "string"
+        },
+        "id": {
+          "description": "Token id",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

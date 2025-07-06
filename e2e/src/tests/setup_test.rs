@@ -2,11 +2,8 @@ use test_context::test_context;
 
 use crate::helpers::{
     chain::Chain,
-    helper::{
-        full_setup, instantiate_collection, mint_token, query_token_owner,
-    },
+    helper::{full_setup, instantiate_collection, mint_token, query_token_owner},
 };
-
 
 #[test_context(Chain)]
 #[test]
@@ -41,8 +38,6 @@ fn test_mint_token(chain: &mut Chain) {
 
     assert_eq!(user.account.address, owner_res.owner)
 }
-
-
 
 #[test_context(Chain)]
 #[test]

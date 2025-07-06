@@ -2,14 +2,18 @@ use crate::{
     error::ContractError,
     msg::Status,
     state::{KNOWN_TOKENS, MINT_CACHE, PUBKEY, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO},
-    utils::{assert_ok_cosmos_msg, assert_registry, assert_status,  extract_pubkey},
+    utils::{assert_ok_cosmos_msg, assert_registry, assert_status, extract_pubkey},
 };
 use cosmwasm_std::{
-    ensure, to_json_binary, Addr, Binary, Coin,  CosmosMsg, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, ReplyOn, Response, StdResult, SubMsg, WasmMsg
+    ensure, to_json_binary, Addr, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    QuerierWrapper, ReplyOn, Response, StdResult, SubMsg, WasmMsg,
+};
+use cw_ownable::{assert_owner, get_ownership, is_owner, OwnershipError};
+use cw_tba::{
+    encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance, Cw721Msg,
+    ExecuteAccountMsg,
 };
 use saa_wasm::UpdateOperation;
-use cw_ownable::{assert_owner, get_ownership, is_owner, OwnershipError};
-use cw_tba::{encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance, Cw721Msg, ExecuteAccountMsg};
 use smart_account_auth::VerifiedData;
 
 pub const MINT_REPLY_ID: u64 = 1;
@@ -22,30 +26,20 @@ pub fn try_executing(
     assert_owner(deps.storage, &sender)?;
     assert_status(deps.storage)?;
 
-    msgs
-        .iter()
-        .try_for_each(|msg| assert_ok_cosmos_msg(&msg))?;
+    msgs.iter().try_for_each(|msg| assert_ok_cosmos_msg(&msg))?;
 
     Ok(Response::new().add_messages(msgs))
 }
 
-
-
 pub fn try_executing_actions(
-    deps  :   DepsMut,
-    env       :   &Env,
-    info      :   MessageInfo,
-    actions   :   Vec<ExecuteAccountMsg>,
+    deps: DepsMut,
+    env: &Env,
+    info: MessageInfo,
+    actions: Vec<ExecuteAccountMsg>,
 ) -> Result<Response, ContractError> {
     let mut res = Response::new();
     for act in actions {
-        let action_res = execute_action(
-            &deps.querier,
-            deps.storage,
-             &env, 
-             &info, 
-             act
-            )?;
+        let action_res = execute_action(&deps.querier, deps.storage, &env, &info, act)?;
         res = res
             .add_submessages(action_res.messages)
             .add_events(action_res.events)
@@ -56,9 +50,6 @@ pub fn try_executing_actions(
     }
     Ok(res)
 }
-
-
-
 
 pub fn execute_action(
     querier: &QuerierWrapper,
@@ -72,17 +63,12 @@ pub fn execute_action(
 
     match msg {
         Execute { msgs } => {
-            msgs
-                .iter()
-                .try_for_each(|msg| assert_ok_cosmos_msg(&msg))?;
+            msgs.iter().try_for_each(|msg| assert_ok_cosmos_msg(&msg))?;
 
             Ok(Response::new().add_messages(msgs))
         }
 
-        MintToken {
-            minter,
-            msg,
-        } => try_minting_token(
+        MintToken { minter, msg } => try_minting_token(
             storage,
             info.sender.clone(),
             minter,
@@ -94,15 +80,7 @@ pub fn execute_action(
             collection,
             token_id,
             recipient,
-        } => {
-            try_transfering_token(
-                storage,
-                collection,
-                token_id,
-                recipient,
-                info.funds.clone(),
-            )
-        }
+        } => try_transfering_token(storage, collection, token_id, recipient, info.funds.clone()),
 
         SendToken {
             collection,
@@ -123,15 +101,14 @@ pub fn execute_action(
             start_after,
             limit,
         } => try_updating_known_tokens(
-            querier, 
-            storage, 
-            env, 
+            querier,
+            storage,
+            env,
             info.sender.clone(),
             collection,
             start_after,
             limit,
         ),
-
 
         ForgetTokens {
             collection,
@@ -142,10 +119,7 @@ pub fn execute_action(
 
         Unfreeze {} => try_unfreezing(querier, storage),
 
-        FeeGrant { 
-            grantee, 
-            allowance 
-        } => try_fee_granting(
+        FeeGrant { grantee, allowance } => try_fee_granting(
             storage,
             env.contract.address.clone(),
             info.sender.clone(),
@@ -154,8 +128,6 @@ pub fn execute_action(
         ),
     }
 }
-
-
 
 pub fn try_minting_token(
     storage: &mut dyn cosmwasm_std::Storage,
@@ -176,14 +148,14 @@ pub fn try_minting_token(
         .into(),
         reply_on: ReplyOn::Success,
         id: MINT_REPLY_ID,
-        gas_limit: None
+        gas_limit: None,
     }))
 }
 
 pub fn try_freezing(
     querier: &QuerierWrapper,
-    storage: &mut dyn cosmwasm_std::Storage, 
-    sender: Addr
+    storage: &mut dyn cosmwasm_std::Storage,
+    sender: Addr,
 ) -> Result<Response, ContractError> {
     let token = TOKEN_INFO.load(storage)?;
     let owner = cw_ownable::get_ownership(storage)?.owner.unwrap();
@@ -202,8 +174,8 @@ pub fn try_freezing(
 }
 
 pub fn try_unfreezing(
-    querier: &QuerierWrapper, 
-    storage: &mut dyn cosmwasm_std::Storage
+    querier: &QuerierWrapper,
+    storage: &mut dyn cosmwasm_std::Storage,
 ) -> Result<Response, ContractError> {
     let owner = cw_ownable::get_ownership(storage)?.owner.unwrap();
     let token = TOKEN_INFO.load(storage)?;
@@ -220,19 +192,24 @@ pub fn try_updating_ownership(
 ) -> Result<Response, ContractError> {
     assert_registry(deps.storage, &info.sender)?;
     let ownership = get_ownership(deps.storage)?;
-    let addr  = deps.api.addr_validate(&new_owner)?;
+    let addr = deps.api.addr_validate(&new_owner)?;
 
     if let Some(data) = new_data {
-        let new_pubkey =  extract_pubkey(data, &addr)?;
+        let new_pubkey = extract_pubkey(data, &addr)?;
         PUBKEY.save(deps.storage, &new_pubkey)?;
         STATUS.save(deps.storage, &Status { frozen: false })?;
         cw_ownable::initialize_owner(deps.storage, deps.api, Some(new_owner.as_str()))?;
     } else {
         STATUS.save(deps.storage, &Status { frozen: true })?;
-        cw_ownable::update_ownership(deps, &env.block, &ownership.owner.unwrap(), cw_ownable::Action::TransferOwnership {
-            new_owner: new_owner.to_string(),
-            expiry: None,
-        })?;
+        cw_ownable::update_ownership(
+            deps,
+            &env.block,
+            &ownership.owner.unwrap(),
+            cw_ownable::Action::TransferOwnership {
+                new_owner: new_owner.to_string(),
+                expiry: None,
+            },
+        )?;
     }
 
     Ok(Response::default()
@@ -246,7 +223,7 @@ pub fn try_changing_data(
     info: MessageInfo,
     op: UpdateOperation<VerifiedData>,
 ) -> Result<Response, ContractError> {
-     match op {
+    match op {
         UpdateOperation::Add(data) => {
             let ownershop = get_ownership(deps.storage)?;
             let owner = ownershop.owner.unwrap();
@@ -261,7 +238,12 @@ pub fn try_changing_data(
             let pubkey = extract_pubkey(data, &info.sender)?;
             PUBKEY.save(deps.storage, &pubkey)?;
             if new_owner {
-                cw_ownable::update_ownership(deps, &env.block, &info.sender, cw_ownable::Action::AcceptOwnership)?;
+                cw_ownable::update_ownership(
+                    deps,
+                    &env.block,
+                    &info.sender,
+                    cw_ownable::Action::AcceptOwnership,
+                )?;
                 /* cw_ownable::update_ownership(deps, &env.block, &info.sender, cw_ownable::Action::TransferOwnership {
                     new_owner: info.sender.to_string(),
                     expiry: None,
@@ -270,7 +252,7 @@ pub fn try_changing_data(
             Ok(Response::new()
                 .add_attribute("action", "change_pubkey")
                 .add_attribute("new_owner", info.sender.as_str()))
-        },
+        }
         UpdateOperation::Remove(_) => Err(ContractError::NotSupported {}),
     }
 }
@@ -406,22 +388,17 @@ pub fn try_purging(deps: DepsMut, sender: Addr) -> Result<Response, ContractErro
     Ok(Response::default().add_attribute("action", "purge"))
 }
 
-
 pub fn try_fee_granting(
-    storage: &mut dyn cosmwasm_std::Storage, 
-    contract: Addr, 
-    sender: Addr, 
-    grantee: String, 
-    allowance: Option<BasicAllowance>
+    storage: &mut dyn cosmwasm_std::Storage,
+    contract: Addr,
+    sender: Addr,
+    grantee: String,
+    allowance: Option<BasicAllowance>,
 ) -> Result<Response, ContractError> {
     assert_owner(storage, &sender)?;
     assert_status(storage)?;
 
-    let msg = encode_feegrant_msg(
-        contract.as_str(),
-        &grantee,
-        allowance,
-    )?;
+    let msg = encode_feegrant_msg(contract.as_str(), &grantee, allowance)?;
 
     Ok(Response::new().add_message(msg))
 }

@@ -1,34 +1,18 @@
 use cosmwasm_std::{ensure, ensure_eq, CosmosMsg, StdError, StdResult, Storage};
 use saa_wasm::saa_types::CredentialRecord;
 
-
-use crate::{error::ContractError, state::{REGISTRY_ADDRESS, STATUS}};
-
+use crate::{
+    error::ContractError,
+    state::{REGISTRY_ADDRESS, STATUS},
+};
 
 pub fn assert_status(store: &dyn Storage) -> StdResult<()> {
     let status = STATUS.load(store)?;
-    ensure!(!status.frozen, StdError::generic_err(ContractError::Frozen {}.to_string()));
-    Ok(())
-}
-
-
-pub fn status_ok(store: &dyn Storage) -> bool {
-    assert_status(store).is_ok()
-}
-
-
-#[cfg(target_arch = "wasm32")]
-pub fn query_if_registry(querier: &cosmwasm_std::QuerierWrapper, addr: cosmwasm_std::Addr) -> StdResult<bool> {
-    let key = cosmwasm_std::storage_keys::namespace_with_key(
-        &[cw22::INTERFACE_NAMESPACE.as_bytes()], 
-        "crates:cw83".as_bytes()
+    ensure!(
+        !status.frozen,
+        StdError::generic_err(ContractError::Frozen {}.to_string())
     );
-    let raw_query = cosmwasm_std::WasmQuery::Raw { 
-        contract_addr: addr.to_string(),
-        key: key.into()
-    };
-    let version : Option<String> = querier.query(&cosmwasm_std::QueryRequest::Wasm(raw_query))?;
-    Ok(version.is_some())
+    Ok(())
 }
 
 
@@ -38,34 +22,30 @@ pub fn assert_registry(store: &dyn Storage, addr: &str) -> Result<(), ContractEr
     Ok(())
 }
 
-
 pub fn assert_owner_derivable(
     creds: &Vec<CredentialRecord>,
     owner: &str,
 ) -> Result<(), ContractError> {
-    let found = creds
-        .iter()
-        .any(|(_, i)| i.address
+    let found = creds.iter().any(|(_, i)| {
+        i.address
             .as_ref()
             .map(|a| a.to_string() == owner)
             .unwrap_or_default()
-        );
+    });
     ensure!(found, ContractError::NoOwnerCred {});
     Ok(())
 }
 
-
-
 pub fn assert_ok_cosmos_msg(msg: &CosmosMsg) -> StdResult<()> {
     match msg {
         CosmosMsg::Wasm(_) => Err(StdError::generic_err("Not Supported")),
-        CosmosMsg::Stargate { type_url, .. }  => {
+        CosmosMsg::Stargate { type_url, .. } => {
             if type_url.to_lowercase().contains("authz") {
                 Err(StdError::generic_err("Not Supported"))
             } else {
                 Ok(())
             }
-        },
+        }
         _ => Ok(()),
     }
 }

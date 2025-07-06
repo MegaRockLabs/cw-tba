@@ -1,66 +1,61 @@
-use cosmwasm_std::{ensure, Binary, CosmosMsg, Deps, Env, Order, StdError, StdResult};
-use cw84::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
+use cosmwasm_std::{to_json_string, Binary, CosmosMsg, Deps, Env, Order, StdError, StdResult};
+use cw84::{CanExecuteResponse, ValidSignatureResponse, /* ValidSignaturesResponse */};
 use cw_tba::{AssetsResponse, ExecuteAccountMsg, FullInfoResponse, TokenInfo};
-use saa_wasm::{saa_types::msgs::{AuthPayload, SignedDataMsg}, verify_data, verify_native, verify_signed};
+use saa_wasm::{
+    saa_types::{Credential}, verify_credential, verify_native
+};
 
 use crate::{
     state::{KNOWN_TOKENS, REGISTRY_ADDRESS, STATUS, TOKEN_INFO},
-    utils::{assert_ok_cosmos_msg, 
-        status_ok}
-    ,
+    utils::{assert_ok_cosmos_msg, assert_status},
 };
 
 const DEFAULT_BATCH_SIZE: u32 = 100;
 
-
-pub fn can_execute(
-    deps: Deps,
-    sender: String,
-    msg: CosmosMsg,
-) -> StdResult<CanExecuteResponse> {
-
-    Ok(CanExecuteResponse { 
-        can_execute: status_ok(deps.storage) && 
-                      verify_native( deps.storage, sender).is_ok() &&
-                      assert_ok_cosmos_msg(&msg).is_ok()
+pub fn can_execute(deps: Deps, sender: String, msg: CosmosMsg) -> StdResult<CanExecuteResponse> {
+    Ok(CanExecuteResponse {
+        can_execute: assert_status(deps.storage).is_ok()
+            && verify_native(deps.storage, sender).is_ok()
+            && assert_ok_cosmos_msg(&msg).is_ok(),
     })
 }
-
 
 pub fn can_execute_signed(
     deps: Deps,
     env: Env,
-    msgs: Vec<ExecuteAccountMsg>,
-    signed: SignedDataMsg,
+    cred: Credential,
+    msg: ExecuteAccountMsg,
 ) -> StdResult<CanExecuteResponse> {
-    Ok(CanExecuteResponse { 
-        can_execute: status_ok(deps.storage) && verify_signed(
-            deps, 
-            &env, 
-            msgs, 
-            signed
-        ).is_ok()
+    Ok(CanExecuteResponse {
+        can_execute: assert_status(deps.storage).is_ok() && 
+        verify_credential(deps, &env, cred, Some(vec![to_json_string(&msg)?])).is_ok(),
     })
 }
 
-
+#[allow(unused)]
 pub fn valid_signature(
     deps: Deps,
     _env: Env,
     data: Binary,
     signature: Binary,
-    payload: Option<AuthPayload>,
+    payload: Option<Credential>,
 ) -> StdResult<ValidSignatureResponse> {
-
-    Ok(ValidSignatureResponse { 
-        is_valid: status_ok(deps.storage) && verify_data(
-            deps, 
-            SignedDataMsg { data, signature, payload }
-        ).is_ok()
+    Ok(ValidSignatureResponse {
+        is_valid: false
+        
+   /*       status_ok(deps.storage)
+            && verify_data(
+                deps,
+                SignedDataMsg {
+                    data,
+                    signature,
+                    payload,
+                },
+            )
+            .is_ok(), */
     })
 }
-
-
+/* 
 pub fn valid_signatures(
     deps: Deps,
     _env: Env,
@@ -86,18 +81,19 @@ pub fn valid_signatures(
             let data = data[index].clone();
             verify_data(
                 deps,
-                SignedDataMsg { data, signature, payload: payload.clone()},
+                SignedDataMsg {
+                    data,
+                    signature,
+                    payload: payload.clone(),
+                },
             )
             .is_ok()
-         
         })
         .collect();
 
     Ok(ValidSignaturesResponse { are_valid })
-} 
-
-
-
+}
+ */
 pub fn assets(
     deps: Deps,
     env: Env,
@@ -109,7 +105,6 @@ pub fn assets(
         tokens: known_tokens(deps, skip, limit)?,
     })
 }
-
 
 pub fn known_tokens(
     deps: Deps,
@@ -136,9 +131,6 @@ pub fn known_tokens(
     tokens
 }
 
-
-
-
 pub fn full_info(
     deps: Deps,
     env: Env,
@@ -149,7 +141,7 @@ pub fn full_info(
     let balances = deps.querier.query_all_balances(env.contract.address)?;
     let ownership = cw_ownable::get_ownership(deps.storage)?;
     let credentials = saa_wasm::get_stored_credentials(deps.storage)
-                                    .map_err(|_| StdError::generic_err("Error getting credentials"))?;
+        .map_err(|_| StdError::generic_err("Error getting credentials"))?;
 
     Ok(FullInfoResponse {
         balances,

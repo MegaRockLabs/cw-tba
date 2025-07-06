@@ -1,9 +1,9 @@
 [package]
-name        = "cw82-tba-credentials"
-version     = { workspace = true }
-edition     = { workspace = true }
-repository  = { workspace = true }
-authors     = [ "Kromsten <s@noreply.megarock.labs>" ]
+name = "cw82-tba-credentials"
+version = { workspace = true }
+authors = ["Kromsten <s@noreply.megarock.labs>"]
+edition = { workspace = true }
+repository = { workspace = true }
 description = "Token Bound Account Credentials"
 
 exclude = [
@@ -12,33 +12,32 @@ exclude = [
 ]
 
 [lib]
-name       =  "cw82_tba_credentials"
+name = "cw82_tba_credentials"
 crate-type = ["cdylib", "rlib"]
 
 [features]
 archway = []
 library = []
 
-
 [dependencies]
-semver          = { workspace = true }
-serde           = { workspace = true }
-thiserror       = { workspace = true }
+anybuf = { workspace = true }
 cosmwasm-schema = { workspace = true }
-cosmwasm-std    = { workspace = true }
+cosmwasm-std = { workspace = true }
+cw-ownable = { workspace = true }
 cw-storage-plus = { workspace = true }
-cw-ownable      = { workspace = true }
-cw2             = { workspace = true }
-cw22            = { workspace = true }
-cw-tba          = { workspace = true, features = ["full_info"] }
-anybuf          = { workspace = true }
-strum           = { workspace = true }
-saa-wasm        = { workspace = true }
+cw-tba = { workspace = true, features = ["full_info"] }
+cw2 = { workspace = true }
+cw22 = { workspace = true }
+saa-wasm = { workspace = true }
+schemars = { workspace = true }
+semver = { workspace = true }
+serde = { workspace = true }
+strum = { workspace = true }
+thiserror = { workspace = true }
 
-cw82            = { workspace = true }
-cw84            = { workspace = true }
-
+cw82 = { workspace = true }
+cw84 = { workspace = true }
 
 [dev-dependencies]
-p256   = { version = "0.13.2" }
 base64 = { version = "0.22.1" }
+p256 = { version = "0.13.2" }

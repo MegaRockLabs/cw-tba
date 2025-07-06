@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AccountsResponse_for_Nullable_TokenInfo",
+  "description": "Response type for QueryMsg::Accounts { query         :    T, start_after   :    Option<String>, skip          :    Option<u32>, limit         :    Option<u32>, } defined by cw83 for account registries",
+  "type": "object",
+  "required": ["accounts", "total"],
+  "properties": {
+    "accounts": {
+      "description": "List of the accounts matching the query",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/AccountResponse_for_Nullable_TokenInfo"
+      }
+    },
+    "total": {
+      "description": "Total number of accounts in the registry",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "AccountResponse_for_Nullable_TokenInfo": {
+      "description": "Response type for QueryMsg::AccountInfo defined by cw83 for account registries",
+      "type": "object",
+      "required": ["address"],
+      "properties": {
+        "address": {
+          "description": "smart contract address of the matched account",
+          "type": "string"
+        },
+        "info": {
+          "description": "additional information about the account",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TokenInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "TokenInfo": {
+      "type": "object",
+      "required": ["collection", "id"],
+      "properties": {
+        "collection": {
+          "description": "Contract address of the collection",
+          "type": "string"
+        },
+        "id": {
+          "description": "Token id",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

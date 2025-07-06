@@ -2,7 +2,7 @@
 
 Gas profiled integration tests hitting a real, local Stargaze chain.
 
-## Running Tests 
+## Running Tests
 
 Use `make e2etest-full` to run the tests or `ENABLE_MAX_COLLECTION=true make e2etest-full` to run all the tests, including the exhaustive minting tests.
 
@@ -15,6 +15,7 @@ Or if you only want to run one test: `make e2etest TEST_NAME=test_invalid_start_
 ## Adding New Integration Tests
 
 Add new tests in `src/tests`:
+
 ```rust
 #[test_context(Chain)]
 #[test]

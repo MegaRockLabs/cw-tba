@@ -1,7 +1,7 @@
+use crate::{msgs::*, Status};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdError, StdResult};
 use saa_wasm::StoredCredentials;
-use crate::{msgs::*, Status};
 
 #[cw_serde]
 pub struct TokenInfo {
@@ -16,7 +16,6 @@ impl TokenInfo {
         (self.collection.as_str(), self.id.as_str())
     }
 }
-
 
 #[cw_serde]
 pub struct FullInfoResponse {
@@ -36,28 +35,23 @@ pub struct FullInfoResponse {
     pub credentials: StoredCredentials,
 }
 
-
-
-
 pub fn verify_nft_ownership(
     querier: &QuerierWrapper,
     address: &str,
     token_info: TokenInfo,
 ) -> StdResult<()> {
-    let owner_res = querier.query_wasm_smart::<OwnerOfResponse>(
+    if querier.query_wasm_smart::<OwnerOfResponse>(
         token_info.collection,
         &Cw721Msg::OwnerOf {
             token_id: token_info.id,
             include_expired: None,
         },
-    )?;
-
-    if owner_res.owner.as_str() != address {
+    )?.owner != address {
         return Err(StdError::generic_err("Not NFT owner"));
     }
-
     Ok(())
 }
+
 
 pub fn query_tokens(
     querier: &QuerierWrapper,

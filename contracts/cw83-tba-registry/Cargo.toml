@@ -1,9 +1,9 @@
 [package]
-name        = "cw83-tba-registry"
-version     = { workspace = true }
-edition     = { workspace = true }
-repository  = { workspace = true }
-authors = [ "Kromsten <s@noreply.megarock.labs>" ]
+name = "cw83-tba-registry"
+version = { workspace = true }
+authors = ["Kromsten <s@noreply.megarock.labs>"]
+edition = { workspace = true }
+repository = { workspace = true }
 description = "Token Bound Account Registry"
 
 exclude = [
@@ -12,27 +12,27 @@ exclude = [
 ]
 
 [lib]
-name       =  "cw83_tba_registry"
+name = "cw83_tba_registry"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-library             = []
-ext_query           = ["cw-tba/ext_query"]
-
+library = []
+ext_query = ["cw-tba/ext_query"]
 
 [dependencies]
-thiserror           = { workspace = true }
-semver              = { workspace = true }
-cosmwasm-schema     = { workspace = true }
-cosmwasm-std        = { workspace = true }
-cw-storage-plus     = { workspace = true }
-cw-utils            = { workspace = true }
-cw2                 = { workspace = true }
-cw22                = { workspace = true }
-cw-tba              = { workspace = true }
-saa-wasm            = { workspace = true }
+cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
+cw-storage-plus = { workspace = true }
+cw-tba = { workspace = true }
+cw-utils = { workspace = true }
+cw2 = { workspace = true }
+cw22 = { workspace = true }
+saa-wasm = { workspace = true }
+schemars = { workspace = true }
+semver = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
 
-cw82                = { workspace = true }
-cw84                = { workspace = true }
-cw83                = { workspace = true, features = ["multi"] }
-
+cw82 = { workspace = true }
+cw83 = { workspace = true }
+cw84 = { workspace = true }

@@ -5,5 +5,5 @@ wasm = "build --release --target wasm32-unknown-unknown --lib"
 integration-test = "test --package e2e -- --ignored --test-threads 1"
 
 [env]
-RUST_LOG="info"
-CONFIG="configs/cosm-orc.yaml"
+RUST_LOG = "info"
+CONFIG = "configs/cosm-orc.yaml"

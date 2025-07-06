@@ -1,7 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_json_binary, DepsMut, Env, MessageInfo, Response, StdResult, SubMsgResult};
-
+use cosmwasm_std::{to_json_binary, DepsMut, Env, MessageInfo, Response, StdResult};
 
 use crate::{
     error::ContractError,
@@ -13,7 +12,6 @@ use crate::{
 
 pub const CONTRACT_NAME: &str = "crates:cw83-token-account-registry";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -35,7 +33,6 @@ pub fn instantiate(
     Ok(Response::new().add_attributes(vec![("action", "instantiate")]))
 }
 
-
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
@@ -51,7 +48,7 @@ pub fn execute(
             create.chain_id,
             create.code_id,
             create.account_data.token_info,
-            create.account_data.account_data,
+            create.account_data.credential_data,
             create.account_data.create_for,
             create.account_data.actions,
             false,
@@ -64,7 +61,7 @@ pub fn execute(
             create.chain_id,
             create.code_id,
             create.account_data.token_info,
-            create.account_data.account_data,
+            create.account_data.credential_data,
             create.account_data.create_for,
             create.account_data.actions,
             true,
@@ -80,50 +77,30 @@ pub fn execute(
             token_info,
             new_account_data,
             update_for,
-        } => update_account_owner(
-            deps,
-            env,
-            info,
+        } => update_account_owner(deps, env, info, token_info, new_account_data, update_for),
+
+        ExecuteMsg::UpdateAccountData {
             token_info,
-            new_account_data,
-            update_for,
-        ),
-
-
-        ExecuteMsg::UpdateAccountData { 
-            token_info, 
-            update_op, 
-            signed 
-        } => update_account_data(deps, env, info, token_info, update_op, signed),
+            update_op,
+            credential,
+        } => update_account_data(deps, env, info, token_info, update_op, credential),
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, _: Env, msg: cosmwasm_std::Reply) -> Result<Response, ContractError> {
-
     if msg.id != cw83::CREATE_ACCOUNT_REPLY_ID {
         return Err(ContractError::Unauthorized {});
     }
 
-    // let res = cw_utils::parse_reply_instantiate_data(msg)?;
-    let res = if let SubMsgResult::Ok(res) = msg.result {
-        #[allow(deprecated)]
-        if let Some(bin) = res.data {
-            cw_utils::parse_instantiate_response_data(&bin)?
-        } else {
-            return Err(ContractError::Unauthorized {});
-        }
-    } else {
-        return Err(ContractError::Unauthorized {});
-    };
+    let res = cw_utils::parse_reply_instantiate_data(msg)?;
+/* 
+    cw22::query_supported_interface_version(
+        &deps.querier,
+        res.contract_address.as_str(),
+        cw82::INTERFACE_NAME,
+    )?; */
 
-    if let None = cw22::query_supported_interface_version(
-        &deps.querier, 
-        res.contract_address.as_str(), 
-        cw82::INTERFACE_NAME
-    )? {
-        return Err(ContractError::Unauthorized {});
-    }
 
     let stored = LAST_ATTEMPTING.load(deps.storage)?;
     LAST_ATTEMPTING.remove(deps.storage);
@@ -139,45 +116,36 @@ pub fn reply(deps: DepsMut, _: Env, msg: cosmwasm_std::Reply) -> Result<Response
         },
     )?;
 
-    TOKEN_ADDRESSES.save(
-        deps.storage,
-        stored.key(), 
-        &res.contract_address
-    )?;
+    TOKEN_ADDRESSES.save(deps.storage, stored.key(), &res.contract_address)?;
 
     Ok(Response::default())
-
 }
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(
-    deps: cosmwasm_std::Deps, 
-    _: Env, 
-    msg: QueryMsg
-) -> StdResult<cosmwasm_std::Binary> {
+pub fn query(deps: cosmwasm_std::Deps, _: Env, msg: QueryMsg) -> StdResult<cosmwasm_std::Binary> {
     match msg {
         QueryMsg::AccountInfo(acc_query) => to_json_binary(&account_info(deps, acc_query)?),
-        QueryMsg::Accounts { 
-            skip, 
-            limit,
-            query,
-            ..
+        QueryMsg::Accounts {
+            skip, limit, query, ..
         } => {
             let res = if let Some(q) = query {
                 match q {
-                    AccountsQueryMsg::Collections { } => collections(deps, skip, limit),
-                    AccountsQueryMsg::Collection(col) => collection_accounts(deps, col, skip, limit)
+                    AccountsQueryMsg::Collections {} => collections(deps, skip, limit),
+                    AccountsQueryMsg::Collection(col) => {
+                        collection_accounts(deps, col, skip, limit)
+                    }
                 }
             } else {
                 accounts(deps, skip, limit)
             }?;
             to_json_binary(&res)
-        },
+        }
 
         QueryMsg::RegistryParams {} => to_json_binary(&REGISTRY_PARAMS.load(deps.storage)?),
     }
 }
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(_: DepsMut, _: Env, _: MigrateMsg) -> StdResult<Response> {

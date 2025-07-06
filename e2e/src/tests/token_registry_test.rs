@@ -39,9 +39,7 @@ fn test_queries(chain: &mut Chain) {
             limit: None,
         },
     );
-    let col_res =
-        from_json::<RegistryMsg::Accounts>(&res.unwrap().res.data.unwrap())
-            .unwrap();
+    let col_res = from_json::<RegistryMsg::Accounts>(&res.unwrap().res.data.unwrap()).unwrap();
 
     // 2 accounts should be registered
     assert_eq!(acc_res.total, 2);
@@ -50,7 +48,7 @@ fn test_queries(chain: &mut Chain) {
     assert_eq!(col_res.accounts.len(), 2);
 
     let first_account = acc_res.accounts.first().clone().unwrap();
-    
+
     let firt_col_account = col_res.accounts.first().clone().unwrap();
     assert_eq!(first_account.address, firt_col_account.address);
 
@@ -58,7 +56,7 @@ fn test_queries(chain: &mut Chain) {
         chain,
         &data.registry,
         &RegistryQuery::AccountInfo(TokenInfo {
-                collection: data.collection.clone(),
+            collection: data.collection.clone(),
             id: data.token_id.clone(),
         }),
     )
@@ -78,8 +76,7 @@ fn test_queries(chain: &mut Chain) {
         },
     );
 
-    let res =
-        from_json::<RegistryMsg::Accounts>(&res.unwrap().res.data.unwrap()).unwrap();
+    let res = from_json::<RegistryMsg::Accounts>(&res.unwrap().res.data.unwrap()).unwrap();
 
     assert_eq!(res.accounts.len(), 1);
     let first = res.accounts[0].clone();
@@ -92,13 +89,14 @@ fn test_queries(chain: &mut Chain) {
 fn test_reset_migrate(chain: &mut Chain) {
     let data = full_setup(chain).unwrap();
 
-    let key = chain.cfg.users[0].clone().key;
+    let user = chain.cfg.users[0].clone();
+    let key = &user.key;
 
     assert!(migrate_simple_token_account(
         chain,
         data.collection.clone(),
         data.token_id.clone(),
-        &key
+        key
     )
     .is_ok());
 
@@ -107,7 +105,7 @@ fn test_reset_migrate(chain: &mut Chain) {
         data.collection.clone(),
         data.token_id.clone(),
         data.public_key,
-        &key
+        &user
     )
     .is_ok());
 }

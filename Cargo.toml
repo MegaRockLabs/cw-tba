@@ -1,66 +1,60 @@
 [workspace]
 members = [
-    #"contracts/cw82-tba-base",
-    "contracts/cw82-tba-credentials",
-    "contracts/cw83-tba-registry",
-    "packages/cw-tba",
-    "e2e"
+  "contracts/cw82-tba-base",
+  "contracts/cw82-tba-credentials",
+  "contracts/cw83-tba-registry",
+  "packages/cw-tba",
 ]
 
 resolver = "2"
 
 [workspace.package]
-version    = "0.9.0"
-edition    = "2021"
+version = "0.10.0"
+edition = "2021"
 repository = ""
 
-
-
 [workspace.dependencies]
-cosmwasm-std         = { version = "1.5.11", features = ["staking", "stargate" ] }
-cosmwasm-schema      = { version = "1.5.11" }
-cw-storage-plus      = "1.2.0"
+anybuf = { version = "0.5.2" }
+base64ct = { version = "=1.7.3", default-features = false }
+cosmwasm-schema = { version = "1.5.11" }
+cosmwasm-std = { version = "1.5.11", features = ["staking", "stargate"] }
+cw-storage-plus = { version = "1.2.0" }
+serde = { version = "1.0.219", features = ["derive"] }
+strum = { version = "0.27.1" }
+strum_macros = { version = "0.27.1" }
 
-serde                = { version = "1.0.219", features = ["derive"] }
-anybuf               = { version = "0.5.2" }
+schemars = "0.8.22"
+semver = "1.0.26"
+thiserror = "2.0.12"
 
-semver                  = "1.0.26"
-schemars                = "0.8.22"
-thiserror               = "2.0.12"
+cw-ownable = "0.5.1"
+cw-utils = "1.0.3"
+cw2 = "1.1.2"
 
-cw-ownable              = "0.5.1"
-cw-utils                = "1.0.3"
-cw2                     = "1.1.2"
+cw22 = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1"] }
+cw81 = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1"] }
+cw82 = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1"] }
+cw83 = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1", "multi"] }
+cw84 = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1"] }
 
+cw-tba = { path = "packages/cw-tba" }
+cw82-tba-base = { path = "contracts/cw82-tba-base", features = ["library"] }
+cw82-tba-credentials = { path = "contracts/cw82-tba-credentials", features = ["library"] }
+cw83-tba-registry = { path = "contracts/cw83-tba-registry", features = ["library"] }
 
+# saa-common = { version = "=0.26.0-rc20", features = ["cosmwasm"] }
+saa-schema = { version = "0.26.0", features = ["cosmwasm"] }
+saa-wasm = { version = "0.1.0-beta.9", default-features = false, features = ["cosmwasm_v1", "types"] }
+smart-account-auth = { version = "=0.26.2" }
 
-cw22                    = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1"] }
-cw81                    = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1"] }
-cw82                    = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1", "multi"] }
-cw83                    = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1", "multi"] }
-cw84                    = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1", "multi"] }
-
-
-saa-wasm                = { version = "0.1.0", path = "../saa-wasm/packages/bundle", features = ["types"]}
-saa-schema              = { version = "0.26.0", path = "../contract-auth/packages/schema", features = ["cosmwasm"] }
-
-smart-account-auth      = { version = "0.26.0", path = "../contract-auth/packages/bundle" }
-
-cw-tba                  = { path = "packages/cw-tba" }
-cw82-tba-base           = { path = "contracts/cw82-tba-base", features = ["library"] }
-cw82-tba-credentials    = { path = "contracts/cw82-tba-credentials", features = ["library"] }
-cw83-tba-registry       = { path = "contracts/cw83-tba-registry", features = ["library"] }
-
-
-strum               = { version = "0.27.1" }
-strum_macros        = { version = "0.27.1" }
-
+# saa-wasm                = { version = "0.1.0-alpha.1", path = "../saa-wasm/packages/bundle", default-features = true, features = ["cosmwasm_v1", "types"]}
+# saa-schema              = { version = "0.26.0", path = "../contract-auth/packages/schema", features = ["cosmwasm"] }
+# smart-account-auth      = { version = "0.26.0-rc2", path = "../contract-auth/packages/bundle" }
 
 [profile.release]
-rpath            = false
-lto              = true
-overflow-checks  = true
-debug            = false
+rpath = false
+lto = true
+overflow-checks = true
+debug = false
 debug-assertions = false
-opt-level        = 3
-
+opt-level = 3

@@ -1,28 +1,32 @@
+use crate::helpers::var::{get_mock_deps, get_mock_env};
 use super::chain::{Chain, SigningAccount};
 use cosm_orc::orchestrator::cosm_orc::tokio_block;
 use cosm_orc::orchestrator::error::{CosmwasmError, ProcessError};
-use cosm_orc::orchestrator::{Address, ChainTxResponse, Denom, ExecResponse, QueryResponse, Coin as OrcCoin};
+use cosm_orc::orchestrator::{
+    Address, ChainTxResponse, Coin as OrcCoin, Denom, ExecResponse, QueryResponse,
+};
 use cosm_orc::orchestrator::{InstantiateResponse, SigningKey};
 use cosm_tome::chain::request::TxOptions;
 use cosm_tome::clients::client::CosmosClient;
 use cosm_tome::modules::bank::model::SendRequest;
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{from_json, to_json_binary, to_json_string, Binary, Coin, CosmosMsg, Empty, Timestamp};
+use cosmwasm_std::testing::mock_info;
+use cosmwasm_std::{
+    from_json, to_json_binary, Binary, Coin, CosmosMsg, Empty, Timestamp,
+};
 use saa_wasm::saa_types::msgs::MsgDataToSign;
+use smart_account_auth::{CheckOption, CredentialsWrapper, ReplayParams};
 use std::fmt::Display;
 use std::str::FromStr;
 
-
-use cw_tba::{CreateAccountMsg, MigrateAccountMsg, TokenInfo};
+use cw_tba::{CreateAccountMsg, TokenInfo};
 use saa_wasm::saa_types::{CosmosArbitrary, Credential, CredentialData};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-
-use cw84::CanExecuteResponse;
 use cw82_tba_base::msg::QueryMsg;
-
+use cw84::CanExecuteResponse;
 
 // contract names used by cosm-orc to register stored code ids / instantiated addresses:
 pub const BASE_REGISTRY_NAME: &str = "cw83_tba_registry";
@@ -35,7 +39,6 @@ pub const MAX_TOKENS: u32 = 10_000;
 pub const CREATION_FB_FEE: u128 = 100_000_000;
 pub const MINT_PRICE: u128 = 100_000_000;
 
-
 pub fn creation_fees_wasm<C: CosmosClient>(chain: &Chain<C>) -> Vec<Coin> {
     vec![Coin {
         denom: chain.cfg.orc_cfg.chain_cfg.denom.clone(),
@@ -43,14 +46,12 @@ pub fn creation_fees_wasm<C: CosmosClient>(chain: &Chain<C>) -> Vec<Coin> {
     }]
 }
 
-
 pub fn creation_fee<C: CosmosClient>(chain: &Chain<C>) -> Vec<OrcCoin> {
     vec![OrcCoin {
         denom: Denom::from_str(&chain.cfg.orc_cfg.chain_cfg.denom).unwrap(),
         amount: CREATION_FB_FEE.into(),
     }]
 }
-
 
 pub fn instantiate_registry<C: CosmosClient>(
     chain: &mut Chain<C>,
@@ -101,7 +102,6 @@ pub fn instantiate_collection<C: CosmosClient>(
     )
 }
 
-
 pub fn mint_token<C: CosmosClient>(
     chain: &mut Chain<C>,
     token_id: String,
@@ -119,7 +119,6 @@ pub fn mint_token<C: CosmosClient>(
         .orc
         .execute(COLLECTION_NAME, "token_mint", &mint_msg, key, vec![])
 }
-
 
 pub fn send_token<C: CosmosClient>(
     chain: &mut Chain<C>,
@@ -143,38 +142,79 @@ pub fn send_token<C: CosmosClient>(
     )
 }
 
-
 pub fn create_simple_token_account<C: CosmosClient>(
     chain: &mut Chain<C>,
-    token_contract: String,
+    registry: String,
+    collection: String,
     token_id: String,
-    pubkey: Binary,
-    key: &SigningKey,
+    signer: &SigningAccount,
 ) -> Result<ExecResponse, ProcessError> {
     let chain_id = chain.cfg.orc_cfg.chain_cfg.chain_id.clone();
+    let prefix = chain.cfg.orc_cfg.chain_cfg.prefix.clone();
+
+    let sk =
+        mnemonic_to_signing_key(&signer.account.mnemonic, &signer.key.derivation_path).unwrap();
+    let pubkey: Binary = sk.public_key().to_bytes().into();
+
+    println!("Chain ID: {}", chain_id);
+    println!("Prefix: {}", prefix);
+    println!("Pubkey: {}", pubkey.to_base64());
+
+    let envelope = MsgDataToSign {
+        chain_id: chain_id.clone(),
+        contract_address: registry.clone(),
+        messages: vec!["Create TBA account".to_string()],
+        nonce: 0u64.into(),
+    };
+
+    let signature: Binary = sk
+        .sign(
+            &smart_account_auth::utils::cosmos::wrap_msg_arb_036(
+                &signer.account.address,
+                &to_json_binary(&envelope).unwrap().to_base64(),
+            )
+            .as_bytes(),
+        )
+        .unwrap()
+        .to_vec()
+        .into();
 
     let account_data = CredentialData {
-        credentials: vec![CosmosArbitrary { 
+        credentials: vec![CosmosArbitrary {
             pubkey,
-            signature: Binary::default(),
-            message: Binary::default(),
-            address: String::default(),
-        }.into()],
+            signature,
+            message: to_json_binary(&envelope).unwrap().into(),
+            address: signer.key.to_addr(prefix.as_str()).unwrap().to_string(),
+        }
+        .into()],
         use_native: None,
         primary_index: None,
         pre_validate: None,
         override_primary: None,
-        nonce: None,
     };
 
-    let init_msg = cw_tba::TokenAccount {
+    let mock = get_mock_deps();
+    let env = get_mock_env(registry.as_str());
+    let info = mock_info(&signer.account.address, &[]);
+    let _res = account_data.verify(
+        mock.as_ref(),
+        &env,
+        &info,
+        ReplayParams::new(
+            0,
+            CheckOption::Messages(vec!["Create TBA account".to_string()]),
+        ),
+    );
+    // println!("Account data verification result: {:?}", res);
+
+    let token_data = cw_tba::TokenAccount {
         token_info: TokenInfo {
-            collection: token_contract,
+            collection,
             id: token_id,
         },
         actions: None,
         create_for: None,
-        account_data,
+        credential_data: account_data,
     };
 
     let code_id = chain.orc.contract_map.code_id(SIMPLE_ACCOUNT_NAME)?;
@@ -185,16 +225,14 @@ pub fn create_simple_token_account<C: CosmosClient>(
         &cw83_tba_registry::msg::ExecuteMsg::CreateAccount(CreateAccountMsg {
             code_id,
             chain_id,
-            account_data: init_msg,
+            account_data: token_data,
         }),
-        key,
+        &signer.key,
         creation_fee(&chain),
     )
 }
 
-
-
-pub fn get_cred_data<C: CosmosClient, M : Serialize + Display>(
+pub fn get_cred_data<C: CosmosClient, M: Serialize + Display>(
     chain: &mut Chain<C>,
     user: &SigningAccount,
     messages: Vec<M>,
@@ -203,27 +241,36 @@ pub fn get_cred_data<C: CosmosClient, M : Serialize + Display>(
     let _hrp = chain.cfg.orc_cfg.chain_cfg.prefix.clone();
     let sk = mnemonic_to_signing_key(&user.account.mnemonic, &user.key.derivation_path).unwrap();
     let registry = chain.orc.contract_map.address(BASE_REGISTRY_NAME).unwrap();
-    
+
     let message = MsgDataToSign {
         chain_id: chain_id.clone(),
         contract_address: registry,
-        messages: messages.into_iter().map(|m| {
-            to_json_string(&m).unwrap()
-        }).collect(),
+        messages: messages
+            .into_iter()
+            .map(|m| m.to_string())
+            .collect(),
         nonce: 0u64.into(),
     };
+    println!("Got messages");
 
     let cred = Credential::CosmosArbitrary(CosmosArbitrary {
         pubkey: sk.public_key().to_bytes().into(),
-        signature: sk.sign(
-            &smart_account_auth::utils::cosmos::wrap_msg_arb_036(
-                &user.account.address, 
-                &to_json_binary(&message).unwrap().to_base64()
-            ).as_bytes()
-        ).unwrap().to_vec().into(),
+        signature: sk
+            .sign(
+                &smart_account_auth::utils::cosmos::wrap_msg_arb_036(
+                    &user.account.address,
+                    &to_json_binary(&message).unwrap().to_base64(),
+                )
+                .as_bytes(),
+            )
+            .unwrap()
+            .to_vec()
+            .into(),
         message: to_json_binary(&message).unwrap().into(),
-        address: String::default()
+        address: user.account.address.clone(),
     });
+
+    println!("Got cred data: {:?}\n\n", cred);
 
     CredentialData {
         credentials: vec![cred],
@@ -231,22 +278,42 @@ pub fn get_cred_data<C: CosmosClient, M : Serialize + Display>(
         primary_index: None,
         pre_validate: None,
         override_primary: None,
-        nonce: None,
     }
 }
-
 
 pub fn create_cred_token_account<C: CosmosClient>(
     chain: &mut Chain<C>,
     token_contract: String,
     token_id: String,
-    user: &SigningAccount
+    user: &SigningAccount,
 ) -> Result<ExecResponse, ProcessError> {
     let chain_id = chain.cfg.orc_cfg.chain_cfg.chain_id.clone();
+    let registry = chain.orc.contract_map.address(BASE_REGISTRY_NAME).unwrap();
+
     //let denom = chain.cfg.orc_cfg.chain_cfg.denom.clone();
 
-    let account_data = get_cred_data(chain, user, Vec::<String>::new());
-    
+    let account_data = get_cred_data(
+        chain, 
+        user, 
+        vec!["Create TBA account".to_string()],
+    );
+
+
+    let mock = get_mock_deps();
+    let env = get_mock_env(registry.as_str());
+    let params = ReplayParams::new(
+        0, CheckOption::Messages(vec!["Create TBA account".to_string()])
+    );
+
+    let ver = account_data.verify(
+        mock.as_ref(),
+        &env,
+        &mock_info(&user.account.address, &[]),
+        params,
+    );
+    println!("Account data verification result: {:?}", ver);
+
+
     let init_msg = cw_tba::TokenAccount {
         token_info: TokenInfo {
             collection: token_contract,
@@ -254,7 +321,7 @@ pub fn create_cred_token_account<C: CosmosClient>(
         },
         actions: None,
         create_for: None,
-        account_data,
+        credential_data: account_data,
     };
 
     let code_id = chain.orc.contract_map.code_id(CRED_ACOUNT_NAME)?;
@@ -262,12 +329,11 @@ pub fn create_cred_token_account<C: CosmosClient>(
     chain.orc.execute(
         BASE_REGISTRY_NAME,
         "registry_create_cred_account",
-        &cw83_tba_registry::msg::ExecuteMsg::CreateAccount(
-            CreateAccountMsg {
-                code_id,
-                chain_id,
-                account_data: init_msg,
-            }),
+        &cw83_tba_registry::msg::ExecuteMsg::CreateAccount(CreateAccountMsg {
+            code_id,
+            chain_id,
+            account_data: init_msg,
+        }),
         &user.key,
         creation_fee(&chain),
     )
@@ -279,23 +345,24 @@ pub fn reset_simple_token_account<C: CosmosClient>(
     token_contract: String,
     token_id: String,
     pubkey: Binary,
-    key: &SigningKey,
+    signer: &SigningAccount,
 ) -> Result<ExecResponse, ProcessError> {
-
     let chain_id = chain.cfg.orc_cfg.chain_cfg.chain_id.clone();
+    let prefix = chain.cfg.orc_cfg.chain_cfg.prefix.clone();
+    let address = signer.key.to_addr(prefix.as_str()).unwrap().to_string();
 
     let account_data = CredentialData {
-        credentials: vec![CosmosArbitrary { 
+        credentials: vec![CosmosArbitrary {
             pubkey,
             signature: Binary::default(),
             message: Binary::default(),
-            address: String::default(),
-        }.into()],
+            address,
+        }
+        .into()],
         use_native: None,
         primary_index: None,
         pre_validate: None,
         override_primary: None,
-        nonce: None,
     };
 
     let init_msg = cw_tba::TokenAccount {
@@ -304,7 +371,7 @@ pub fn reset_simple_token_account<C: CosmosClient>(
             id: token_id,
         },
         actions: None,
-        account_data,
+        credential_data: account_data,
         create_for: None,
     };
 
@@ -318,12 +385,10 @@ pub fn reset_simple_token_account<C: CosmosClient>(
             chain_id,
             account_data: init_msg,
         }),
-        key,
+        &signer.key,
         creation_fee(&chain),
     )
 }
-
-
 
 pub fn migrate_simple_token_account<C: CosmosClient>(
     chain: &mut Chain<C>,
@@ -339,9 +404,7 @@ pub fn migrate_simple_token_account<C: CosmosClient>(
             id: token_id,
         },
         new_code_id: code_id,
-        msg: MigrateAccountMsg {
-            params: None,
-        },
+        msg: Binary::default(),
     };
 
     chain.orc.execute(
@@ -378,7 +441,6 @@ pub fn get_init_address(res: ChainTxResponse) -> String {
 }
 
 pub fn full_setup<C: CosmosClient>(chain: &mut Chain<C>) -> Result<FullSetupData, ProcessError> {
-    
     let _start_time = latest_block_time(chain).plus_seconds(60);
 
     let user: super::chain::SigningAccount = chain.cfg.users[0].clone();
@@ -388,10 +450,8 @@ pub fn full_setup<C: CosmosClient>(chain: &mut Chain<C>) -> Result<FullSetupData
     let reg_init = instantiate_registry(chain, signer_address.clone(), &user.key).unwrap();
     let registry = get_init_address(reg_init.res);
 
-
     let init_res =
         instantiate_collection(chain, user.account.address.clone(), None, &user.key).unwrap();
-
 
     let collection = get_init_address(init_res.res);
     chain
@@ -412,10 +472,10 @@ pub fn full_setup<C: CosmosClient>(chain: &mut Chain<C>) -> Result<FullSetupData
     let pubkey: Binary = user.key.public_key().unwrap().to_bytes().into();
     let create_res = create_simple_token_account(
         chain,
+        registry.clone(),
         collection.clone(),
         token_id.clone(),
-        pubkey.clone(),
-        &user.key,
+        &user,
     )
     .unwrap();
 
@@ -426,7 +486,6 @@ pub fn full_setup<C: CosmosClient>(chain: &mut Chain<C>) -> Result<FullSetupData
         .add_address(SIMPLE_ACCOUNT_NAME, token_account.clone())
         .unwrap();
 
-
     let cred_token_id = "2".to_string();
     mint_token(
         chain,
@@ -436,13 +495,13 @@ pub fn full_setup<C: CosmosClient>(chain: &mut Chain<C>) -> Result<FullSetupData
     )
     .unwrap();
 
-    let cred_create_res = create_cred_token_account(
-        chain,
-        collection.clone(),
-        cred_token_id.clone(),
-        &user
-    );
+    let cred_create_res =
+        create_cred_token_account(chain, collection.clone(), cred_token_id.clone(), &user);
 
+    println!(
+        "Created credential token account: {:?}",
+        cred_create_res
+    );
     let cred_token_account = get_init_address(cred_create_res.unwrap().res);
     chain
         .orc

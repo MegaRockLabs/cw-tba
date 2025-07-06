@@ -1,12 +1,12 @@
 use cosm_tome::signing_key::key::mnemonic_to_signing_key;
 use cosmwasm_std::testing::{mock_info, mock_dependencies, mock_env};
-use cosmwasm_std::{to_json_binary, Addr, Empty};
+use cosmwasm_std::{to_json_binary, to_json_string, Addr, Empty};
 use cw82_tba_credentials::contract::instantiate;
 use cw82_tba_credentials::execute::try_executing_signed;
 use cw_tba::{ExecuteAccountMsg, ExecuteMsg, TokenInfo};
 use saa_wasm::saa_types::utils::cosmos::wrap_msg_arb_036;
 use saa_wasm::saa_types::msgs::{MsgDataToSign, SignedDataMsg};
-use smart_account_auth::{DerivableMsg, VerifiedData};
+use smart_account_auth::VerifiedData;
 use test_context::test_context;
 
 use cw82_tba_credentials::msg::InstantiateMsg;
@@ -63,7 +63,7 @@ fn test(chain: &mut Chain) {
     let actions = MsgDataToSign { 
         chain_id: chain.cfg.orc_cfg.chain_cfg.chain_id.clone(),
         contract_address: data.cred_token_account.clone(),
-        messages: vec![execute_msg.to_json_string().unwrap()],
+        messages: vec![to_json_string(&execute_msg).unwrap()],
         nonce: 1u64.into(),
     };
 

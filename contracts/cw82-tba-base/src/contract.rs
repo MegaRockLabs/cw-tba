@@ -1,22 +1,25 @@
-use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult
-};
-use cw_ownable::{get_ownership, initialize_owner};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult
+};
+use cw_ownable::{get_ownership, initialize_owner};
 use cw_tba::{ExecuteMsg, QueryMsg};
 
+#[cfg(target_arch = "wasm32")]
+use crate::utils::query_if_registry;
 use crate::{
     error::ContractError,
     execute::{
-        try_changing_data, try_executing, try_executing_actions, try_freezing, try_purging, try_updating_known_on_receive, try_updating_known_tokens, try_updating_ownership, MINT_REPLY_ID
+        try_changing_data, try_executing, try_freezing, try_purging,
+        try_updating_known_on_receive, try_updating_known_tokens, try_updating_ownership,
+        MINT_REPLY_ID,
     },
     msg::{InstantiateMsg, MigrateMsg, Status},
     query::{assets, can_execute, full_info, known_tokens, valid_signature},
-    state::{MINT_CACHE, PUBKEY, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO}, utils::extract_pubkey,
+    state::{MINT_CACHE, PUBKEY, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO},
+    utils::extract_pubkey,
 };
-#[cfg(target_arch = "wasm32")]
-use crate::utils::query_if_registry;
 
 pub const CONTRACT_NAME: &str = "crates:cw82-token-account";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -51,7 +54,10 @@ pub fn instantiate(
         return Err(ContractError::Unauthorized {});
     };
 
-    let pubkey = extract_pubkey(msg.account_data, &info.sender)?;
+    let pubkey = extract_pubkey(
+        msg.account_data, 
+        &Addr::unchecked(msg.owner.clone())
+    )?;
 
     initialize_owner(deps.storage, deps.api, Some(msg.owner.as_str()))?;
     TOKEN_INFO.save(deps.storage, &msg.token_info)?;
@@ -61,8 +67,6 @@ pub fn instantiate(
     SERIAL.save(deps.storage, &0u128)?;
     Ok(Response::default())
 }
-
-
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
@@ -77,13 +81,9 @@ pub fn execute(
     SERIAL.update(deps.storage, |s| Ok::<u128, StdError>((s + 1) % u128::MAX))?;
 
     let res = match msg {
-        ExecuteMsg::Execute { 
-            msgs 
-        } => try_executing(deps.as_ref(), info.sender, msgs),
-        ExecuteMsg::ExecuteNative { 
-            msgs 
-        } => try_executing_actions(deps, &env, info, msgs),
-        ExecuteMsg::Freeze {} => try_freezing(&deps.querier,deps.storage, info.sender),
+        ExecuteMsg::Execute { msgs } => try_executing(deps.as_ref(), info.sender, msgs),
+  /*       ExecuteMsg::ExecuteNative { msgs } => try_executing_actions(deps, &env, info, msgs), */
+        ExecuteMsg::Freeze {} => try_freezing(&deps.querier, deps.storage, info.sender),
 
         ExecuteMsg::ReceiveNft(msg) => {
             try_updating_known_on_receive(deps, info.sender.to_string(), msg.token_id)
@@ -100,7 +100,6 @@ pub fn execute(
     Ok(res)
 }
 
-
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     if REGISTRY_ADDRESS.load(deps.storage).is_err() {
@@ -112,24 +111,21 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::AccountNumber {} => to_json_binary(&SERIAL.load(deps.storage)?),
         QueryMsg::Registry {} => to_json_binary(&REGISTRY_ADDRESS.load(deps.storage)?),
         QueryMsg::Ownership {} => to_json_binary(&get_ownership(deps.storage)?),
-        QueryMsg::CanExecute { 
-            sender, 
-            msg 
-        } => to_json_binary(&can_execute(deps, sender, &msg)?),
+        QueryMsg::CanExecute { sender, msg } => to_json_binary(&can_execute(deps, sender, &msg)?),
         QueryMsg::ValidSignature {
-                        signature,
-                        data,
-                        payload,
-            } => to_json_binary(&valid_signature(deps, data, signature, &payload)?),
+            signature,
+            data,
+            payload,
+        } => to_json_binary(&valid_signature(deps, data, signature, &payload)?),
         QueryMsg::KnownTokens { skip, limit } => to_json_binary(&known_tokens(deps, skip, limit)?),
         QueryMsg::Assets { skip, limit } => to_json_binary(&assets(deps, env, skip, limit)?),
         QueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),
-        QueryMsg::ValidSignatures { .. } => {
-            Err(StdError::generic_err("ValidSignatures query is not supported"))
-        }
-        QueryMsg::CanExecuteSigned { .. } => {
-            Err(StdError::generic_err("CanExecuteSigned query is not supported"))
-        }
+/*         QueryMsg::ValidSignatures { .. } => Err(StdError::generic_err(
+            "ValidSignatures query is not supported",
+        )), */
+        QueryMsg::CanExecuteSigned { .. } => Err(StdError::generic_err(
+            "CanExecuteSigned query is not supported",
+        )),
     }
 }
 

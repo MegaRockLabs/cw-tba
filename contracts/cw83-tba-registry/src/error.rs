@@ -53,7 +53,6 @@ impl ContractError {
     }
 }
 
-
 impl From<semver::Error> for ContractError {
     fn from(err: semver::Error) -> Self {
         Self::SemVer(err.to_string())

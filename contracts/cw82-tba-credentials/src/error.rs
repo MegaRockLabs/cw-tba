@@ -1,8 +1,7 @@
-use saa_wasm::saa_types::{AuthError, SessionError, errors::StorageError};
-use cw_ownable::OwnershipError;
 use cosmwasm_std::StdError;
+use cw_ownable::OwnershipError;
+use saa_wasm::saa_types::{errors::StorageError, AuthError};
 use thiserror::Error;
-
 
 #[derive(Error, Debug)]
 pub enum ContractError {
@@ -14,9 +13,6 @@ pub enum ContractError {
 
     #[error("{0}")]
     Auth(#[from] AuthError),
-
-    #[error("{0}")]
-    Session(#[from] SessionError),
 
     #[error("{0}")]
     Storage(#[from] StorageError),
@@ -33,23 +29,14 @@ pub enum ContractError {
     #[error("Not Supported")]
     NotSupported {},
 
-    #[error("Invalid signed action: {0}")]
-    BadSignedAction(String),
-
     #[error("Account is frozen until ownership or credentials updates")]
     Frozen {},
 
     #[error("Deleted")]
     Deleted {},
 
-    #[error("Provided nonce has already been used")]
-    NonceExists {},
-
     #[error("At least one of the provided credentials must be deriving into owner of the token")]
     NoOwnerCred {},
-
-    #[error("Can't call this method directly. Must be signed.")]
-    NoDirectCall {},
 
     #[error("{0}")]
     Generic(String),

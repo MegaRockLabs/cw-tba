@@ -36,4 +36,7 @@ e2e/gas_reports/*
 
 
 temp*
+ts
+e2e
+
 node_modules

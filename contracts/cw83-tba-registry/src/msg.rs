@@ -1,10 +1,12 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cw83::{
-    registry_execute, registry_query, AccountResponse, AccountsResponse
-};
+use cw83::{registry_execute, registry_query, AccountResponse, AccountsResponse};
 
-use cw_tba::{CreateAccountMsg, MigrateAccountMsg, RegistryParams, TokenInfo, TokenAccount};
-use saa_wasm::{saa_types::{msgs::SignedDataMsg, CredentialData}, UpdateOperation};
+use cw84::Binary;
+use cw_tba::{CreateAccountMsg, RegistryParams, TokenAccount, TokenInfo};
+use saa_wasm::{
+    saa_types::{Credential, CredentialData},
+    UpdateOperation,
+};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -14,38 +16,30 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum AccountsQueryMsg {
     Collection(String),
-    Collections{}
+    Collections {},
 }
 
-
-
 #[allow(dead_code, unused)]
-type OptTokenInfo       = Option<TokenInfo>;
-type OptAccountsQuery   = Option<AccountsQueryMsg>;
+type OptTokenInfo = Option<TokenInfo>;
+type OptAccountsQuery = Option<AccountsQueryMsg>;
 
 /// An full account stored in the registry
-pub type Account        = AccountResponse<TokenInfo>;
-pub type AccountOpt     = AccountResponse<Option<TokenInfo>>;
-pub type Accounts       = AccountsResponse<Option<TokenInfo>>;
-
-
+pub type Account = AccountResponse<TokenInfo>;
+pub type AccountOpt = AccountResponse<Option<TokenInfo>>;
+pub type Accounts = AccountsResponse<Option<TokenInfo>>;
 
 #[registry_query(TokenInfo, TokenInfo, OptAccountsQuery, OptTokenInfo)]
-#[cw_serde]
 #[derive(QueryResponses)]
+#[cw_serde]
 pub enum QueryMsg {
     /// Query params of the registry
     #[returns(RegistryParams)]
     RegistryParams {},
 }
 
-
-
-
 #[registry_execute(TokenAccount)]
 #[cw_serde]
 pub enum ExecuteMsg {
-
     /// Update the owner of a token-bound account
     UpdateAccountOwnership {
         /// Non-Fungible Token Info that the existing account is linked to
@@ -62,7 +56,7 @@ pub enum ExecuteMsg {
         /// New data on the account
         update_op: UpdateOperation,
         /// Signed information to update the account
-        signed: Option<SignedDataMsg>,
+        credential: Option<Credential>,
     },
 
     /// Create a new token-bound account. Access the old one will be forever lost
@@ -75,7 +69,7 @@ pub enum ExecuteMsg {
         /// New code id to migrate the account to
         new_code_id: u64,
         /// Migration message to be passed to the account contract
-        msg: MigrateAccountMsg,
+        msg:  Binary,
     },
 }
 
@@ -90,8 +84,6 @@ pub enum SudoMsg {
     /// manager contracts that can update an owner for an account if the latter is the new holder of the bound NFT
     UpdateManagers { managers: Vec<String> },
 }
-
-
 
 #[cw_serde]
 pub struct MigrateMsg {}

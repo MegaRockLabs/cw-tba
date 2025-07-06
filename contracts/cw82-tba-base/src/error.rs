@@ -1,7 +1,7 @@
 use cosmwasm_std::StdError;
 use cw_ownable::OwnershipError;
 use cw_utils::ParseReplyError;
-use saa_wasm::saa_types::{AuthError, SessionError};
+use saa_wasm::saa_types::AuthError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -18,11 +18,7 @@ pub enum ContractError {
     #[error("{0}")]
     Auth(#[from] AuthError),
 
-    #[error("Session {0}")]
-    Session(#[from] SessionError),
-    
-
-    #[error("Passed Credential data must have only one Secpl251 credential")]
+    #[error("Passed data must only include one cosmos credential")]
     PubkeyOnly {},
 
     #[error("Unauthorized")]

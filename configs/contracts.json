@@ -1,0 +1,18 @@
+{
+  "cw721_base": {
+    "code_id": 4,
+    "address": "stars1wkwy0xh89ksdgj9hr347dyd2dw7zesmtrue6kfzyml4vdtz6e5ws2hcm9v"
+  },
+  "cw82_tba_base": {
+    "code_id": 3,
+    "address": "stars17p9rzwnnfxcjp32un9ug7yhhzgtkhvl9jfksztgw5uh69wac2pgsh7yame"
+  },
+  "cw83_tba_registry": {
+    "code_id": 2,
+    "address": "stars1wug8sewp6cedgkmrmvhl3lf3tulagm9hnvy8p0rppz9yjw0g4wtqmpd9x3"
+  },
+  "cw82_tba_credentials": {
+    "code_id": 1,
+    "address": "stars1yw4xvtc43me9scqfr2jr2gzvcxd3a9y4eq7gaukreugw2yd2f8tssqyvcm"
+  }
+}
