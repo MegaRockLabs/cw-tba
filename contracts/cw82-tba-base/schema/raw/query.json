@@ -5,7 +5,9 @@
     {
       "description": "Public key that is used to verify signed messages",
       "type": "object",
-      "required": ["pubkey"],
+      "required": [
+        "pubkey"
+      ],
       "properties": {
         "pubkey": {
           "type": "object",
@@ -17,7 +19,9 @@
     {
       "description": "Status of the account telling whether it iz frozen",
       "type": "object",
-      "required": ["status"],
+      "required": [
+        "status"
+      ],
       "properties": {
         "status": {
           "type": "object",
@@ -29,7 +33,9 @@
     {
       "description": "NFT token the account is linked to",
       "type": "object",
-      "required": ["token"],
+      "required": [
+        "token"
+      ],
       "properties": {
         "token": {
           "type": "object",
@@ -41,7 +47,9 @@
     {
       "description": "Registry address",
       "type": "object",
-      "required": ["registry"],
+      "required": [
+        "registry"
+      ],
       "properties": {
         "registry": {
           "type": "object",
@@ -53,18 +61,26 @@
     {
       "description": "List of the tokens the account is aware of",
       "type": "object",
-      "required": ["known_tokens"],
+      "required": [
+        "known_tokens"
+      ],
       "properties": {
         "known_tokens": {
           "type": "object",
           "properties": {
             "limit": {
-              "type": ["integer", "null"],
+              "type": [
+                "integer",
+                "null"
+              ],
               "format": "uint32",
               "minimum": 0.0
             },
             "skip": {
-              "type": ["integer", "null"],
+              "type": [
+                "integer",
+                "null"
+              ],
               "format": "uint32",
               "minimum": 0.0
             }
@@ -77,18 +93,26 @@
     {
       "description": "List of the assets (balances + tokens) the account is aware of",
       "type": "object",
-      "required": ["assets"],
+      "required": [
+        "assets"
+      ],
       "properties": {
         "assets": {
           "type": "object",
           "properties": {
             "limit": {
-              "type": ["integer", "null"],
+              "type": [
+                "integer",
+                "null"
+              ],
               "format": "uint32",
               "minimum": 0.0
             },
             "skip": {
-              "type": ["integer", "null"],
+              "type": [
+                "integer",
+                "null"
+              ],
               "format": "uint32",
               "minimum": 0.0
             }
@@ -101,18 +125,26 @@
     {
       "description": "Full info about the account",
       "type": "object",
-      "required": ["full_info"],
+      "required": [
+        "full_info"
+      ],
       "properties": {
         "full_info": {
           "type": "object",
           "properties": {
             "limit": {
-              "type": ["integer", "null"],
+              "type": [
+                "integer",
+                "null"
+              ],
               "format": "uint32",
               "minimum": 0.0
             },
             "skip": {
-              "type": ["integer", "null"],
+              "type": [
+                "integer",
+                "null"
+              ],
               "format": "uint32",
               "minimum": 0.0
             }
@@ -125,7 +157,9 @@
     {
       "description": "Incremental number telling wether a direct interaction with the account has occured",
       "type": "object",
-      "required": ["serial"],
+      "required": [
+        "serial"
+      ],
       "properties": {
         "serial": {
           "type": "object",
@@ -136,11 +170,16 @@
     },
     {
       "type": "object",
-      "required": ["can_execute"],
+      "required": [
+        "can_execute"
+      ],
       "properties": {
         "can_execute": {
           "type": "object",
-          "required": ["msg", "sender"],
+          "required": [
+            "msg",
+            "sender"
+          ],
           "properties": {
             "msg": {
               "$ref": "#/definitions/CosmosMsg_for_Empty"
@@ -156,11 +195,16 @@
     },
     {
       "type": "object",
-      "required": ["valid_signature"],
+      "required": [
+        "valid_signature"
+      ],
       "properties": {
         "valid_signature": {
           "type": "object",
-          "required": ["data", "signature"],
+          "required": [
+            "data",
+            "signature"
+          ],
           "properties": {
             "data": {
               "$ref": "#/definitions/Binary"
@@ -186,11 +230,16 @@
     },
     {
       "type": "object",
-      "required": ["valid_signatures"],
+      "required": [
+        "valid_signatures"
+      ],
       "properties": {
         "valid_signatures": {
           "type": "object",
-          "required": ["data", "signatures"],
+          "required": [
+            "data",
+            "signatures"
+          ],
           "properties": {
             "data": {
               "type": "array",
@@ -223,7 +272,9 @@
     {
       "description": "Query the contract's ownership information",
       "type": "object",
-      "required": ["ownership"],
+      "required": [
+        "ownership"
+      ],
       "properties": {
         "ownership": {
           "type": "object",
@@ -240,11 +291,16 @@
         {
           "description": "Sends native tokens from the contract to the given address.\n\nThis is translated to a [MsgSend](https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/bank/v1beta1/tx.proto#L19-L28). `from_address` is automatically filled with the current contract's address.",
           "type": "object",
-          "required": ["send"],
+          "required": [
+            "send"
+          ],
           "properties": {
             "send": {
               "type": "object",
-              "required": ["amount", "to_address"],
+              "required": [
+                "amount",
+                "to_address"
+              ],
               "properties": {
                 "amount": {
                   "type": "array",
@@ -263,11 +319,15 @@
         {
           "description": "This will burn the given coins from the contract's account. There is no Cosmos SDK message that performs this, but it can be done by calling the bank keeper. Important if a contract controls significant token supply that must be retired.",
           "type": "object",
-          "required": ["burn"],
+          "required": [
+            "burn"
+          ],
           "properties": {
             "burn": {
               "type": "object",
-              "required": ["amount"],
+              "required": [
+                "amount"
+              ],
               "properties": {
                 "amount": {
                   "type": "array",
@@ -288,7 +348,10 @@
     },
     "Coin": {
       "type": "object",
-      "required": ["amount", "denom"],
+      "required": [
+        "amount",
+        "denom"
+      ],
       "properties": {
         "amount": {
           "$ref": "#/definitions/Uint128"
@@ -302,7 +365,9 @@
       "oneOf": [
         {
           "type": "object",
-          "required": ["bank"],
+          "required": [
+            "bank"
+          ],
           "properties": {
             "bank": {
               "$ref": "#/definitions/BankMsg"
@@ -312,7 +377,9 @@
         },
         {
           "type": "object",
-          "required": ["custom"],
+          "required": [
+            "custom"
+          ],
           "properties": {
             "custom": {
               "$ref": "#/definitions/Empty"
@@ -322,7 +389,9 @@
         },
         {
           "type": "object",
-          "required": ["staking"],
+          "required": [
+            "staking"
+          ],
           "properties": {
             "staking": {
               "$ref": "#/definitions/StakingMsg"
@@ -332,7 +401,9 @@
         },
         {
           "type": "object",
-          "required": ["distribution"],
+          "required": [
+            "distribution"
+          ],
           "properties": {
             "distribution": {
               "$ref": "#/definitions/DistributionMsg"
@@ -343,11 +414,16 @@
         {
           "description": "A Stargate message encoded the same way as a protobuf [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto). This is the same structure as messages in `TxBody` from [ADR-020](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-020-protobuf-transaction-encoding.md)",
           "type": "object",
-          "required": ["stargate"],
+          "required": [
+            "stargate"
+          ],
           "properties": {
             "stargate": {
               "type": "object",
-              "required": ["type_url", "value"],
+              "required": [
+                "type_url",
+                "value"
+              ],
               "properties": {
                 "type_url": {
                   "type": "string"
@@ -362,7 +438,9 @@
         },
         {
           "type": "object",
-          "required": ["ibc"],
+          "required": [
+            "ibc"
+          ],
           "properties": {
             "ibc": {
               "$ref": "#/definitions/IbcMsg"
@@ -372,7 +450,9 @@
         },
         {
           "type": "object",
-          "required": ["wasm"],
+          "required": [
+            "wasm"
+          ],
           "properties": {
             "wasm": {
               "$ref": "#/definitions/WasmMsg"
@@ -382,7 +462,9 @@
         },
         {
           "type": "object",
-          "required": ["gov"],
+          "required": [
+            "gov"
+          ],
           "properties": {
             "gov": {
               "$ref": "#/definitions/GovMsg"
@@ -398,11 +480,15 @@
         {
           "description": "This is translated to a [MsgSetWithdrawAddress](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#L29-L37). `delegator_address` is automatically filled with the current contract's address.",
           "type": "object",
-          "required": ["set_withdraw_address"],
+          "required": [
+            "set_withdraw_address"
+          ],
           "properties": {
             "set_withdraw_address": {
               "type": "object",
-              "required": ["address"],
+              "required": [
+                "address"
+              ],
               "properties": {
                 "address": {
                   "description": "The `withdraw_address`",
@@ -416,11 +502,15 @@
         {
           "description": "This is translated to a [[MsgWithdrawDelegatorReward](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#L42-L50). `delegator_address` is automatically filled with the current contract's address.",
           "type": "object",
-          "required": ["withdraw_delegator_reward"],
+          "required": [
+            "withdraw_delegator_reward"
+          ],
           "properties": {
             "withdraw_delegator_reward": {
               "type": "object",
-              "required": ["validator"],
+              "required": [
+                "validator"
+              ],
               "properties": {
                 "validator": {
                   "description": "The `validator_address`",
@@ -443,11 +533,16 @@
         {
           "description": "This maps directly to [MsgVote](https://github.com/cosmos/cosmos-sdk/blob/v0.42.5/proto/cosmos/gov/v1beta1/tx.proto#L46-L56) in the Cosmos SDK with voter set to the contract address.",
           "type": "object",
-          "required": ["vote"],
+          "required": [
+            "vote"
+          ],
           "properties": {
             "vote": {
               "type": "object",
-              "required": ["proposal_id", "vote"],
+              "required": [
+                "proposal_id",
+                "vote"
+              ],
               "properties": {
                 "proposal_id": {
                   "type": "integer",
@@ -475,11 +570,18 @@
         {
           "description": "Sends bank tokens owned by the contract to the given address on another chain. The channel must already be established between the ibctransfer module on this chain and a matching module on the remote chain. We cannot select the port_id, this is whatever the local chain has bound the ibctransfer module to.",
           "type": "object",
-          "required": ["transfer"],
+          "required": [
+            "transfer"
+          ],
           "properties": {
             "transfer": {
               "type": "object",
-              "required": ["amount", "channel_id", "timeout", "to_address"],
+              "required": [
+                "amount",
+                "channel_id",
+                "timeout",
+                "to_address"
+              ],
               "properties": {
                 "amount": {
                   "description": "packet data only supports one coin https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/ibc/applications/transfer/v1/transfer.proto#L11-L20",
@@ -513,11 +615,17 @@
         {
           "description": "Sends an IBC packet with given data over the existing channel. Data should be encoded in a format defined by the channel version, and the module on the other side should know how to parse this.",
           "type": "object",
-          "required": ["send_packet"],
+          "required": [
+            "send_packet"
+          ],
           "properties": {
             "send_packet": {
               "type": "object",
-              "required": ["channel_id", "data", "timeout"],
+              "required": [
+                "channel_id",
+                "data",
+                "timeout"
+              ],
               "properties": {
                 "channel_id": {
                   "type": "string"
@@ -541,11 +649,15 @@
         {
           "description": "This will close an existing channel that is owned by this contract. Port is auto-assigned to the contract's IBC port",
           "type": "object",
-          "required": ["close_channel"],
+          "required": [
+            "close_channel"
+          ],
           "properties": {
             "close_channel": {
               "type": "object",
-              "required": ["channel_id"],
+              "required": [
+                "channel_id"
+              ],
               "properties": {
                 "channel_id": {
                   "type": "string"
@@ -586,7 +698,10 @@
     "IbcTimeoutBlock": {
       "description": "IBCTimeoutHeight Height is a monotonically increasing data type that can be compared against another Height for the purposes of updating and freezing clients. Ordering is (revision_number, timeout_height)",
       "type": "object",
-      "required": ["height", "revision"],
+      "required": [
+        "height",
+        "revision"
+      ],
       "properties": {
         "height": {
           "description": "block height after which the packet times out. the height within the given revision",
@@ -608,11 +723,16 @@
         {
           "description": "This is translated to a [MsgDelegate](https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/staking/v1beta1/tx.proto#L81-L90). `delegator_address` is automatically filled with the current contract's address.",
           "type": "object",
-          "required": ["delegate"],
+          "required": [
+            "delegate"
+          ],
           "properties": {
             "delegate": {
               "type": "object",
-              "required": ["amount", "validator"],
+              "required": [
+                "amount",
+                "validator"
+              ],
               "properties": {
                 "amount": {
                   "$ref": "#/definitions/Coin"
@@ -628,11 +748,16 @@
         {
           "description": "This is translated to a [MsgUndelegate](https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/staking/v1beta1/tx.proto#L112-L121). `delegator_address` is automatically filled with the current contract's address.",
           "type": "object",
-          "required": ["undelegate"],
+          "required": [
+            "undelegate"
+          ],
           "properties": {
             "undelegate": {
               "type": "object",
-              "required": ["amount", "validator"],
+              "required": [
+                "amount",
+                "validator"
+              ],
               "properties": {
                 "amount": {
                   "$ref": "#/definitions/Coin"
@@ -648,11 +773,17 @@
         {
           "description": "This is translated to a [MsgBeginRedelegate](https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/staking/v1beta1/tx.proto#L95-L105). `delegator_address` is automatically filled with the current contract's address.",
           "type": "object",
-          "required": ["redelegate"],
+          "required": [
+            "redelegate"
+          ],
           "properties": {
             "redelegate": {
               "type": "object",
-              "required": ["amount", "dst_validator", "src_validator"],
+              "required": [
+                "amount",
+                "dst_validator",
+                "src_validator"
+              ],
               "properties": {
                 "amount": {
                   "$ref": "#/definitions/Coin"
@@ -688,7 +819,12 @@
     },
     "VoteOption": {
       "type": "string",
-      "enum": ["yes", "no", "abstain", "no_with_veto"]
+      "enum": [
+        "yes",
+        "no",
+        "abstain",
+        "no_with_veto"
+      ]
     },
     "WasmMsg": {
       "description": "The message types of the wasm module.\n\nSee https://github.com/CosmWasm/wasmd/blob/v0.14.0/x/wasm/internal/types/tx.proto",
@@ -696,11 +832,17 @@
         {
           "description": "Dispatches a call to another contract at a known address (with known ABI).\n\nThis is translated to a [MsgExecuteContract](https://github.com/CosmWasm/wasmd/blob/v0.14.0/x/wasm/internal/types/tx.proto#L68-L78). `sender` is automatically filled with the current contract's address.",
           "type": "object",
-          "required": ["execute"],
+          "required": [
+            "execute"
+          ],
           "properties": {
             "execute": {
               "type": "object",
-              "required": ["contract_addr", "funds", "msg"],
+              "required": [
+                "contract_addr",
+                "funds",
+                "msg"
+              ],
               "properties": {
                 "contract_addr": {
                   "type": "string"
@@ -727,14 +869,24 @@
         {
           "description": "Instantiates a new contracts from previously uploaded Wasm code.\n\nThe contract address is non-predictable. But it is guaranteed that when emitting the same Instantiate message multiple times, multiple instances on different addresses will be generated. See also Instantiate2.\n\nThis is translated to a [MsgInstantiateContract](https://github.com/CosmWasm/wasmd/blob/v0.29.2/proto/cosmwasm/wasm/v1/tx.proto#L53-L71). `sender` is automatically filled with the current contract's address.",
           "type": "object",
-          "required": ["instantiate"],
+          "required": [
+            "instantiate"
+          ],
           "properties": {
             "instantiate": {
               "type": "object",
-              "required": ["code_id", "funds", "label", "msg"],
+              "required": [
+                "code_id",
+                "funds",
+                "label",
+                "msg"
+              ],
               "properties": {
                 "admin": {
-                  "type": ["string", "null"]
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "code_id": {
                   "type": "integer",
@@ -767,11 +919,17 @@
         {
           "description": "Migrates a given contracts to use new wasm code. Passes a MigrateMsg to allow us to customize behavior.\n\nOnly the contract admin (as defined in wasmd), if any, is able to make this call.\n\nThis is translated to a [MsgMigrateContract](https://github.com/CosmWasm/wasmd/blob/v0.14.0/x/wasm/internal/types/tx.proto#L86-L96). `sender` is automatically filled with the current contract's address.",
           "type": "object",
-          "required": ["migrate"],
+          "required": [
+            "migrate"
+          ],
           "properties": {
             "migrate": {
               "type": "object",
-              "required": ["contract_addr", "msg", "new_code_id"],
+              "required": [
+                "contract_addr",
+                "msg",
+                "new_code_id"
+              ],
               "properties": {
                 "contract_addr": {
                   "type": "string"
@@ -798,11 +956,16 @@
         {
           "description": "Sets a new admin (for migrate) on the given contract. Fails if this contract is not currently admin of the target contract.",
           "type": "object",
-          "required": ["update_admin"],
+          "required": [
+            "update_admin"
+          ],
           "properties": {
             "update_admin": {
               "type": "object",
-              "required": ["admin", "contract_addr"],
+              "required": [
+                "admin",
+                "contract_addr"
+              ],
               "properties": {
                 "admin": {
                   "type": "string"
@@ -818,11 +981,15 @@
         {
           "description": "Clears the admin on the given contract, so no more migration possible. Fails if this contract is not currently admin of the target contract.",
           "type": "object",
-          "required": ["clear_admin"],
+          "required": [
+            "clear_admin"
+          ],
           "properties": {
             "clear_admin": {
               "type": "object",
-              "required": ["contract_addr"],
+              "required": [
+                "contract_addr"
+              ],
               "properties": {
                 "contract_addr": {
                   "type": "string"

@@ -76,14 +76,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
     }
 
     let res = match msg {
-        ExecuteMsg::ExecuteSigned { msg, signed } => {
-            execute::try_executing_signed(deps, env, info, signed, *msg)
-        }
-/* 
-        ExecuteMsg::ExecuteNative { msgs } => {
-            execute::try_executing_actions(deps, &env, info, msgs)
-        }
- */
+
         ExecuteMsg::UpdateOwnership {
             new_owner,
             new_account_data,
@@ -97,14 +90,24 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
             execute::try_updating_known_on_receive(deps, info.sender.to_string(), msg.token_id)
         }
 
+        ExecuteMsg::Purge {} => execute::try_purging(deps.api, deps.storage, info.sender.as_str()),
+
+        ExecuteMsg::Freeze {} => execute::try_freezing(deps),
+
         ExecuteMsg::Execute { msgs } => {
             verify_native(deps.storage, info.sender.to_string())?;
             action::try_executing(msgs)
         }
 
-        ExecuteMsg::Purge {} => execute::try_purging(deps.api, deps.storage, info.sender.as_str()),
+        ExecuteMsg::ExecuteSigned { msg, signed } => {
+            execute::try_executing_signed(deps, env, info, signed, *msg)
+        }
+/* 
+        ExecuteMsg::ExecuteNative { msgs } => {
+            execute::try_executing_actions(deps, &env, info, msgs)
+        }
+ */
 
-        ExecuteMsg::Freeze {} => execute::try_freezing(deps),
     }?;
 
     Ok(

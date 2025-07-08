@@ -4,10 +4,10 @@ use cosmwasm_std::{to_json_binary, DepsMut, Env, MessageInfo, Response, StdResul
 
 use crate::{
     error::ContractError,
-    execute::{create_account, migrate_account, update_account_data, update_account_owner},
-    msg::{AccountsQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    execute::{create_account, execute_admin, migrate_account, update_account_data, update_account_owner},
+    msg::{AccountsQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     query::{account_info, accounts, collection_accounts, collections},
-    state::{COL_TOKEN_COUNTS, LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES},
+    state::{ADMIN, COL_TOKEN_COUNTS, LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES},
 };
 
 pub const CONTRACT_NAME: &str = "crates:cw83-token-account-registry";
@@ -17,7 +17,7 @@ pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn instantiate(
     deps: DepsMut,
     _: Env,
-    _: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -30,6 +30,7 @@ pub fn instantiate(
         }],
     )?;
     REGISTRY_PARAMS.save(deps.storage, &msg.params)?;
+    ADMIN.set(deps, Some(info.sender))?;
     Ok(Response::new().add_attributes(vec![("action", "instantiate")]))
 }
 
@@ -84,6 +85,15 @@ pub fn execute(
             update_op,
             credential,
         } => update_account_data(deps, env, info, token_info, update_op, credential),
+
+        ExecuteMsg::AdminUpdate(
+            msg
+        ) => {
+            ADMIN.assert_admin(deps.as_ref(), &info.sender)?;
+            execute_admin(deps, msg)
+        }
+        
+
     }
 }
 
@@ -123,13 +133,34 @@ pub fn reply(deps: DepsMut, _: Env, msg: cosmwasm_std::Reply) -> Result<Response
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
+pub fn sudo(deps: DepsMut, _env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
+    execute_admin(deps, msg)
+}
+
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(_: DepsMut, _: Env, _: MigrateMsg) -> StdResult<Response> {
+    Ok(Response::default().add_attribute("action", "migrate"))
+}
+
+
+
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: cosmwasm_std::Deps, _: Env, msg: QueryMsg) -> StdResult<cosmwasm_std::Binary> {
     match msg {
-        QueryMsg::AccountInfo(acc_query) => to_json_binary(&account_info(deps, acc_query)?),
+  
+        QueryMsg::Admin {} => to_json_binary(&ADMIN.get(deps)?),
+
+        QueryMsg::RegistryParams {} => to_json_binary(&REGISTRY_PARAMS.load(deps.storage)?),
+
+        QueryMsg::AccountInfo(token) => to_json_binary(&account_info(deps, token)?),
+
         QueryMsg::Accounts {
-            skip, limit, query, ..
-        } => {
-            let res = if let Some(q) = query {
+            skip, 
+            limit, 
+            query, 
+            ..
+        } => to_json_binary(&if let Some(q) = query {
                 match q {
                     AccountsQueryMsg::Collections {} => collections(deps, skip, limit),
                     AccountsQueryMsg::Collection(col) => {
@@ -138,16 +169,11 @@ pub fn query(deps: cosmwasm_std::Deps, _: Env, msg: QueryMsg) -> StdResult<cosmw
                 }
             } else {
                 accounts(deps, skip, limit)
-            }?;
-            to_json_binary(&res)
-        }
-
-        QueryMsg::RegistryParams {} => to_json_binary(&REGISTRY_PARAMS.load(deps.storage)?),
+            }?
+        )
     }
 }
 
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_: DepsMut, _: Env, _: MigrateMsg) -> StdResult<Response> {
-    Ok(Response::default().add_attribute("action", "migrate"))
-}
+
+

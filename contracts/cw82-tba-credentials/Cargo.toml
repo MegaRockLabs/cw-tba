@@ -16,8 +16,9 @@ name = "cw82_tba_credentials"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-archway = []
 library = []
+archway = []
+omniflix = ["cw-tba/omniflix"]
 
 [dependencies]
 anybuf = { workspace = true }
@@ -25,7 +26,6 @@ cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
 cw-ownable = { workspace = true }
 cw-storage-plus = { workspace = true }
-cw-tba = { workspace = true, features = ["full_info"] }
 cw2 = { workspace = true }
 cw22 = { workspace = true }
 saa-wasm = { workspace = true }
@@ -37,6 +37,8 @@ thiserror = { workspace = true }
 
 cw82 = { workspace = true }
 cw84 = { workspace = true }
+
+cw-tba = { path = "../../packages/cw-tba", features = ["full_info", "multi"] }
 
 [dev-dependencies]
 base64 = { version = "0.22.1" }

@@ -49,6 +49,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ecb50559f19eb92f65279f9de03e4625ed0572e7564ef3de5253e13928c55266"
 
 [[package]]
+name = "anyhow"
+version = "1.0.98"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
+
+[[package]]
 name = "array-bytes"
 version = "6.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -190,6 +196,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
+name = "bytes"
+version = "1.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
+
+[[package]]
 name = "cc"
 version = "1.2.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -203,6 +215,15 @@ name = "cfg-if"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9555578bc9e57714c812a1f84e4fc5b4d21fcb063490c624de019f7464c91268"
+
+[[package]]
+name = "chrono"
+version = "0.4.41"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c469d952047f47f91b68d1cba3f10d63c11d73e4636f24f08daf0278abf01c4d"
+dependencies = [
+ "num-traits",
+]
 
 [[package]]
 name = "common-path"
@@ -412,6 +433,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-controllers"
+version = "1.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57de8d3761e46be863e3ac1eba8c8a976362a48c6abf240df1e26c3e421ee9e8"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw-utils",
+ "schemars 0.8.22",
+ "serde",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "cw-extra-protos"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -481,6 +517,7 @@ dependencies = [
  "cw-ownable",
  "cw83",
  "cw84",
+ "omniflix-std",
  "saa-schema",
  "saa-wasm",
  "schemars 0.8.22",
@@ -569,30 +606,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw82-tba-credentials"
-version = "0.10.0"
-dependencies = [
- "anybuf",
- "base64 0.22.1",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-ownable",
- "cw-storage-plus",
- "cw-tba",
- "cw2",
- "cw22",
- "cw82",
- "cw84",
- "p256",
- "saa-wasm",
- "schemars 0.8.22",
- "semver",
- "serde",
- "strum",
- "thiserror 2.0.12",
-]
-
-[[package]]
 name = "cw83"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -608,6 +621,7 @@ version = "0.10.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-controllers",
  "cw-storage-plus",
  "cw-tba",
  "cw-utils",
@@ -675,7 +689,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7c1832837b905bbfb5101e07cc24c8deddf52f93225eee6ead5f4d63d53ddcb"
 dependencies = [
  "const-oid",
- "pem-rfc7468",
  "zeroize",
 ]
 
@@ -834,7 +847,6 @@ dependencies = [
  "ff",
  "generic-array",
  "group",
- "pem-rfc7468",
  "pkcs8",
  "rand_core 0.6.4",
  "sec1",
@@ -1065,7 +1077,7 @@ dependencies = [
  "impl-serde",
  "ink_ir",
  "ink_primitives",
- "itertools",
+ "itertools 0.12.1",
  "parity-scale-codec",
  "proc-macro2",
  "quote",
@@ -1131,7 +1143,7 @@ dependencies = [
  "either",
  "impl-serde",
  "ink_prelude",
- "itertools",
+ "itertools 0.12.1",
  "proc-macro2",
  "quote",
  "syn 2.0.104",
@@ -1233,6 +1245,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "276ec31bcb4a9ee45f58bec6f9ec700ae4cf4f4f8f2fa7e06cb406bd5ffdd770"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "itertools"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
 ]
 
 [[package]]
@@ -1339,6 +1360,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "omniflix-std"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "547f7753d3389183174851821bef45e3bd0e0ef6e36f0e7eed9e1b4d16e15575"
+dependencies = [
+ "chrono",
+ "cosmwasm-std",
+ "omniflix-std-derive",
+ "prost 0.12.6",
+ "prost-types 0.12.6",
+ "schemars 0.8.22",
+ "serde",
+ "serde-cw-value",
+]
+
+[[package]]
+name = "omniflix-std-derive"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8bbd85582e3ef1a23fa7b12e0415ea604260c114e72faf40d829c2c40f1c745e"
+dependencies = [
+ "itertools 0.10.5",
+ "proc-macro2",
+ "prost-types 0.11.9",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1406,15 +1456,6 @@ name = "paste"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
-
-[[package]]
-name = "pem-rfc7468"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88b39c9bfcfc231068454382784bb460aae594343fb030d46e9f50a645418412"
-dependencies = [
- "base64ct",
-]
 
 [[package]]
 name = "pkcs8"
@@ -1519,6 +1560,70 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "prost"
+version = "0.11.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b82eaa1d779e9a4bc1c3217db8ffbeabaae1dca241bf70183242128d48681cd"
+dependencies = [
+ "bytes",
+ "prost-derive 0.11.9",
+]
+
+[[package]]
+name = "prost"
+version = "0.12.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "deb1435c188b76130da55f17a466d252ff7b1418b2ad3e037d127b94e3411f29"
+dependencies = [
+ "bytes",
+ "prost-derive 0.12.6",
+]
+
+[[package]]
+name = "prost-derive"
+version = "0.11.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5d2d8d10f3c6ded6da8b05b5fb3b8a5082514344d56c9f871412d29b4e075b4"
+dependencies = [
+ "anyhow",
+ "itertools 0.10.5",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "prost-derive"
+version = "0.12.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
+dependencies = [
+ "anyhow",
+ "itertools 0.12.1",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
+name = "prost-types"
+version = "0.11.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "213622a1460818959ac1181aaeb2dc9c7f63df720db7d788b3e24eacd1983e13"
+dependencies = [
+ "prost 0.11.9",
+]
+
+[[package]]
+name = "prost-types"
+version = "0.12.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9091c90b0a32608e984ff2fa4091273cbdd755d54935c51d520887f4a1dbd5b0"
+dependencies = [
+ "prost 0.12.6",
 ]
 
 [[package]]
@@ -1666,9 +1771,9 @@ checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
 
 [[package]]
 name = "saa-auth"
-version = "0.26.7"
+version = "0.26.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e80380f0c67b74a3b727d6307be12ad902f28c391f59cc2c039e24a85b505071"
+checksum = "5d81f21234ecb9737910edc79cadf2e0d74bd351a2ac6737f9f461b4416c1158"
 dependencies = [
  "hex",
  "primitive-types",
@@ -1682,9 +1787,9 @@ dependencies = [
 
 [[package]]
 name = "saa-common"
-version = "0.26.7"
+version = "0.26.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acd710123c074cb258ac9173a624abd7f22476831839687efcb9c03b6db04aae"
+checksum = "7d771b11e25ddb850cfec8bc185a2915e13011794031d0c4f0740da31b0cf05f"
 dependencies = [
  "base64 0.22.1",
  "bech32 0.11.0",
@@ -1782,9 +1887,9 @@ dependencies = [
 
 [[package]]
 name = "saa-wasm"
-version = "0.1.0-beta.9"
+version = "0.1.0-beta.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23de47a71e66b527925737aab179409ccc9276b66edb28abfc7d481fe32b6f6d"
+checksum = "add8751931173fd22cbbdcd58828e8fd82e14cb85196dcf4ed60b87f4dcac26c"
 dependencies = [
  "saa-schema",
  "saa-wasm-types",
@@ -2164,9 +2269,9 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 
 [[package]]
 name = "smart-account-auth"
-version = "0.26.2"
+version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17d09ed819dcc301d20e21ac54e447ac6142fa86ee0ac20faf11aef7e9ded744"
+checksum = "57e356d0f6a8f49044c62e766cf0fd3fa73c272c9c100cd59b1fa864b15c3578"
 dependencies = [
  "saa-auth",
  "saa-common",

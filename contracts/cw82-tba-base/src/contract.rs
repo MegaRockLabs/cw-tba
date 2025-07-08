@@ -3,21 +3,20 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult
 };
-use cw_ownable::{get_ownership, initialize_owner};
+use cw_ownable::{assert_owner, get_ownership, initialize_owner};
 use cw_tba::{ExecuteMsg, QueryMsg};
+use saa_wasm::account_number;
 
 #[cfg(target_arch = "wasm32")]
 use crate::utils::query_if_registry;
 use crate::{
     error::ContractError,
     execute::{
-        try_changing_data, try_executing, try_freezing, try_purging,
-        try_updating_known_on_receive, try_updating_known_tokens, try_updating_ownership,
-        MINT_REPLY_ID,
+        try_changing_data, try_executing, try_executing_actions, try_freezing, try_purging, try_updating_known_on_receive, try_updating_known_tokens, try_updating_ownership, MINT_REPLY_ID
     },
     msg::{InstantiateMsg, MigrateMsg, Status},
     query::{assets, can_execute, full_info, known_tokens, valid_signature},
-    state::{MINT_CACHE, PUBKEY, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO},
+    state::{MINT_CACHE, PUBKEY, REGISTRY_ADDRESS, STATUS, TOKEN_INFO},
     utils::extract_pubkey,
 };
 
@@ -27,7 +26,7 @@ pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
@@ -64,9 +63,15 @@ pub fn instantiate(
     REGISTRY_ADDRESS.save(deps.storage, &info.sender.to_string())?;
     STATUS.save(deps.storage, &Status { frozen: false })?;
     PUBKEY.save(deps.storage, &pubkey)?;
-    SERIAL.save(deps.storage, &0u128)?;
-    Ok(Response::default())
+
+    let actions = msg.actions.unwrap_or_default();
+    let res = try_executing_actions(deps, &env, &info, actions)?;
+
+    Ok(res.add_attribute("action", "instantiate")
+        .add_attribute("owner", msg.owner)
+        .add_attribute("pubkey", pubkey.to_string()))
 }
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
@@ -78,23 +83,33 @@ pub fn execute(
     if REGISTRY_ADDRESS.load(deps.storage).is_err() {
         return Err(ContractError::Deleted {});
     }
-    SERIAL.update(deps.storage, |s| Ok::<u128, StdError>((s + 1) % u128::MAX))?;
+    let res = match msg { 
 
-    let res = match msg {
-        ExecuteMsg::Execute { msgs } => try_executing(deps.as_ref(), info.sender, msgs),
-  /*       ExecuteMsg::ExecuteNative { msgs } => try_executing_actions(deps, &env, info, msgs), */
-        ExecuteMsg::Freeze {} => try_freezing(&deps.querier, deps.storage, info.sender),
-
-        ExecuteMsg::ReceiveNft(msg) => {
-            try_updating_known_on_receive(deps, info.sender.to_string(), msg.token_id)
-        }
         ExecuteMsg::UpdateOwnership {
             new_owner,
             new_account_data,
         } => try_updating_ownership(deps, env, info, new_owner, new_account_data),
-        ExecuteMsg::UpdateAccountData(op) => try_changing_data(deps, env, info, op),
+
+        ExecuteMsg::UpdateAccountData(
+            op
+        ) => try_changing_data(deps, env, info, op),
+
+        ExecuteMsg::ReceiveNft(
+            msg
+        ) => try_updating_known_on_receive(deps, info.sender.to_string(), msg.token_id),
+
         ExecuteMsg::Purge {} => try_purging(deps, info.sender),
-        _ => unreachable!(),
+
+        ExecuteMsg::Freeze {} => try_freezing(&deps.querier, deps.storage, info.sender),
+
+        ExecuteMsg::Execute { msgs } => try_executing(deps.as_ref(), info.sender, msgs),
+
+        ExecuteMsg::ExecuteNative { msgs } => {
+            assert_owner(deps.storage, &info.sender)?;
+            try_executing_actions(deps, &env, &info, msgs)
+        },
+        
+        _ => Err(ContractError::NotSupported {}),
     }?;
 
     Ok(res)
@@ -108,23 +123,23 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Token {} => to_json_binary(&TOKEN_INFO.load(deps.storage)?),
         QueryMsg::Status {} => to_json_binary(&STATUS.load(deps.storage)?),
-        QueryMsg::AccountNumber {} => to_json_binary(&SERIAL.load(deps.storage)?),
+        QueryMsg::AccountNumber {} => to_json_binary(&account_number(deps.storage)),
         QueryMsg::Registry {} => to_json_binary(&REGISTRY_ADDRESS.load(deps.storage)?),
         QueryMsg::Ownership {} => to_json_binary(&get_ownership(deps.storage)?),
         QueryMsg::CanExecute { sender, msg } => to_json_binary(&can_execute(deps, sender, &msg)?),
+        QueryMsg::KnownTokens { skip, limit } => to_json_binary(&known_tokens(deps, skip, limit)?),
+        QueryMsg::Assets { skip, limit } => to_json_binary(&assets(deps, env, skip, limit)?),
+        QueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),
         QueryMsg::ValidSignature {
             signature,
             data,
             payload,
         } => to_json_binary(&valid_signature(deps, data, signature, &payload)?),
-        QueryMsg::KnownTokens { skip, limit } => to_json_binary(&known_tokens(deps, skip, limit)?),
-        QueryMsg::Assets { skip, limit } => to_json_binary(&assets(deps, env, skip, limit)?),
-        QueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),
-/*         QueryMsg::ValidSignatures { .. } => Err(StdError::generic_err(
-            "ValidSignatures query is not supported",
-        )), */
+        QueryMsg::ValidSignatures { .. } => Err(StdError::generic_err(
+            "ValidSignatures query is not supported for now",
+        )), 
         QueryMsg::CanExecuteSigned { .. } => Err(StdError::generic_err(
-            "CanExecuteSigned query is not supported",
+            "CanExecuteSigned query is not supported for now",
         )),
     }
 }

@@ -8,8 +8,10 @@ description = "Definition and types for Token-Bound Accounts"
 
 [features]
 default = []
+multi = ["cw84/multi", "cw83/multi"]
 ext_query = []
 full_info = []
+omniflix = ["dep:omniflix-std"]
 
 [dependencies]
 anybuf = { workspace = true }
@@ -27,3 +29,5 @@ strum_macros = { workspace = true }
 
 # saa-schema          = { version = "0.24.5", features = ["cosmwasm", "session"], path = "../../../contract-auth/packages/schema" }
 saa-wasm = { workspace = true }
+
+omniflix-std = { workspace = true, optional = true }

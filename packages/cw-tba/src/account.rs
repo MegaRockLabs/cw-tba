@@ -55,6 +55,7 @@ pub enum ExecuteAccountMsg {
     },
 
     /// Send NFT to a contract
+    #[cfg(not(feature = "omniflix"))]
     SendToken {
         /// Contract address of the collection
         collection: String,

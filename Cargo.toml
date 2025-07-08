@@ -1,7 +1,7 @@
 [workspace]
 members = [
   "contracts/cw82-tba-base",
-  "contracts/cw82-tba-credentials",
+  # "contracts/cw82-tba-credentials",
   "contracts/cw83-tba-registry",
   "packages/cw-tba",
 ]
@@ -44,12 +44,14 @@ cw83-tba-registry = { path = "contracts/cw83-tba-registry", features = ["library
 
 # saa-common = { version = "=0.26.0-rc20", features = ["cosmwasm"] }
 saa-schema = { version = "0.26.0", features = ["cosmwasm"] }
-saa-wasm = { version = "0.1.0-beta.9", default-features = false, features = ["cosmwasm_v1", "types"] }
-smart-account-auth = { version = "=0.26.2" }
+saa-wasm = { version = "0.1.0-beta.10", default-features = false, features = ["cosmwasm_v1", "types"] }
+smart-account-auth = { version = "0.26.3" }
 
 # saa-wasm                = { version = "0.1.0-alpha.1", path = "../saa-wasm/packages/bundle", default-features = true, features = ["cosmwasm_v1", "types"]}
 # saa-schema              = { version = "0.26.0", path = "../contract-auth/packages/schema", features = ["cosmwasm"] }
 # smart-account-auth      = { version = "0.26.0-rc2", path = "../contract-auth/packages/bundle" }
+
+omniflix-std = { version = "0.2.1" }
 
 [profile.release]
 rpath = false

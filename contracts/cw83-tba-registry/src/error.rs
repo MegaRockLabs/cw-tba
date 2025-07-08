@@ -1,4 +1,5 @@
 use cosmwasm_std::StdError;
+use cw_controllers::AdminError;
 use cw_utils::{ParseReplyError, PaymentError};
 use saa_wasm::saa_types::AuthError;
 use thiserror::Error;
@@ -13,6 +14,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     Auth(#[from] AuthError),
+
+    #[error("{0}")]
+    Admin(#[from] AdminError),
 
     #[error("Insufficient fee: expected {0}, got {1}")]
     InsufficientFee(u128, u128),

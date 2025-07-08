@@ -1,18 +1,14 @@
 use cosmwasm_std::{
-    ensure, ensure_eq, to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn,
-    Response, SubMsg, WasmMsg,
+    ensure, ensure_eq, to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, StdError, SubMsg, WasmMsg
 };
 
 use crate::{
-    error::ContractError,
-    funds::checked_funds,
-    state::{LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES},
+    error::ContractError, funds::checked_funds, msg::SudoMsg, state::{LAST_ATTEMPTING, REGISTRY_PARAMS, TOKEN_ADDRESSES}
 };
 use cw83::CREATE_ACCOUNT_REPLY_ID;
 use cw84::{Binary, ValidSignatureResponse};
 use cw_tba::{
-    verify_nft_ownership, ExecuteAccountMsg, ExecuteMsg, InstantiateAccountMsg,
-    QueryMsg, TokenInfo,
+    verify_nft_ownership, ExecuteAccountMsg, ExecuteMsg, InstantiateAccountMsg, QueryMsg, RegistryParams, TokenInfo
 };
 use saa_wasm::{
     saa_types::{
@@ -23,6 +19,7 @@ use saa_wasm::{
 
 const CREATE_MSG: &str = "Create TBA account";
 const UPDATE_MSG: &str = "Update TBA account ownership";
+
 
 fn construct_label(info: &TokenInfo, serial: Option<u64>) -> String {
     let base = format!("{}-{}-account", info.collection, info.id);
@@ -95,6 +92,8 @@ pub fn create_account(
         account_data,
         actions,
     };
+    
+    let action = if reset { "reset_account" } else { "create_account"};
 
     Ok(Response::default()
         .add_messages(msgs)
@@ -112,21 +111,15 @@ pub fn create_account(
             // payload: Binary::default(),
         })
         .add_attributes(vec![
-            (
-                "action",
-                if reset {
-                    "reset_account"
-                } else {
-                    "create_account"
-                },
-            ),
-            ("token_contract", token_info.collection.as_str()),
+            ("action", action),
+            ("collection", token_info.collection.as_str()),
             ("token_id", token_info.id.as_str()),
+            ("owner", info.sender.as_str()),
             ("code_id", code_id.to_string().as_str()),
             ("chain_id", chain_id.as_str()),
-            ("owner", info.sender.as_str()),
         ]))
 }
+
 
 pub fn update_account_owner(
     deps: DepsMut,
@@ -276,4 +269,31 @@ pub fn migrate_account(
         ("token_id", token_info.id.as_str()),
         ("new_code_id", new_code_id.to_string().as_str()),
     ]))
+}
+
+
+
+pub fn execute_admin(
+    deps: DepsMut,
+    msg: SudoMsg,
+) -> Result<Response, ContractError> {
+
+    match msg {
+        SudoMsg::UpdateAllowedCodeIds { code_ids } => {
+            REGISTRY_PARAMS.update(deps.storage, |mut params| {
+                params.allowed_code_ids = code_ids;
+                Ok::<RegistryParams, StdError>(params)
+            })?;
+        },
+        SudoMsg::UpdateManagers { managers } => {
+            REGISTRY_PARAMS.update(deps.storage, |mut params| {
+                params.managers = managers;
+                Ok::<RegistryParams, StdError>(params)
+            })?;
+        },
+        SudoMsg::UpdateParams(params) => {
+            REGISTRY_PARAMS.save(deps.storage, &params)?;
+        },
+    }
+    Ok(Response::new().add_attributes(vec![("action", "admin_update")]))
 }

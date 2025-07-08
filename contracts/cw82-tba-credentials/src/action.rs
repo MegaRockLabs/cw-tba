@@ -34,6 +34,7 @@ pub fn execute_action(
             recipient,
         } => try_transfering_token(deps.storage, collection, token_id, recipient),
 
+        #[cfg(not(feature = "omniflix"))]
         SendToken {
             collection,
             token_id,
@@ -168,6 +169,7 @@ pub fn try_transfering_token(
         .add_attribute("action", "transfer_token"))
 }
 
+#[cfg(not(feature = "omniflix"))]
 pub fn try_sending_token(
     storage: &mut dyn Storage,
     contract_addr: String,

@@ -9,9 +9,7 @@ use crate::{
 const DEFAULT_BATCH_SIZE: u32 = 100;
 
 pub fn account_info(deps: Deps, info: TokenInfo) -> StdResult<Account> {
-    let info_key = [info.collection.as_str(), info.id.as_str()];
-    let address = TOKEN_ADDRESSES.load(deps.storage, info_key.into())?;
-
+    let address = TOKEN_ADDRESSES.load(deps.storage, info.key())?;
     Ok(Account { address, info })
 }
 
@@ -28,21 +26,16 @@ pub fn collections(deps: Deps, skip: Option<u32>, limit: Option<u32>) -> StdResu
         (total, _) => total,
     } as u32;
 
-    let collections = iter
+    let accounts = iter
         .enumerate()
         .filter(|(i, _)| *i >= skip)
         .take(limit)
-        .map(|(_, c)| {
-            Ok(AccountOpt {
-                info: None,
-                address: c?,
-            })
-        })
+        .map(|(_, c)| Ok(AccountOpt { address: c?, info: None }))
         .collect::<StdResult<Vec<AccountOpt>>>()?;
 
     Ok(Accounts {
-        accounts: collections,
-        total,
+        total: total.max(accounts.len() as u32),
+        accounts,
     })
 }
 
@@ -70,8 +63,12 @@ pub fn accounts(deps: Deps, skip: Option<u32>, limit: Option<u32>) -> StdResult<
         })
         .collect::<StdResult<Vec<AccountOpt>>>()?;
 
-    Ok(Accounts { accounts, total })
+    Ok(Accounts { 
+        total: total.max(accounts.len() as u32), 
+        accounts, 
+    })
 }
+
 
 pub fn collection_accounts(
     deps: Deps,
@@ -81,6 +78,7 @@ pub fn collection_accounts(
 ) -> StdResult<Accounts> {
     let skip = skip.unwrap_or(0) as usize;
     let limit = limit.unwrap_or(DEFAULT_BATCH_SIZE) as usize;
+
 
     let iter =
         TOKEN_ADDRESSES
@@ -108,5 +106,8 @@ pub fn collection_accounts(
         })
         .collect::<StdResult<Vec<AccountOpt>>>()?;
 
-    Ok(Accounts { accounts, total })
+    Ok(Accounts { 
+        total: total.max(accounts.len() as u32), 
+        accounts, 
+    })
 }
