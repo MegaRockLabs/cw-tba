@@ -38,8 +38,4 @@ thiserror = { workspace = true }
 cw82 = { workspace = true }
 cw84 = { workspace = true }
 
-cw-tba = { path = "../../packages/cw-tba", features = ["full_info", "multi"] }
-
-[dev-dependencies]
-base64 = { version = "0.22.1" }
-p256 = { version = "0.13.2" }
+cw-tba = { path = "../../packages/cw-tba", features = ["full_info"] }

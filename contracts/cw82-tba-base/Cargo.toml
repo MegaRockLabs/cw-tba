@@ -16,7 +16,7 @@ name = "cw82_tba_base"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["omniflix"]
+default = []
 library = []
 omniflix = ["cw-tba/omniflix"]
 

@@ -17,7 +17,7 @@ use crate::{
     execute::{self, try_executing_actions},
     msg::{ContractResult, InstantiateMsg, MigrateMsg, QueryMsg},
     query::{
-        assets, can_execute, can_execute_signed, full_info, known_tokens, valid_signature,
+        assets, can_execute, can_execute_signed, full_info, known_tokens, valid_signature, valid_signatures,
        /*  valid_signatures,  */
     },
     state::{save_token_credentials, MINT_CACHE, REGISTRY_ADDRESS, STATUS, TOKEN_INFO},
@@ -98,15 +98,15 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
             verify_native(deps.storage, info.sender.to_string())?;
             action::try_executing(msgs)
         }
-
-        ExecuteMsg::ExecuteSigned { msg, signed } => {
-            execute::try_executing_signed(deps, env, info, signed, *msg)
-        }
-/* 
         ExecuteMsg::ExecuteNative { msgs } => {
+            verify_native(deps.storage, info.sender.to_string())?;
             execute::try_executing_actions(deps, &env, info, msgs)
         }
- */
+
+        ExecuteMsg::ExecuteSigned { msgs, signed } => {
+            execute::try_executing_signed(deps, env, info, signed, msgs)
+        }
+        
 
     }?;
 
@@ -131,19 +131,20 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),
         // QueryMsg::SessionQueries(q) => handle_session_query(deps.api, deps.storage, &env, q),
         QueryMsg::CanExecute { sender, msg } => to_json_binary(&can_execute(deps, sender, msg)?),
-        QueryMsg::CanExecuteSigned { msg, signed } => {
-            to_json_binary(&can_execute_signed(deps, env, signed, msg)?)
+        QueryMsg::CanExecuteSigned { msgs, signed } => {
+            to_json_binary(&can_execute_signed(deps, env, signed, msgs)?)
         }
         QueryMsg::ValidSignature {
             signature,
             data,
             payload,
         } => to_json_binary(&valid_signature(deps, env, data, signature, payload)?),
-/*         QueryMsg::ValidSignatures {
+        
+         QueryMsg::ValidSignatures {
             signatures,
             data,
             payload,
-        } => to_json_binary(&valid_signatures(deps, env, data, signatures, payload)?), */
+        } => to_json_binary(&valid_signatures(deps, env, data, signatures, payload)?), 
     }
 }
 

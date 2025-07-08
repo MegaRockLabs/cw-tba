@@ -27,7 +27,6 @@ saa-schema = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 
-# saa-schema          = { version = "0.24.5", features = ["cosmwasm", "session"], path = "../../../contract-auth/packages/schema" }
 saa-wasm = { workspace = true }
 
 omniflix-std = { workspace = true, optional = true }

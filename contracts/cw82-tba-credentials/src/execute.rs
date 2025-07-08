@@ -15,16 +15,16 @@ use saa_wasm::{
 };
 
 pub fn try_executing_signed(
-    mut deps: DepsMut,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     cred: Credential,
-    msg: ExecuteAccountMsg,
+    msgs: Vec<ExecuteAccountMsg>,
 ) -> ContractResult {
     assert_status(deps.storage)?;
-    let num = verify_credential(deps.as_ref(), &env, cred, Some(vec![to_json_string(&msg)?]))?;
+    let num = verify_credential(deps.as_ref(), &env, cred, Some(vec![to_json_string(&msgs)?]))?;
     ACCOUNT_NUMBER.save(deps.storage, &num)?;
-    execute_action(&mut deps, &env, &info, msg)
+    try_executing_actions(deps, &env, info, msgs)
 }
 
 pub fn try_executing_actions(

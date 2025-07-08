@@ -606,6 +606,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw82-tba-credentials"
+version = "0.10.0"
+dependencies = [
+ "anybuf",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-ownable",
+ "cw-storage-plus",
+ "cw-tba",
+ "cw2",
+ "cw22",
+ "cw82",
+ "cw84",
+ "saa-wasm",
+ "schemars 0.8.22",
+ "semver",
+ "serde",
+ "strum",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "cw83"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1887,9 +1909,9 @@ dependencies = [
 
 [[package]]
 name = "saa-wasm"
-version = "0.1.0-beta.10"
+version = "0.1.0-gamma.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "add8751931173fd22cbbdcd58828e8fd82e14cb85196dcf4ed60b87f4dcac26c"
+checksum = "3ab02de316e3ef8d98becd42307487d10bcbb76920358ab69ac904367811ef7b"
 dependencies = [
  "saa-schema",
  "saa-wasm-types",
@@ -1898,9 +1920,9 @@ dependencies = [
 
 [[package]]
 name = "saa-wasm-types"
-version = "0.1.0-beta.4"
+version = "0.1.0-gamma.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97dec91316309490a0b11b63f58a2ea0788902bdaeb56ec84858a9e6e4eebb46"
+checksum = "5e0d942e3bd48e58800e666b271d84dfb3b5ce8190ab5d2b1dc0b69600e701f6"
 dependencies = [
  "cosmwasm-schema",
  "cw-storage-plus",

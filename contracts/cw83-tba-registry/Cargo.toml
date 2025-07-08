@@ -16,7 +16,7 @@ name = "cw83_tba_registry"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["omniflix"]
+default = []
 library = []
 omniflix = ["cw-tba/omniflix"]
 ext_query = ["cw-tba/ext_query"]
@@ -24,7 +24,7 @@ ext_query = ["cw-tba/ext_query"]
 [dependencies]
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
-cw-controllers = "1.1.2"
+cw-controllers = { workspace = true }
 cw-storage-plus = { workspace = true }
 cw-tba = { workspace = true }
 cw-utils = { workspace = true }
