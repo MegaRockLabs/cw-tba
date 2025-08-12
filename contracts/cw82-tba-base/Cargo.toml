@@ -16,24 +16,22 @@ name = "cw82_tba_base"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["wasm"]
+default = []
 library = []
-wasm = []
-cosmwasm = []
-solana = []
-substrate = []
-std = []
+omniflix = ["cw-tba/omniflix"]
 
 [dependencies]
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
 cw-ownable = { workspace = true }
 cw-storage-plus = { workspace = true }
-cw-tba = { workspace = true, features = ["full_info"] }
 cw-utils = { workspace = true }
 cw2 = { workspace = true }
 cw22 = { workspace = true }
-cw82 = { workspace = true }
+
+cw-tba = { path = "../../packages/cw-tba", features = ["full_info", "multi"] }
+cw82 = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1", "multi"] }
+
 cw83 = { workspace = true }
 cw84 = { workspace = true }
 saa-schema = { workspace = true }
@@ -45,3 +43,5 @@ smart-account-auth = { workspace = true, features = ["cosmos_arb_addr"] }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 thiserror = { workspace = true }
+
+# omniflix-std = { workspace = true, optional = true }

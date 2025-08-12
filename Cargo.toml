@@ -9,16 +9,20 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.10.0"
+version = "0.11.0"
+authors = ["Kromsten <kromsten@megarock.app>"]
 edition = "2021"
-repository = ""
+license = "cc-by-nc"
+repository = "https://github.com/megarocklabs/cw-tba"
 
 [workspace.dependencies]
 anybuf = { version = "0.5.2" }
 base64ct = { version = "=1.7.3", default-features = false }
 cosmwasm-schema = { version = "1.5.11" }
 cosmwasm-std = { version = "1.5.11", features = ["staking", "stargate"] }
+cw-controllers = { version = "1.1.2" }
 cw-storage-plus = { version = "1.2.0" }
+
 serde = { version = "1.0.219", features = ["derive"] }
 strum = { version = "0.27.1" }
 strum_macros = { version = "0.27.1" }
@@ -33,9 +37,9 @@ cw2 = "1.1.2"
 
 cw22 = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1"] }
 cw81 = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1"] }
-cw82 = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1"] }
+cw82 = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1", "multi"] }
 cw83 = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1", "multi"] }
-cw84 = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1"] }
+cw84 = { version = "2.0.0", default-features = false, features = ["cosmwasm_v1", "multi"] }
 
 cw-tba = { path = "packages/cw-tba" }
 cw82-tba-base = { path = "contracts/cw82-tba-base", features = ["library"] }
@@ -44,12 +48,11 @@ cw83-tba-registry = { path = "contracts/cw83-tba-registry", features = ["library
 
 # saa-common = { version = "=0.26.0-rc20", features = ["cosmwasm"] }
 saa-schema = { version = "0.26.0", features = ["cosmwasm"] }
-saa-wasm = { version = "0.1.0-beta.9", default-features = false, features = ["cosmwasm_v1", "types"] }
-smart-account-auth = { version = "=0.26.2" }
+saa-wasm = { version = "0.1.0-gamma.2", default-features = false, features = ["cosmwasm_v1", "types"] }
+smart-account-auth = { version = "0.26.3" }
 
-# saa-wasm                = { version = "0.1.0-alpha.1", path = "../saa-wasm/packages/bundle", default-features = true, features = ["cosmwasm_v1", "types"]}
-# saa-schema              = { version = "0.26.0", path = "../contract-auth/packages/schema", features = ["cosmwasm"] }
-# smart-account-auth      = { version = "0.26.0-rc2", path = "../contract-auth/packages/bundle" }
+omniflix-std = { version = "0.2.1" }
+# saa-wasm = { version = "0.1.0-beta.6", path = "../saa-wasm/packages/bundle", default-features = false, features = ["cosmwasm_v1", "types"] }
 
 [profile.release]
 rpath = false

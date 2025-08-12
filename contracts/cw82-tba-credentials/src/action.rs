@@ -9,7 +9,7 @@ use cosmwasm_std::{
 };
 use cw_tba::{
     encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance, Cw721Msg,
-    ExecuteAccountMsg, Status,
+    ActiontMsg, Status,
 };
 
 pub const MINT_REPLY_ID: u64 = 1;
@@ -18,10 +18,10 @@ pub fn execute_action(
     deps: &mut DepsMut,
     env: &Env,
     info: &MessageInfo,
-    msg: ExecuteAccountMsg,
+    msg: ActiontMsg,
 ) -> ContractResult {
     assert_status(deps.storage)?;
-    use ExecuteAccountMsg::*;
+    use ActiontMsg::*;
 
     match msg {
         Execute { msgs } => try_executing(msgs),
@@ -34,6 +34,7 @@ pub fn execute_action(
             recipient,
         } => try_transfering_token(deps.storage, collection, token_id, recipient),
 
+        #[cfg(not(feature = "omniflix"))]
         SendToken {
             collection,
             token_id,
@@ -168,6 +169,7 @@ pub fn try_transfering_token(
         .add_attribute("action", "transfer_token"))
 }
 
+#[cfg(not(feature = "omniflix"))]
 pub fn try_sending_token(
     storage: &mut dyn Storage,
     contract_addr: String,

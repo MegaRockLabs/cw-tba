@@ -12,11 +12,11 @@ use saa_wasm::saa_types::VerifiedData;
 
 
 #[cw_serde]
-pub struct InstantiateAccountMsg<A = ExecuteAccountMsg> {
+pub struct InstantiateAccountMsg {
     /// Customiable payload specififc for account implementation
     pub account_data: VerifiedData,
     /// Actions to execute immediately on the account creation
-    pub actions: Option<Vec<A>>,
+    pub actions: Option<Vec<ActiontMsg>>,
     /// Token info
     pub token_info: TokenInfo,
     /// Token owner that had been verified by the registry
@@ -40,7 +40,7 @@ pub struct BasicAllowance {
 
 //#[saa_derivable]
 #[cw_serde]
-pub enum ExecuteAccountMsg {
+pub enum ActiontMsg {
     /// Proxy method for executing cosmos messages
     /// Wasm and Stargate messages aren't supported
     /// Only the current holder can execute this method
@@ -55,6 +55,7 @@ pub enum ExecuteAccountMsg {
     },
 
     /// Send NFT to a contract
+    #[cfg(not(feature = "omniflix"))]
     SendToken {
         /// Contract address of the collection
         collection: String,
@@ -107,7 +108,7 @@ pub enum ExecuteAccountMsg {
 }
 
 
-#[signed_execute(ExecuteAccountMsg, Credential)]
+#[signed_execute(ActiontMsg, Credential)]
 #[cw_serde]
 pub enum ExecuteMsg {
     /// Registry only method to update the owner to the current NFT holder
@@ -146,7 +147,7 @@ pub struct AssetsResponse {
 // #[session_query(ExecuteAccountMsg)]
 
 #[cw_ownable_query]
-#[signed_query(ExecuteAccountMsg, Credential, Credential)]
+#[signed_query(ActiontMsg, Credential, Credential)]
 #[derive(QueryResponses)]
 #[cw_serde]
 pub enum QueryMsg {

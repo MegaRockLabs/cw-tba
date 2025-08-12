@@ -2,7 +2,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cw83::{registry_execute, registry_query, AccountResponse, AccountsResponse};
 
 use cw84::Binary;
-use cw_tba::{CreateAccountMsg, RegistryParams, TokenAccount, TokenInfo};
+use cw_tba::{CreateAccountMsg, RegistryParams, TokenAccountPayload, TokenInfo};
 use saa_wasm::{
     saa_types::{Credential, CredentialData},
     UpdateOperation,
@@ -28,6 +28,7 @@ pub type Account = AccountResponse<TokenInfo>;
 pub type AccountOpt = AccountResponse<Option<TokenInfo>>;
 pub type Accounts = AccountsResponse<Option<TokenInfo>>;
 
+
 #[registry_query(TokenInfo, TokenInfo, OptAccountsQuery, OptTokenInfo)]
 #[derive(QueryResponses)]
 #[cw_serde]
@@ -35,9 +36,25 @@ pub enum QueryMsg {
     /// Query params of the registry
     #[returns(RegistryParams)]
     RegistryParams {},
+
+    #[returns(cw_controllers::AdminResponse)]
+    Admin {},
 }
 
-#[registry_execute(TokenAccount)]
+
+#[cw_serde]
+pub enum SudoMsg {
+    // UpdateFairBurnAddress(String),
+
+    /// updating the entire registry params object
+    UpdateParams(Box<RegistryParams>),
+    /// updating the list of code ids that are allowed for account creation & migration
+    UpdateAllowedCodeIds { code_ids: Vec<u64> },
+    /// manager contracts that can update an owner for an account if the latter is the new holder of the bound NFT
+    UpdateManagers { managers: Vec<String> },
+}
+
+#[registry_execute(TokenAccountPayload)]
 #[cw_serde]
 pub enum ExecuteMsg {
     /// Update the owner of a token-bound account
@@ -59,9 +76,6 @@ pub enum ExecuteMsg {
         credential: Option<Credential>,
     },
 
-    /// Create a new token-bound account. Access the old one will be forever lost
-    ResetAccount(CreateAccountMsg),
-
     /// Migrate an account to the newer code version if the code id is allowed
     MigrateAccount {
         /// Non-Fungible Token Info that the existing account is linked to
@@ -71,19 +85,15 @@ pub enum ExecuteMsg {
         /// Migration message to be passed to the account contract
         msg:  Binary,
     },
+
+    /// Create a new token-bound account. The old one will purged and access to it forever lost
+    ResetAccount(CreateAccountMsg),
+
+
+    AdminUpdate(SudoMsg),
 }
 
-#[cw_serde]
-pub enum SudoMsg {
-    /// updating the entire registry params object
-    UpdateParams(Box<RegistryParams>),
-    /// updating an address that is used for fair fee burning
-    UpdateFairBurnAddress(String),
-    /// updating the list of code ids that are allowed for account creation & migration
-    UpdateAllowedCodeIds { code_ids: Vec<u64> },
-    /// manager contracts that can update an owner for an account if the latter is the new holder of the bound NFT
-    UpdateManagers { managers: Vec<String> },
-}
+
 
 #[cw_serde]
 pub struct MigrateMsg {}

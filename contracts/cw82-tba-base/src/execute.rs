@@ -1,22 +1,20 @@
 use crate::{
     error::ContractError,
     msg::Status,
-    state::{KNOWN_TOKENS, MINT_CACHE, PUBKEY, REGISTRY_ADDRESS, SERIAL, STATUS, TOKEN_INFO},
+    state::{KNOWN_TOKENS, MINT_CACHE, PUBKEY, REGISTRY_ADDRESS, STATUS, TOKEN_INFO},
     utils::{assert_ok_cosmos_msg, assert_registry, assert_status, extract_pubkey},
 };
 use cosmwasm_std::{
-    ensure, to_json_binary, Addr, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    ensure, Addr, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
     QuerierWrapper, ReplyOn, Response, StdResult, SubMsg, WasmMsg,
 };
 use cw_ownable::{assert_owner, get_ownership, is_owner, OwnershipError};
-use cw_tba::{
-    encode_feegrant_msg, query_tokens, verify_nft_ownership, BasicAllowance, Cw721Msg,
-    ExecuteAccountMsg,
-};
+use cw_tba::{encode_feegrant_msg, query_tokens, transfer_nft_msg, verify_nft_ownership, BasicAllowance, ActiontMsg};
 use saa_wasm::UpdateOperation;
 use smart_account_auth::VerifiedData;
 
 pub const MINT_REPLY_ID: u64 = 1;
+
 
 pub fn try_executing(
     deps: Deps,
@@ -34,8 +32,8 @@ pub fn try_executing(
 pub fn try_executing_actions(
     deps: DepsMut,
     env: &Env,
-    info: MessageInfo,
-    actions: Vec<ExecuteAccountMsg>,
+    info: &MessageInfo,
+    actions: Vec<ActiontMsg>,
 ) -> Result<Response, ContractError> {
     let mut res = Response::new();
     for act in actions {
@@ -56,10 +54,10 @@ pub fn execute_action(
     storage: &mut dyn cosmwasm_std::Storage,
     env: &Env,
     info: &MessageInfo,
-    msg: ExecuteAccountMsg,
+    msg: ActiontMsg,
 ) -> Result<Response, ContractError> {
     assert_status(storage)?;
-    use ExecuteAccountMsg::*;
+    use ActiontMsg::*;
 
     match msg {
         Execute { msgs } => {
@@ -80,8 +78,9 @@ pub fn execute_action(
             collection,
             token_id,
             recipient,
-        } => try_transfering_token(storage, collection, token_id, recipient, info.funds.clone()),
+        } => try_transfering_token(env, storage, collection, token_id, recipient, info.funds.clone()),
 
+        #[cfg(not(feature = "omniflix"))]
         SendToken {
             collection,
             token_id,
@@ -139,7 +138,8 @@ pub fn try_minting_token(
     assert_owner(storage, &sender)?;
     assert_status(storage)?;
     MINT_CACHE.save(storage, &collection)?;
-    Ok(Response::new().add_submessage(SubMsg {
+    Ok(Response::new()
+    .add_submessage(SubMsg {
         msg: WasmMsg::Execute {
             contract_addr: collection.clone(),
             msg,
@@ -330,28 +330,28 @@ pub fn try_updating_known_on_receive(
 }
 
 pub fn try_transfering_token(
+    env: &Env,
     storage: &mut dyn cosmwasm_std::Storage,
     collection: String,
     token_id: String,
     recipient: String,
-    funds: Vec<Coin>,
+    _funds: Vec<Coin>,
 ) -> Result<Response, ContractError> {
     assert_status(storage)?;
     KNOWN_TOKENS.remove(storage, (collection.as_str(), token_id.as_str()));
-    let msg: cosmwasm_std::CosmosMsg = WasmMsg::Execute {
-        contract_addr: collection,
-        msg: to_json_binary(&Cw721Msg::TransferNft {
-            recipient,
-            token_id,
-        })?,
-        funds,
-    }
-    .into();
+    let msg = transfer_nft_msg(
+        &collection,
+        &token_id,
+        env.contract.address.as_str(),
+        &recipient,
+    );
     Ok(Response::default()
         .add_message(msg)
         .add_attribute("action", "transfer_token"))
 }
 
+
+#[cfg(not(feature = "omniflix"))]
 pub fn try_sending_token(
     storage: &mut dyn cosmwasm_std::Storage,
     collection: String,
@@ -364,7 +364,7 @@ pub fn try_sending_token(
     KNOWN_TOKENS.remove(storage, (collection.as_str(), token_id.as_str()));
     let msg: cosmwasm_std::CosmosMsg = WasmMsg::Execute {
         contract_addr: collection,
-        msg: to_json_binary(&Cw721Msg::SendNft {
+        msg: cosmwasm_std::to_json_binary(&cw_tba::Cw721Msg::SendNft {
             contract,
             token_id,
             msg: msg.to_vec().into(),
@@ -382,7 +382,6 @@ pub fn try_purging(deps: DepsMut, sender: Addr) -> Result<Response, ContractErro
     KNOWN_TOKENS.clear(deps.storage);
     REGISTRY_ADDRESS.remove(deps.storage);
     TOKEN_INFO.remove(deps.storage);
-    SERIAL.remove(deps.storage);
     PUBKEY.remove(deps.storage);
     STATUS.remove(deps.storage);
     Ok(Response::default().add_attribute("action", "purge"))

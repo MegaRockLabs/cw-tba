@@ -1,8 +1,8 @@
-use cosmwasm_std::{to_json_string, Binary, CosmosMsg, Deps, Env, Order, StdError, StdResult};
-use cw84::{CanExecuteResponse, ValidSignatureResponse, /* ValidSignaturesResponse */};
-use cw_tba::{AssetsResponse, ExecuteAccountMsg, FullInfoResponse, TokenInfo};
+use cosmwasm_std::{ensure, to_json_string, Binary, CosmosMsg, Deps, Env, Order, StdError, StdResult};
+use cw84::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
+use cw_tba::{AssetsResponse, ActiontMsg, FullInfoResponse, TokenInfo};
 use saa_wasm::{
-    saa_types::{Credential}, verify_credential, verify_native
+    saa_types::{Credential}, verify_cred_query, verify_native
 };
 
 use crate::{
@@ -24,11 +24,11 @@ pub fn can_execute_signed(
     deps: Deps,
     env: Env,
     cred: Credential,
-    msg: ExecuteAccountMsg,
+    msg: Vec<ActiontMsg>,
 ) -> StdResult<CanExecuteResponse> {
     Ok(CanExecuteResponse {
         can_execute: assert_status(deps.storage).is_ok() && 
-        verify_credential(deps, &env, cred, Some(vec![to_json_string(&msg)?])).is_ok(),
+        verify_cred_query(deps.storage, &env, cred, Some(vec![to_json_string(&msg)?])).is_ok(),
     })
 }
 
@@ -41,59 +41,39 @@ pub fn valid_signature(
     payload: Option<Credential>,
 ) -> StdResult<ValidSignatureResponse> {
     Ok(ValidSignatureResponse {
-        is_valid: false
-        
-   /*       status_ok(deps.storage)
-            && verify_data(
-                deps,
-                SignedDataMsg {
-                    data,
-                    signature,
-                    payload,
-                },
-            )
-            .is_ok(), */
+        is_valid: payload.map(|c|c.verify(deps)).transpose().is_ok()
     })
 }
-/* 
+
 pub fn valid_signatures(
     deps: Deps,
     _env: Env,
     data: Vec<Binary>,
     signatures: Vec<Binary>,
-    payload: Option<AuthPayload>,
+    payload: Option<Credential>,
 ) -> StdResult<ValidSignaturesResponse> {
-    if !status_ok(deps.storage) {
+    if assert_status(deps.storage).is_err() {
         return Ok(ValidSignaturesResponse {
             are_valid: vec![false, data.len() > 1],
         });
     };
-
     ensure!(
         data.len() == signatures.len(),
         StdError::generic_err("Data and signatures must be of equal length")
     );
 
-    let are_valid: Vec<bool> = signatures
-        .into_iter()
-        .enumerate()
-        .map(|(index, signature)| {
-            let data = data[index].clone();
-            verify_data(
-                deps,
-                SignedDataMsg {
-                    data,
-                    signature,
-                    payload: payload.clone(),
-                },
-            )
-            .is_ok()
-        })
-        .collect();
+    let cred = match payload {
+        Some(c) => c,
+        None => return Ok(ValidSignaturesResponse { are_valid: vec![false; data.len()] }),
+    };
 
-    Ok(ValidSignaturesResponse { are_valid })
+    return Ok(ValidSignaturesResponse {
+        are_valid: vec![cred.verify(deps).is_ok(); data.len()],
+    });
+
 }
- */
+
+
 pub fn assets(
     deps: Deps,
     env: Env,

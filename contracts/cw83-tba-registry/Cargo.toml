@@ -1,8 +1,9 @@
 [package]
 name = "cw83-tba-registry"
 version = { workspace = true }
-authors = ["Kromsten <s@noreply.megarock.labs>"]
+authors = { workspace = true }
 edition = { workspace = true }
+license = { workspace = true }
 repository = { workspace = true }
 description = "Token Bound Account Registry"
 
@@ -16,12 +17,15 @@ name = "cw83_tba_registry"
 crate-type = ["cdylib", "rlib"]
 
 [features]
+default = []
 library = []
+omniflix = ["cw-tba/omniflix"]
 ext_query = ["cw-tba/ext_query"]
 
 [dependencies]
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
+cw-controllers = { workspace = true }
 cw-storage-plus = { workspace = true }
 cw-tba = { workspace = true }
 cw-utils = { workspace = true }
@@ -31,6 +35,7 @@ saa-wasm = { workspace = true }
 schemars = { workspace = true }
 semver = { workspace = true }
 serde = { workspace = true }
+smart-account-auth = { workspace = true }
 thiserror = { workspace = true }
 
 cw82 = { workspace = true }

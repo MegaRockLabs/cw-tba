@@ -1,7 +1,10 @@
-use crate::{msgs::*, Status};
-use cosmwasm_schema::cw_serde;
+#[cfg(feature = "omniflix")]
+use omniflix_std::types::omniflix::onft::v1beta1::{MsgTransferOnft,  OnftQuerier};
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdError, StdResult};
 use saa_wasm::StoredCredentials;
+use cosmwasm_schema::cw_serde;
+use crate::{msgs::*, Status};
+
 
 #[cw_serde]
 pub struct TokenInfo {
@@ -35,24 +38,52 @@ pub struct FullInfoResponse {
     pub credentials: StoredCredentials,
 }
 
+
 pub fn verify_nft_ownership(
     querier: &QuerierWrapper,
     address: &str,
     token_info: TokenInfo,
 ) -> StdResult<()> {
-    if querier.query_wasm_smart::<OwnerOfResponse>(
-        token_info.collection,
-        &Cw721Msg::OwnerOf {
-            token_id: token_info.id,
-            include_expired: None,
-        },
-    )?.owner != address {
+    if query_owner(querier, &token_info.collection, &token_info.id)?.owner != address {
         return Err(StdError::generic_err("Not NFT owner"));
     }
     Ok(())
 }
 
 
+#[cfg(not(feature = "omniflix"))]
+fn query_owner(
+    querier: &QuerierWrapper,
+    collection: &str,
+    token_id: &str,
+) -> StdResult<OwnerOfResponse> {
+    querier.query_wasm_smart(
+        collection,
+        &Cw721Msg::OwnerOf {
+            token_id: token_id.to_string(),
+            include_expired: None,
+        },
+    )
+}
+
+#[cfg(feature = "omniflix")]
+fn query_owner(
+    querier: &QuerierWrapper,
+    denom: &str,
+    token_id: &str,
+) -> StdResult<OwnerOfResponse> {
+    let res = OnftQuerier::new(querier).onft(denom.to_string(), token_id.to_string())?;
+    if let Some(onft) = res.onft {
+        Ok(OwnerOfResponse {
+            owner: onft.owner,
+            approvals: vec![],
+        })
+    } else {
+        Err(StdError::generic_err("Token not found"))
+    }
+}
+
+#[cfg(not(feature = "omniflix"))]
 pub fn query_tokens(
     querier: &QuerierWrapper,
     collection: &str,
@@ -60,6 +91,8 @@ pub fn query_tokens(
     start_after: Option<String>,
     limit: Option<u32>,
 ) -> StdResult<TokensResponse> {
+
+    
     querier.query_wasm_smart(
         collection,
         &Cw721Msg::Tokens {
@@ -69,3 +102,77 @@ pub fn query_tokens(
         },
     )
 }
+
+
+#[cfg(feature = "omniflix")]
+pub fn query_tokens(
+    querier: &QuerierWrapper,
+    denom: &str,
+    owner: String,
+    _start_after: Option<String>,
+    _limit: Option<u32>,
+) -> StdResult<TokensResponse> {
+    let res = OnftQuerier::new(querier).owner_onf_ts(
+        denom.to_string(),
+        owner,
+        None
+    )?;
+    
+    match res.owner {
+        None => return Err(StdError::generic_err("Owner not found")),
+        Some(o) => {
+            return Ok(TokensResponse {
+                tokens: o.id_collections
+                        .into_iter()
+                        .find_map(|id_collection| {
+                            if id_collection.denom_id == denom {
+                                Some(id_collection.onft_ids)
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap_or_default()
+            });
+        }
+        
+    }
+
+}
+
+
+#[cfg(feature = "omniflix")]
+pub fn transfer_nft_msg(
+    denom_id: &str,
+    token_id: &str,
+    sender: &str,
+    recipient: &str,
+) -> cosmwasm_std::CosmosMsg {
+
+    MsgTransferOnft {
+        denom_id: denom_id.to_string(),
+        id: token_id.to_string(),
+        sender: sender.to_string(),
+        recipient: recipient.to_string(),
+    }
+    .into()
+}
+
+
+#[cfg(not(feature = "omniflix"))]
+pub fn transfer_nft_msg(
+    collection: &str,
+    token_id: &str,
+    _sender: &str,
+    recipient: &str,
+) -> cosmwasm_std::CosmosMsg {
+    cosmwasm_std::CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
+        contract_addr: collection.to_string(),
+        msg: cosmwasm_std::to_json_binary(&Cw721Msg::TransferNft {
+            recipient: recipient.to_string(),
+            token_id: token_id.to_string(),
+        }).unwrap_or_default(),
+        funds: vec![],
+    })
+}
+
+

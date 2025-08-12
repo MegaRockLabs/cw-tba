@@ -1,15 +1,18 @@
 [package]
 name = "cw-tba"
 version = { workspace = true }
-authors = ["Kromsten <s@noreply.megarock.labs>"]
+authors = { workspace = true }
 edition = { workspace = true }
+license = { workspace = true }
 repository = { workspace = true }
 description = "Definition and types for Token-Bound Accounts"
 
 [features]
 default = []
+multi = ["cw84/multi", "cw83/multi"]
 ext_query = []
 full_info = []
+omniflix = ["dep:omniflix-std"]
 
 [dependencies]
 anybuf = { workspace = true }
@@ -25,5 +28,7 @@ saa-schema = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 
-# saa-schema          = { version = "0.24.5", features = ["cosmwasm", "session"], path = "../../../contract-auth/packages/schema" }
 saa-wasm = { workspace = true }
+smart-account-auth = { workspace = true }
+
+omniflix-std = { workspace = true, optional = true }

@@ -1,3 +1,4 @@
+use cw_controllers::Admin;
 use cw_storage_plus::{Item, Map};
 use cw_tba::{RegistryParams, TokenInfo};
 
@@ -9,3 +10,5 @@ pub static TOKEN_ADDRESSES: Map<(&str, &str), String> = Map::new("t");
 pub static LAST_ATTEMPTING: Item<TokenInfo> = Item::new("l");
 /// Registry params
 pub static REGISTRY_PARAMS: Item<RegistryParams> = Item::new("p");
+/// Admin for updates without governance
+pub const ADMIN: Admin = Admin::new("a");

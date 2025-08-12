@@ -50,10 +50,8 @@ pub fn valid_signature(
     let address = owner.owner.unwrap_or(Addr::unchecked(""));
 
     Ok(ValidSignatureResponse {
-        is_valid: match assert_status(deps.storage)? {
-            true => verify_arbitrary(deps, address.as_str(), data, signature, &pk)?,
-            false => false,
-        },
+        is_valid: assert_status(deps.storage).is_ok() &&
+            verify_arbitrary(deps, address.as_str(), data, signature, &pk).is_ok()
     })
 }
 
