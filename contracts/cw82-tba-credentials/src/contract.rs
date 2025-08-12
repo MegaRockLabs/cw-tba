@@ -5,16 +5,17 @@ use saa_wasm::{account_number, verify_native};
 use {crate::grants::register_granter_msg, cosmwasm_std::SubMsg};
 
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    to_json_binary as to_bin
 };
 
 use cw_ownable::get_ownership;
 use cw_tba::{ExecuteMsg, Status};
+use crate::execute;
 
 use crate::{
     action::{self, MINT_REPLY_ID},
     error::ContractError,
-    execute::{self, try_executing_actions},
     msg::{ContractResult, InstantiateMsg, MigrateMsg, QueryMsg},
     query::{
         assets, can_execute, can_execute_signed, full_info, known_tokens, valid_signature, valid_signatures,
@@ -23,7 +24,7 @@ use crate::{
     state::{save_token_credentials, MINT_CACHE, REGISTRY_ADDRESS, STATUS, TOKEN_INFO},
 };
 
-pub const CONTRACT_NAME: &str = "crates:cw82-token-cred-account";
+pub const CONTRACT_NAME: &str = "crates:cw82-tba-creds";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -62,12 +63,13 @@ pub fn instantiate(
 
     save_token_credentials(deps.api, deps.storage, msg.account_data, msg.owner.as_str())?;
     let actions = msg.actions.unwrap_or_default();
-    let res = try_executing_actions(deps, &env, info, actions)?;
+    let res = execute::try_executing_actions(deps, &env, info, actions)?;
 
     #[cfg(feature = "archway")]
     let res = res.add_submessage(SubMsg::new(register_granter_msg(&env)?));
     Ok(res)
 }
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> ContractResult {
@@ -94,7 +96,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
 
         ExecuteMsg::Freeze {} => execute::try_freezing(deps),
 
-        ExecuteMsg::Execute { msgs } => {
+        ExecuteMsg::Execute { msgs, .. } => {
             verify_native(deps.storage, info.sender.to_string())?;
             action::try_executing(msgs)
         }
@@ -103,7 +105,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
             execute::try_executing_actions(deps, &env, info, msgs)
         }
 
-        ExecuteMsg::ExecuteSigned { msgs, signed } => {
+        ExecuteMsg::ExecuteSigned { msgs, signed, .. } => {
             execute::try_executing_signed(deps, env, info, signed, msgs)
         }
         
@@ -117,42 +119,70 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> C
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    if REGISTRY_ADDRESS.load(deps.storage).is_err() {
-        return Err(StdError::generic_err(ContractError::Deleted {}.to_string()));
+    let registry = match REGISTRY_ADDRESS.load(deps.storage) {
+        Err(_) => return Err(StdError::generic_err(ContractError::Deleted {}.to_string())),
+        Ok(r) => r
     };
     match msg {
-        QueryMsg::Token {} => to_json_binary(&TOKEN_INFO.load(deps.storage)?),
-        QueryMsg::Status {} => to_json_binary(&STATUS.load(deps.storage)?),
-        QueryMsg::AccountNumber {} => to_json_binary(&account_number(deps.storage)),
-        QueryMsg::Registry {} => to_json_binary(&REGISTRY_ADDRESS.load(deps.storage)?),
-        QueryMsg::Ownership {} => to_json_binary(&get_ownership(deps.storage)?),
-        QueryMsg::KnownTokens { skip, limit } => to_json_binary(&known_tokens(deps, skip, limit)?),
-        QueryMsg::Assets { skip, limit } => to_json_binary(&assets(deps, env, skip, limit)?),
-        QueryMsg::FullInfo { skip, limit } => to_json_binary(&full_info(deps, env, skip, limit)?),
+        QueryMsg::Registry {} => to_bin(&registry),
+        QueryMsg::Token {} => to_bin(&TOKEN_INFO.load(deps.storage)?),
+        QueryMsg::Status {} => to_bin(&STATUS.load(deps.storage)?),
+        QueryMsg::Ownership {} => to_bin(&get_ownership(deps.storage)?),
+        QueryMsg::AccountNumber {} => to_bin(&account_number(deps.storage)),
+        
+        QueryMsg::KnownTokens { 
+            skip, 
+            limit 
+        } => to_bin(&known_tokens(deps, skip, limit)?),
+        
+        QueryMsg::Assets { 
+            skip, 
+            limit 
+        } => to_bin(&assets(deps, env, skip, limit)?),
+        
+        QueryMsg::FullInfo { 
+            skip, 
+            limit 
+        } => to_bin(&full_info(deps, env, skip, limit)?),
+        
         // QueryMsg::SessionQueries(q) => handle_session_query(deps.api, deps.storage, &env, q),
-        QueryMsg::CanExecute { sender, msg } => to_json_binary(&can_execute(deps, sender, msg)?),
-        QueryMsg::CanExecuteSigned { msgs, signed } => {
-            to_json_binary(&can_execute_signed(deps, env, signed, msgs)?)
-        }
+        
+        QueryMsg::CanExecute { 
+            sender, 
+            msg 
+        } => to_bin(&can_execute(deps, sender, msg)?),
+        
+        QueryMsg::CanExecuteSigned { 
+            msgs, 
+            signed,
+            .. 
+        } => to_bin(&can_execute_signed(deps, env, signed, msgs)?),
+
         QueryMsg::ValidSignature {
             signature,
             data,
             payload,
-        } => to_json_binary(&valid_signature(deps, env, data, signature, payload)?),
-        
+        } => to_bin(&valid_signature(deps, env, data, signature, payload)?),
+
          QueryMsg::ValidSignatures {
             signatures,
             data,
             payload,
-        } => to_json_binary(&valid_signatures(deps, env, data, signatures, payload)?), 
+        } => to_bin(&valid_signatures(deps, env, data, signatures, payload)?),
+
+        QueryMsg::CanExecuteNative { .. } => Err(StdError::generic_err(
+            "CanExecuteNative query is not supported for now",
+        )),
     }
 }
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _: Env, _: MigrateMsg) -> ContractResult {
     STATUS.save(deps.storage, &Status { frozen: false })?;
     Ok(Response::default())
 }
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult {

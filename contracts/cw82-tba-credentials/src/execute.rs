@@ -9,9 +9,9 @@ use cosmwasm_std::{ensure, to_json_string, Api, DepsMut, Env, MessageInfo, Respo
 use cw2::CONTRACT;
 use cw22::SUPPORTED_INTERFACES;
 use cw_ownable::{get_ownership, Action};
-use cw_tba::{verify_nft_ownership, ExecuteAccountMsg, Status, UpdateAccountOp};
+use cw_tba::{verify_nft_ownership, ActiontMsg, Status, UpdateAccountOp};
 use saa_wasm::{
-    add_credentials, stores::ACCOUNT_NUMBER, remove_credentials, saa_types::{Credential, VerifiedData}, verify_credential
+    add_credentials, stores::ACCOUNT_NUMBER, remove_credentials, saa_types::{Credential, VerifiedData}, verify_cred_actions
 };
 
 pub fn try_executing_signed(
@@ -19,19 +19,20 @@ pub fn try_executing_signed(
     env: Env,
     info: MessageInfo,
     cred: Credential,
-    msgs: Vec<ExecuteAccountMsg>,
+    msgs: Vec<ActiontMsg>,
 ) -> ContractResult {
     assert_status(deps.storage)?;
-    let num = verify_credential(deps.as_ref(), &env, cred, Some(vec![to_json_string(&msgs)?]))?;
+    let num = verify_cred_actions(deps.storage, &env, cred, Some(vec![to_json_string(&msgs)?]))?;
     ACCOUNT_NUMBER.save(deps.storage, &num)?;
     try_executing_actions(deps, &env, info, msgs)
 }
+
 
 pub fn try_executing_actions(
     mut deps: DepsMut,
     env: &Env,
     info: MessageInfo,
-    actions: Vec<ExecuteAccountMsg>,
+    actions: Vec<ActiontMsg>,
 ) -> ContractResult {
     let mut res = Response::new();
     for act in actions {

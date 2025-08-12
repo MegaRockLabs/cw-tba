@@ -1,23 +1,19 @@
-use crate::{common::TokenInfo, ExecuteAccountMsg};
+use crate::{common::TokenInfo, ActiontMsg};
+use smart_account_auth::CredentialData;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Coin, Empty};
-use saa_wasm::saa_types::CredentialData;
-use serde::Serialize;
+use cosmwasm_std::Coin;
+
 
 #[cw_serde]
-pub struct RegistryParams<T = Option<Empty>> {
+pub struct RegistryParams {
     pub allowed_code_ids: Vec<u64>,
     pub creation_fees: Vec<Coin>,
     pub managers: Vec<String>,
-    pub extension: T,
 }
 
 /// An extenstion for [cw83::CreateAccountMsg]
 #[cw_serde]
-pub struct TokenAccount<A = ExecuteAccountMsg>
-where
-    A: Serialize,
-{
+pub struct TokenAccountPayload {
     /// Non-Fungible Token Info that the created account will be linked to
     pub token_info: TokenInfo,
 
@@ -25,7 +21,7 @@ where
     pub credential_data: CredentialData,
 
     /// Actions to execute immediately on the account creation
-    pub actions: Option<Vec<A>>,
+    pub actions: Option<Vec<ActiontMsg>>,
 
     /// Optional parameter to create an account on behalf of another user that holds the token
     pub create_for: Option<String>,

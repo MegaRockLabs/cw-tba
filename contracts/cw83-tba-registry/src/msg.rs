@@ -2,7 +2,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cw83::{registry_execute, registry_query, AccountResponse, AccountsResponse};
 
 use cw84::Binary;
-use cw_tba::{CreateAccountMsg, RegistryParams, TokenAccount, TokenInfo};
+use cw_tba::{CreateAccountMsg, RegistryParams, TokenAccountPayload, TokenInfo};
 use saa_wasm::{
     saa_types::{Credential, CredentialData},
     UpdateOperation,
@@ -54,7 +54,7 @@ pub enum SudoMsg {
     UpdateManagers { managers: Vec<String> },
 }
 
-#[registry_execute(TokenAccount)]
+#[registry_execute(TokenAccountPayload)]
 #[cw_serde]
 pub enum ExecuteMsg {
     /// Update the owner of a token-bound account

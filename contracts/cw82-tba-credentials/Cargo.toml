@@ -1,8 +1,9 @@
 [package]
 name = "cw82-tba-credentials"
 version = { workspace = true }
-authors = ["Kromsten <s@noreply.megarock.labs>"]
+authors = { workspace = true }
 edition = { workspace = true }
+license = { workspace = true }
 repository = { workspace = true }
 description = "Token Bound Account Credentials"
 

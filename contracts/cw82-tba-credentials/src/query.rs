@@ -1,8 +1,8 @@
 use cosmwasm_std::{ensure, to_json_string, Binary, CosmosMsg, Deps, Env, Order, StdError, StdResult};
 use cw84::{CanExecuteResponse, ValidSignatureResponse, ValidSignaturesResponse};
-use cw_tba::{AssetsResponse, ExecuteAccountMsg, FullInfoResponse, TokenInfo};
+use cw_tba::{AssetsResponse, ActiontMsg, FullInfoResponse, TokenInfo};
 use saa_wasm::{
-    saa_types::{Credential}, verify_credential, verify_native
+    saa_types::{Credential}, verify_cred_query, verify_native
 };
 
 use crate::{
@@ -24,11 +24,11 @@ pub fn can_execute_signed(
     deps: Deps,
     env: Env,
     cred: Credential,
-    msg: Vec<ExecuteAccountMsg>,
+    msg: Vec<ActiontMsg>,
 ) -> StdResult<CanExecuteResponse> {
     Ok(CanExecuteResponse {
         can_execute: assert_status(deps.storage).is_ok() && 
-        verify_credential(deps, &env, cred, Some(vec![to_json_string(&msg)?])).is_ok(),
+        verify_cred_query(deps.storage, &env, cred, Some(vec![to_json_string(&msg)?])).is_ok(),
     })
 }
 

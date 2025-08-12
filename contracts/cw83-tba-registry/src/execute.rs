@@ -8,7 +8,7 @@ use crate::{
 use cw83::CREATE_ACCOUNT_REPLY_ID;
 use cw84::{Binary, ValidSignatureResponse};
 use cw_tba::{
-    verify_nft_ownership, ExecuteAccountMsg, ExecuteMsg, InstantiateAccountMsg, QueryMsg, RegistryParams, TokenInfo
+    verify_nft_ownership, ActiontMsg, ExecuteMsg, InstantiateAccountMsg, QueryMsg, RegistryParams, TokenInfo
 };
 use saa_wasm::{
     saa_types::{
@@ -38,7 +38,7 @@ pub fn create_account(
     token_info: TokenInfo,
     account_data: CredentialData,
     create_for: Option<String>,
-    actions: Option<Vec<ExecuteAccountMsg>>,
+    actions: Option<Vec<ActiontMsg>>,
     reset: bool,
 ) -> Result<Response, ContractError> {
     ensure_eq!(

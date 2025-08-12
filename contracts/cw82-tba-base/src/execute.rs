@@ -9,9 +9,7 @@ use cosmwasm_std::{
     QuerierWrapper, ReplyOn, Response, StdResult, SubMsg, WasmMsg,
 };
 use cw_ownable::{assert_owner, get_ownership, is_owner, OwnershipError};
-use cw_tba::{
-    encode_feegrant_msg, query_tokens, transfer_nft_msg, verify_nft_ownership, BasicAllowance, ExecuteAccountMsg
-};
+use cw_tba::{encode_feegrant_msg, query_tokens, transfer_nft_msg, verify_nft_ownership, BasicAllowance, ActiontMsg};
 use saa_wasm::UpdateOperation;
 use smart_account_auth::VerifiedData;
 
@@ -35,7 +33,7 @@ pub fn try_executing_actions(
     deps: DepsMut,
     env: &Env,
     info: &MessageInfo,
-    actions: Vec<ExecuteAccountMsg>,
+    actions: Vec<ActiontMsg>,
 ) -> Result<Response, ContractError> {
     let mut res = Response::new();
     for act in actions {
@@ -56,10 +54,10 @@ pub fn execute_action(
     storage: &mut dyn cosmwasm_std::Storage,
     env: &Env,
     info: &MessageInfo,
-    msg: ExecuteAccountMsg,
+    msg: ActiontMsg,
 ) -> Result<Response, ContractError> {
     assert_status(storage)?;
-    use ExecuteAccountMsg::*;
+    use ActiontMsg::*;
 
     match msg {
         Execute { msgs } => {

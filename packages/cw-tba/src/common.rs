@@ -1,9 +1,9 @@
-use crate::{msgs::*, Status};
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdError, StdResult};
-use saa_wasm::StoredCredentials;
 #[cfg(feature = "omniflix")]
 use omniflix_std::types::omniflix::onft::v1beta1::{MsgTransferOnft,  OnftQuerier};
+use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdError, StdResult};
+use saa_wasm::StoredCredentials;
+use cosmwasm_schema::cw_serde;
+use crate::{msgs::*, Status};
 
 
 #[cw_serde]
@@ -173,7 +173,6 @@ pub fn transfer_nft_msg(
         }).unwrap_or_default(),
         funds: vec![],
     })
-
 }
 
 

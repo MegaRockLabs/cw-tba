@@ -102,7 +102,7 @@ pub fn execute(
 
         ExecuteMsg::Freeze {} => try_freezing(&deps.querier, deps.storage, info.sender),
 
-        ExecuteMsg::Execute { msgs } => try_executing(deps.as_ref(), info.sender, msgs),
+        ExecuteMsg::Execute { msgs, .. } => try_executing(deps.as_ref(), info.sender, msgs),
 
         ExecuteMsg::ExecuteNative { msgs } => {
             assert_owner(deps.storage, &info.sender)?;
@@ -141,6 +141,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::CanExecuteSigned { .. } => Err(StdError::generic_err(
             "CanExecuteSigned query is not supported for now",
         )),
+        QueryMsg::CanExecuteNative { .. } => Err(StdError::generic_err(
+            "CanExecuteNative query is not supported for now",
+        ))
     }
 }
 

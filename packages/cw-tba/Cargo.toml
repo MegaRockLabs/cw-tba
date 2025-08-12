@@ -1,8 +1,9 @@
 [package]
 name = "cw-tba"
 version = { workspace = true }
-authors = ["Kromsten <s@noreply.megarock.labs>"]
+authors = { workspace = true }
 edition = { workspace = true }
+license = { workspace = true }
 repository = { workspace = true }
 description = "Definition and types for Token-Bound Accounts"
 
@@ -28,5 +29,6 @@ strum = { workspace = true }
 strum_macros = { workspace = true }
 
 saa-wasm = { workspace = true }
+smart-account-auth = { workspace = true }
 
 omniflix-std = { workspace = true, optional = true }

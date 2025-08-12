@@ -1,10 +1,12 @@
-use crate::TokenAccount;
+use crate::TokenAccountPayload;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Binary;
-use saa_wasm::{saa_types::{types::exp::Expiration, VerifiedData}, UpdateOperation};
+use saa_wasm::UpdateOperation;
+
+use smart_account_auth::{Expiration, VerifiedData};
 
 
-pub type CreateAccountMsg = cw83::CreateAccountMsg<TokenAccount>;
+pub type CreateAccountMsg = cw83::CreateAccountMsg<TokenAccountPayload>;
 
 
 #[cw_serde]

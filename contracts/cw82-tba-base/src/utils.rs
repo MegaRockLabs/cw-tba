@@ -7,9 +7,12 @@ use cosmwasm_std::{
 };
 use saa_wasm::saa_types::{CredentialAddress, VerifiedData};
 
-pub fn assert_status(store: &dyn Storage) -> StdResult<bool> {
+pub fn assert_status(store: &dyn Storage) -> StdResult<()> {
     let status = STATUS.load(store)?;
-    Ok(!status.frozen)
+    if status.frozen {
+        return Err(StdError::generic_err("Account is frozen"));
+    }
+    Ok(())
 }
 
 pub fn status_ok(store: &dyn Storage) -> bool {
