@@ -21,12 +21,14 @@ metadata.csv
 
 # Auto-gen
 .cargo-ok
+logs
 
 # Build artifacts
 *.wasm
 hash.txt
 contracts.txt
 artifacts/
+sonar*
 
 # code coverage
 tarpaulin-report.*

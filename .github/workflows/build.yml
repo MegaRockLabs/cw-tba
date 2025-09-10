@@ -1,0 +1,95 @@
+name: Rust-Build
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+
+      - name: Check for errors
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --locked --tests
+        env:
+          RUST_BACKTRACE: 1
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --lib --locked --tests
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: cargo build
+        run: cargo build --workspace --verbose
+
+      - name: cargo test
+        run: cargo llvm-cov --all-features --workspace --lcov --output-path target/lcov.info
+
+      - uses: qltysh/qlty-action/coverage@main
+        with:
+          token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+          files: target/lcov.info
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+          components: clippy
+
+      - name: Run clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --tests -- -D warnings --message-format=json &> clippy_report.json
+
+      - name: Setup sonarqube
+        uses: warchant/setup-sonar-scanner@v3
+
+      - name: Sonar Scan
+        shell: bash
+        run: |
+          sonar-scanner -Dcommunity.rust.clippy.reportPaths=clippy_report.json -Dsonar.login=${{ secrets.SONAR_TOKEN }}
