@@ -84,7 +84,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --tests -- -D warnings --message-format=json &> clippy_report.json
+          args: --tests --message-format=json -- -D warnings &> clippy_report.json
 
       - name: Setup sonarqube
         uses: warchant/setup-sonar-scanner@v3
