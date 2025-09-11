@@ -1,4 +1,3 @@
-import { sleep } from 'bun';
 import { beforeAll, describe, expect, test } from 'vitest';
 import { getChainData } from '../src/chain';
 import {
@@ -10,6 +9,7 @@ import {
 	transferToken,
 } from '../src/contract';
 import type { ChainData, ExecuteAccountMsg, FullInfoResponse } from '../src/types';
+import { sleep } from '../src/utils';
 import { getEthSigner } from '../src/utils';
 
 describe('Setup Tests', () => {
