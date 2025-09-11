@@ -13,11 +13,8 @@ on:
         default: false
         required: false
 
-env:
-  NODE_VERSION: "22"
-
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && 'main' || github.head_ref }}
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && 'main' || github.ref_name }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
@@ -34,9 +31,11 @@ jobs:
   check:
     name: Check
     runs-on: ubuntu-latest
+    needs: [optimize_ci]
+    if: ${{ needs.optimize_ci.outputs.skip != 'true' }}
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
@@ -56,9 +55,11 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    needs: [optimize_ci]
+    if: ${{ needs.optimize_ci.outputs.skip != 'true' }}
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
@@ -105,7 +106,9 @@ jobs:
           components: clippy
 
       - name: Run clippy
-        run: cargo clippy --message-format=json > clippy_report.json 2>&1
+        shell: bask
+        run: |
+          cargo clippy --tests --message-format=json -- -D warnings > clippy_report.json
 
       - name: Setup sonarqube
         uses: warchant/setup-sonar-scanner@v3
