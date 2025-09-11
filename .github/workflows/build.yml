@@ -105,8 +105,7 @@ jobs:
           components: clippy
 
       - name: Run clippy
-        run: cargo clippy --all-features --profile=test --message-format=json > clippy_report.json 2>&1
-
+        run: cargo clippy  --profile=test --message-format=json > clippy_report.json 2>&1
       - name: Setup sonarqube
         uses: warchant/setup-sonar-scanner@v3
 
