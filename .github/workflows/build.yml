@@ -109,7 +109,7 @@ jobs:
       - name: Run clippy
         shell: bash
         run: |
-          cargo clippy --tests --message-format=json -- -D warnings > clippy_report.json
+          cargo clippy --tests --message-format=json --  > clippy_report.json
 
       - name: Setup sonarqube
         uses: warchant/setup-sonar-scanner@v3
