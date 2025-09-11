@@ -108,7 +108,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --all-features --profile=test --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt continue-on-error: true
+          args: --all-features --profile=test --message-format=json &> clippy_report.json
 
       - name: Setup sonarqube
         uses: warchant/setup-sonar-scanner@v3
