@@ -23,3 +23,5 @@ export function getEthSigner(): string {
 			26,
 		]).toString('hex');
 }
+
+export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
