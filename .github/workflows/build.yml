@@ -106,7 +106,7 @@ jobs:
           components: clippy
 
       - name: Run clippy
-        shell: bask
+        shell: bash
         run: |
           cargo clippy --tests --message-format=json -- -D warnings > clippy_report.json
 
