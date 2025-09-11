@@ -1,12 +1,36 @@
-name: Rust-Build
+name: Build Package CI
+
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, opened]
+  workflow_dispatch:
+    inputs:
+      beta_release:
+        description: Create beta release
+        type: boolean
+        default: false
+        required: false
+
+env:
+  NODE_VERSION: "22"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && 'main' || github.head_ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  optimize_ci:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check_skip.outputs.skip }}
+    steps:
+      - uses: withgraphite/graphite-ci-action@main
+        id: check_skip
+        with:
+          graphite_token: ${{ secrets.GRAPHITE_TOKEN }}
+
   check:
     name: Check
     runs-on: ubuntu-latest
