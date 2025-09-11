@@ -15,7 +15,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && 'main' || github.ref_name }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.ref_name != 'refs/heads/main' }}
 
 jobs:
   optimize_ci:
@@ -23,7 +23,7 @@ jobs:
     outputs:
       skip: ${{ steps.check_skip.outputs.skip }}
     steps:
-      - uses: withgraphite/graphite-ci-action@1.4.0
+      - uses: withgraphite/graphite-ci-action@v0.0.9
         id: check_skip
         with:
           graphite_token: ${{ secrets.GRAPHITE_TOKEN }}
