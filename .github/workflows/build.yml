@@ -15,16 +15,17 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && 'main' || github.ref_name }}
-  cancel-in-progress: ${{ github.ref_name != 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
   optimize_ci:
     runs-on: ubuntu-latest
     outputs:
-      skip: ${{ steps.check_skip.outputs.skip }}
+      skip: ${{ steps.check_skip.outputs.skip || steps.defaults.outputs.skip }}
     steps:
       - uses: withgraphite/graphite-ci-action@v0.0.9
         id: check_skip
+        continue-on-error: true
         with:
           graphite_token: ${{ secrets.GRAPHITE_TOKEN }}
 
